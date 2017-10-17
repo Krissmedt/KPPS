@@ -26,15 +26,38 @@ ep0 = 1
 q0 = 1
 
 ## Methods
-def coulomb(q1,q2,pos1,pos2):
+def coulomb(q2,pos1,pos2):
     rpos = pos1-pos2
     r = sqrt(fsum(rpos**2))
     rUnit = rpos/r
     
-    Fc = 1/(4*pi*ep0) * q1*q2/r**2 * rUnit
+    Ec = 1/(4*pi*ep0) * q2/r**2 * rUnit
     
-    return Fc
+    return Ec
 
+def eFieldCont(pos,**kwargs):
+    Ef = np.zeros(3, dtype=np.float)
+    boost = 1
+    saddle = 0
+    eftype = "sPenning"
+    
+    if "ftype" in kwargs:
+        eftype = kwargs["ftype"]
+    
+    if "boost" in kwargs:
+        boost = kwargs["boost"]
+    
+    if eftype == "sPenning":
+        if fabs(pos[0]) > saddle:
+            Ef[0] = -pos[0] * boost
+    elif eftype == "custom":
+        if "F" in kwargs:
+            customF = kwargs["F"]
+            Ef = customF(pos,boost)
+            
+    return Ef
+    
+    
 def randPos(pos,ndim):
     for nd in range(0,ndim):
         for xi in range(0,len(pos)):
@@ -53,8 +76,21 @@ def mkDataDir(*args):
             print(
                   "Unexptected error, did you enter a string or otherwise" +
                   " parsable value? Code:", sys_exc_info()[0])
+    
+    k = 1
+    error = True
+    append = ""
+    while error == True:
+        try:
+            os.mkdir("./" + foldername + append)
+            error = False
+        except FileExistsError:
+            append = "(" + str(k) + ")"
+            error = True
+            k = k+1
             
-    os.mkdir("./" + foldername)
+    foldername = foldername + append
+    
     return foldername
 
 def writePData(foldername,tstep,tsteps,positionArray):
@@ -69,11 +105,11 @@ def writePData(foldername,tstep,tsteps,positionArray):
 ## Problem variables
 #mp = 1.67262189821*10**(-27)
 mp = 2000
-nq = 20
+nq = 1
 ndim = 2
 
-te = 10
-tsteps = 1000
+te = 20
+tsteps = 2000
 samples = floor(tsteps/5)
 tsample = floor(tsteps/samples)
 dt = te/tsteps
@@ -81,7 +117,7 @@ tArray = np.zeros(tsteps,dtype=np.float)
 
 pos = np.zeros((nq,3),dtype=np.float)
 vel = np.zeros((nq,3),dtype=np.float)
-Fe = np.zeros((nq,3),dtype=np.float)
+Ee = np.zeros((nq,3),dtype=np.float)
 
 vtk_writer = pt.VTK_XML_Serial_Unstructured()
 results = []
@@ -89,6 +125,7 @@ results = []
 foldername = mkDataDir(ndim,"D_",nq,"p_",te,"s_",tsteps,"k")
 
 pos = randPos(pos,ndim)
+print(pos)
 #pos = np.array([[1.,0.],[0.,0.]])
 
 for ts in range(0,tsteps):
@@ -97,7 +134,12 @@ for ts in range(0,tsteps):
         for pjj in range(0,nq):
             if pii==pjj:
                 continue
-            Fe[pii,:] = Fe[pii,:] + coulomb(1,1,pos[pii,:],pos[pjj,:])
+            Ee[pii,:] = Ee[pii,:] + coulomb(1,pos[pii,:],pos[pjj,:])
+            
+        Ee[pii,:] = Ee[pii,:] + eFieldCont(pos[pii,:],
+                                           ftype="sPenning",
+                                           boost=50)
+        Fe = Ee*1
         
         Fe = Fe*q0**2
         a = Fe[pii,:]/mp
