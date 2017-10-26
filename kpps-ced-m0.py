@@ -32,13 +32,11 @@ def coulomb(q2,pos1,pos2):
     rUnit = rpos/r
     
     Ec = 1/(4*pi*ep0) * q2/r**2 * rUnit
-    
     return Ec
 
 def eFieldCont(pos,**kwargs):
     Ef = np.zeros(3, dtype=np.float)
     boost = 1
-    saddle = 0
     eftype = "sPenning"
     
     if "ftype" in kwargs:
@@ -48,8 +46,7 @@ def eFieldCont(pos,**kwargs):
         boost = kwargs["boost"]
     
     if eftype == "sPenning":
-        if fabs(pos[0]) > saddle:
-            Ef[0] = -pos[0] * boost
+        Ef[0] = -pos[0] * boost
     elif eftype == "custom":
         if "F" in kwargs:
             customF = kwargs["F"]
@@ -105,7 +102,7 @@ def writePData(foldername,tstep,tsteps,positionArray):
 ## Problem variables
 #mp = 1.67262189821*10**(-27)
 mp = 2000
-nq = 1
+nq = 10
 ndim = 2
 
 te = 20
@@ -113,7 +110,8 @@ tsteps = 2000
 samples = floor(tsteps/5)
 tsample = floor(tsteps/samples)
 dt = te/tsteps
-tArray = np.zeros(tsteps,dtype=np.float)
+tArray = np.zeros(tsteps+1,dtype=np.float)
+xArray = np.zeros((tsteps+1,nq),dtype=np.float)
 
 pos = np.zeros((nq,3),dtype=np.float)
 vel = np.zeros((nq,3),dtype=np.float)
@@ -128,9 +126,39 @@ pos = randPos(pos,ndim)
 print(pos)
 #pos = np.array([[1.,0.],[0.,0.]])
 
-for ts in range(0,tsteps):
+
+## Acceleration and velocity initialisation
+#Update acceleration
+for pii in range(0,nq):
+    #Initialise acceleration (at n=0)
+    for pjj in range(0,nq):
+        if pii==pjj:
+            continue
+        Ee[pii,:] = Ee[pii,:] + coulomb(1,pos[pii,:],pos[pjj,:])
+        
+    Ee[pii,:] = Ee[pii,:] + eFieldCont(pos[pii,:],
+                                       ftype="sPenning",
+                                       boost=5000)
+    Fe = Ee*1
+    
+    Fe = Fe*q0**2
+    a = Fe[pii,:]/mp
+    
+    #Initialise velocity (at n=1/2)
+    vel[pii,:] = vel[pii,:] + dt/2*a
+
+
+## Main time loop
+for ts in range(1,tsteps+1):
     tArray[ts] = dt*ts
+    Ee = np.zeros((nq,3),dtype=np.float)
     for pii in range(0,nq):
+        xArray[ts,pii] = pos[pii,0]
+        
+        #Update position
+        pos[pii,:] = pos[pii,:] + dt*vel[pii,:]
+        
+        #Update acceleration
         for pjj in range(0,nq):
             if pii==pjj:
                 continue
@@ -138,15 +166,19 @@ for ts in range(0,tsteps):
             
         Ee[pii,:] = Ee[pii,:] + eFieldCont(pos[pii,:],
                                            ftype="sPenning",
-                                           boost=50)
+                                           boost=5000)
         Fe = Ee*1
         
         Fe = Fe*q0**2
         a = Fe[pii,:]/mp
 
-        vel[pii,:] = vel[pii,:] + dt*a
-        pos[pii,:] = pos[pii,:] + dt*vel[pii,:]
         
+        vel[pii,:] = vel[pii,:] + dt*a    #Update velocity
+
+  
     if ts % tsample == 0 or ts == (tsteps-1):
         writePData(foldername,ts,tsteps,pos)
 
+
+plt.plot(tArray,xArray)
+plt.axis([0,20,-2,2])
