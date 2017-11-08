@@ -73,23 +73,10 @@ for ts in range(1,tsteps+1):
     E = eField(pos,ftype="sPenning",boost=5000)
     B = bField(pos,magnitude=500)
     
-    """
+
     update = boris(pos,vel,E,B,dt,mp)
     vel = update['vel']
     pos = update['pos']
-    """
-    for pii in range(0,nq):
-        vMinus = vel[pii,:] + k*E[pii,:]
-        t = k*B[pii,:]
-        tMag = np.linalg.norm(t)
-        vDash = vMinus + np.cross(vMinus,t)
-        vPlus = vMinus + np.cross(2/(1+tMag**2)*vDash,t)
-        
-        vel[pii,:] = vPlus + k*E[pii,:]
-
-    pos = pos + dt*vel
-    
-    
     
     xArray[ts,:] = pos[:,0]
     yArray[ts,:] = pos[:,1]
