@@ -14,18 +14,28 @@ ep0 = 1
 q0 = 1
 
 
-## Methods
-def coulomb(q2,pos1,pos2):
-    # Returns the electric field contribution on particle 1 w.r.t. particle 2,
-    # where the charge of particle 2 'q2' is given in units of the elementary
-    # charge q0 (i.e. actual charge = q2*q0).
+## Electric Field Methods
+def eField(species,**kwargs):
+    try:
+        pos = species.pos
+    except AttributeError:
+        print("Input species object has no position array named 'pos'.")
     
-    rpos = pos1-pos2
-    r = sqrt(fsum(rpos**2))
-    rUnit = rpos/r
+    nq = len(pos)
+    E = np.zeros((nq,3),dtype=np.float)
     
-    Ec = 1/(4*pi*ep0) * q2/r**2 * rUnit
-    return Ec
+    for pii in range(0,nq):
+        for pjj in range(0,nq):
+            if pii==pjj:
+                continue
+            E[pii,:] = E[pii,:] + coulomb(1,pos[pii,:],pos[pjj,:])
+            
+        E[pii,:] = E[pii,:] + eFieldSet(pos[pii,:],**kwargs)
+   
+    species.E = E
+    return E
+
+
 
 def eFieldSet(pos,**kwargs):
     Ef = np.zeros(3, dtype=np.float)
@@ -48,23 +58,32 @@ def eFieldSet(pos,**kwargs):
     return Ef
 
 
-def eField(pos,**kwargs):
-    nq = len(pos)
-    Ee = np.zeros((nq,3),dtype=np.float)
-    for pii in range(0,nq):
-        for pjj in range(0,nq):
-            if pii==pjj:
-                continue
-            Ee[pii,:] = Ee[pii,:] + coulomb(1,pos[pii,:],pos[pjj,:])
-            
-        Ee[pii,:] = Ee[pii,:] + eFieldSet(pos[pii,:],**kwargs)
-   
-    return Ee
+def coulomb(q2,pos1,pos2):
+    """
+    Returns the electric field contribution on particle 1 w.r.t. particle 2,
+    where the charge of particle 2 'q2' is given in units of the elementary
+    charge q0 (i.e. actual charge = q2*q0).
+    """
+    
+    rpos = pos1-pos2
+    r = sqrt(fsum(rpos**2))
+    rUnit = rpos/r
+    
+    Ec = 1/(4*pi*ep0) * q2/r**2 * rUnit
+    return Ec
 
 
-def bField(pos,**kwargs):
+
+## Magnetic field methods
+def bField(species,**kwargs):
+    try:
+        pos = species.pos
+    except AttributeError:
+        print("Input object has no position array named 'pos'.")
+        
     nq = len(pos)
     B = np.zeros((nq,3),dtype=np.float)
+    
     if "magnitude" in kwargs:
         bMag = kwargs["magnitude"]
     else:
@@ -73,47 +92,48 @@ def bField(pos,**kwargs):
     for pii in range(0,nq):
         B[pii,0] = bMag 
         
-    return B
-
-def boris(pos,vel,E,B,dt,mp):
-    nq = len(pos)
-    k = dt*nq/(2*mp)
-    t = k*B
+    species.B = B
     
+    return species
+
+
+## Time integration methods
+def boris(species, simulationParameters):
+    nq = len(species.pos)
+    k = simulationParameters.dt * species.nq /(2*species.mq)
+    vPlus = np.zeros((nq,3),dtype=np.float)
+    
+    t = k*species.B
+    vMinus = species.vel + k*species.E
     for pii in range(0,nq):
-        vMinus = vel[pii,:] + k*E[pii,:]
         tMag = np.linalg.norm(t[pii,:])
-        vDash = vMinus + np.cross(vMinus,t[pii,:])
-        vPlus = vMinus + np.cross(2/(1+tMag**2)*vDash,t[pii,:])
+        vDash = vMinus[pii,:] + np.cross(vMinus[pii,:],t[pii,:])
+        vPlus[pii,:] = vMinus[pii,:] + np.cross(2/(1+tMag**2)*vDash,t[pii,:])
     
-        vel[pii,:] = vPlus + k*E[pii,:]
+    species.vel = vPlus + k*species.E
+    species.pos = species.pos + simulationParameters.dt * species.vel
     
-    pos = pos + dt*vel
-    
-    update = dict([('pos',pos),('vel',vel)])
-    return update
+    return species
 
     
-def qAccel(E,pos,**kwargs):
-    # Calculates acceleration for a charged particle as a function of position,
-    # for a given electric field at the particle position returned by function
-    # 'E'.
+def qAccel(species,**kwargs):
+    """
+    Calculates acceleration for a charged particle as a function of position,
+    for a given electric field at the particle position returned by function
+    'E'.
+    """
     
-    q1 = 1 #particle charge as multiple of elementary charge q0.
+    species.F = species.E * species.q
+    species.F = species.F * (species.q0)**2
+    a = species.F/species.mq
     
-    Ee = E(pos,**kwargs)
-           
-    Fe = Ee*q1
-    
-    Fe = Fe*q0**2
-    a = Fe/mp
-    
-    return a
+    return [a, species]
     
     
-def randPos(pos,ndim):
+## Other methods
+def randPos(species,ndim):
     for nd in range(0,ndim):
-        for xi in range(0,len(pos)):
-            pos[xi,nd] = rand.random()
+        for xi in range(0,len(species.pos)):
+            species.pos[xi,nd] = rand.random()
     
-    return pos
+    return species
