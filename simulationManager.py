@@ -10,9 +10,6 @@ class simulationManager:
     tSteps = 100
     dt = tEnd/tSteps
     
-    ndim = 3
-    
-    
     ## Main Methods
     def __init__(self,**kwargs):
         if 'tEnd' in kwargs and 'tSteps' in kwargs:
@@ -38,9 +35,6 @@ class simulationManager:
         self.tArray = []
         self.tArray.append(self.t)
         
-        if 'dimensions' in kwargs:
-            self.ndim = kwargs['dimensions']
-            
         
     def updateTime(self):
         if self.t < self.tEnd:

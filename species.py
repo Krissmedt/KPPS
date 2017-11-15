@@ -2,7 +2,7 @@
 
 ## Dependencies
 import numpy as np
-from math import exp, sqrt, floor, fabs, fsum, pi, e
+from math import pi
 
 ## Class
 class species:
@@ -10,7 +10,9 @@ class species:
     nq = 1
     q = 1
     mq = 1
-     
+    
+    qtype = 'custom'
+    
     ## Physical constants
     mu0 = 1
     ep0 = 1
@@ -25,13 +27,15 @@ class species:
         if 'mq' in kwargs:
             self.mq = kwargs['mq']
             
-        if 'qtype' in kwargs and kwargs['qtype'] == "proton":
-            self.q = 1
-            self.mq = 1836.152672197
-            
-        if 'qtype' in kwargs and kwargs['qtype'] == "electron":
-            self.q = -1
-            self.mq = 1
+        if 'qtype' in kwargs:
+            if kwargs['qtype'] == "proton":
+                self.qtype = 'proton'
+                self.q = 1
+                self.mq = 1836.152672197
+            elif kwargs['qtype'] == "electron":
+                self.qtype = 'electron'
+                self.q = -1
+                self.mq = 1
         
         
         self.E = np.zeros((self.nq,3),dtype=np.float) 

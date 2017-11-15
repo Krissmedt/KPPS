@@ -28,7 +28,7 @@ def eField(species,**kwargs):
         for pjj in range(0,nq):
             if pii==pjj:
                 continue
-            E[pii,:] = E[pii,:] + coulomb(1,pos[pii,:],pos[pjj,:])
+            E[pii,:] = E[pii,:] + coulomb(species.q,pos[pii,:],pos[pjj,:])
             
         E[pii,:] = E[pii,:] + eFieldSet(pos[pii,:],**kwargs)
    
@@ -76,23 +76,19 @@ def coulomb(q2,pos1,pos2):
 
 ## Magnetic field methods
 def bField(species,**kwargs):
-    try:
-        pos = species.pos
-    except AttributeError:
-        print("Input object has no position array named 'pos'.")
-        
-    nq = len(pos)
-    B = np.zeros((nq,3),dtype=np.float)
+    species.B = np.array(species.B)
     
     if "magnitude" in kwargs:
         bMag = kwargs["magnitude"]
     else:
-        bMag = 5000
-        
-    for pii in range(0,nq):
-        B[pii,0] = bMag 
-        
-    species.B = B
+        bMag = 1
+    
+    if "uniform" in kwargs:
+        try:
+            species.B[:,0:] = np.multiply(bMag,kwargs["uniform"])
+        except TypeError:
+            print("TypeError raised, did you input a length 3 vector to define"
+                  + " the uniform magnetic field?")
     
     return species
 
