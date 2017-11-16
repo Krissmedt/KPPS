@@ -2,6 +2,7 @@
 
 ## Dependencies
 import random as rand
+import numpy as np
 
 ## Class
 class caseHandler:
@@ -19,12 +20,14 @@ class caseHandler:
     
     def setupExplicit(self,species,**kwargs):
         if 'positions' in kwargs:
-            nPos = len(kwargs['positions'])
-            if nPos == species.nq:
-                species.pos = kwargs['positions']
+            posInput = np.array(kwargs['positions'])
+            nPos = posInput.size / 3
+            nPos = int(nPos)
+            if nPos <= species.nq:
+                species.pos[:nPos,:] = posInput
                 
         if 'velocities' in kwargs:
-            velInput = kwargs['velocities']
+            velInput = np.array(kwargs['velocities'])
             nVel = velInput.size / 3
             nVel = int(nVel)
             if nVel <= species.nq:

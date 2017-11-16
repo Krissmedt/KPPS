@@ -9,6 +9,7 @@ from math import floor
 class dataHandler:
     writeEvery = 1
     recordEvery = 1
+    recordIndex = 0
     dataFoldername = "./"
     runOps = []
     plotOps = []
@@ -70,11 +71,11 @@ class dataHandler:
         
     def recordData(self,species,simulationManager):
         if simulationManager.ts % self.recordEvery == 0:
-            self.tArray[simulationManager.ts] = simulationManager.t
-            self.xArray[simulationManager.ts,:] = species.pos[:,0]
-            self.yArray[simulationManager.ts,:] = species.pos[:,1]
-            self.zArray[simulationManager.ts,:] = species.pos[:,2]
-        
+            self.tArray[self.recordIndex] = simulationManager.t
+            self.xArray[self.recordIndex,:] = species.pos[:,0]
+            self.yArray[self.recordIndex,:] = species.pos[:,1]
+            self.zArray[self.recordIndex,:] = species.pos[:,2]
+            self.recordIndex += 1
     
     def xyzPlot(self,**plotSettings):
         figureNo = 0
@@ -108,11 +109,13 @@ class dataHandler:
                            str(simulationManager.tSteps) + 'k']
                 
                 self.dataFoldername += delimiter.join(entries)
-                
+            
+            self.mkDataDir()
+            
         if 'sampleRate' in kwargs:
             self.sampleRate = kwargs['sampleRate']
             
-        self.mkDataDir()
+
         
         
     def writeData(self,species,simulationManager):

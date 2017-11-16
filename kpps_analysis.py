@@ -66,16 +66,13 @@ class kpps_analysis:
     ## Electric field methods
     def eField(self,species,**kwargs):
         k = 1
-        eftype = "sPenning"
-        if "ftype" in self.electricFieldInput:
-            eftype = self.electricFieldInput["ftype"]
-        
         if "magnitude" in self.electricFieldInput:
             k = self.electricFieldInput["magnitude"]
-        
-        if eftype == "sPenning":
-            species.E[:,2] += -species.pos[:,2] * k
-                
+            
+        if "sPenning" in self.electricFieldInput:
+            direction = self.electricFieldInput['sPenning']
+            species.E += - species.pos * direction * k
+
         return species
 
 
