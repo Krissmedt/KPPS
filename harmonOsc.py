@@ -17,8 +17,8 @@ k = pi**2
 x0 = 1
 w = sqrt(k/m)
 
-dt = 1 *2/w
-te = 100
+dt = 0.1 *2/w
+te = 10
 tsteps = floor(te/dt)
 
 t = np.zeros((tsteps,1),dtype=np.float)
@@ -27,7 +27,6 @@ v = np.zeros(4,dtype=np.float)
 a = np.zeros(4,dtype=np.float)
 
 x[0,0:4] = x0
-
 
 a[2] = -k/m * x[0,2]
 v[2] = v[2] + a[2]*dt
@@ -40,9 +39,9 @@ for ti in range(1,tsteps):
     x[ti,0] = x0*cos(w*t[ti])
 
     #Forward Euler
+    x[ti,1] = x[ti-1,1] + dt*v[1]
     a[1] = -k/m * x[ti-1,1]
     v[1] = v[1] + dt*a[1]
-    x[ti,1] = x[ti-1,1] + dt*v[1]
     
     #Leapfrog 1
     x[ti,2] = x[ti-1,2] + v[2]*dt

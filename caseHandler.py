@@ -25,6 +25,11 @@ class caseHandler:
             nPos = int(nPos)
             if nPos <= species.nq:
                 species.pos[:nPos,:] = posInput
+            elif nPos > species.nq:
+                print("More positions than particles specified, ignoring excess entries.")
+                species.pos = posInput[:species.nq,:]
+                
+                
                 
         if 'velocities' in kwargs:
             velInput = np.array(kwargs['velocities'])
@@ -32,6 +37,9 @@ class caseHandler:
             nVel = int(nVel)
             if nVel <= species.nq:
                 species.vel[:nVel,:] = velInput
+            elif nVel > species.nq:
+                print("More velocities than particles specified, ignoring excess entries.")
+                species.vel = velInput[:species.nq,:]
                 
         return species
                 

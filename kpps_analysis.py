@@ -70,8 +70,13 @@ class kpps_analysis:
             k = self.electricFieldInput["magnitude"]
             
         if "sPenning" in self.electricFieldInput:
-            direction = self.electricFieldInput['sPenning']
+            direction = np.array(self.electricFieldInput['sPenning'])
             species.E += - species.pos * direction * k
+        elif "general" in self.electricFieldInput:
+            inputMatrix = np.array(self.electricFieldInput['general'])
+            for pii in range(0,species.nq):
+                direction = np.dot(inputMatrix,species.pos[pii,:])
+                species.E[pii,:] += direction * k
 
         return species
 
@@ -125,8 +130,9 @@ class kpps_analysis:
             bMag = 1
         
         if "uniform" in settings:
+            direction = np.array(settings["uniform"])
             try:
-                species.B[:,0:] = np.multiply(bMag,settings["uniform"])
+                species.B[:,0:] = np.multiply(bMag,direction)
             except TypeError:
                 print("TypeError raised, did you input a length 3 vector "
                       + "to define the uniform magnetic field?")

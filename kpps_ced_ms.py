@@ -56,7 +56,8 @@ class kpps:
             analyser.magnetic(particles)
             analyser.timeIntegrator(particles,sim)
             dHandler.run(particles,sim)
-        
+
+
         ## Plot position results singularly
         dHandler.plot()
 
