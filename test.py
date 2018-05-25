@@ -1,25 +1,23 @@
-class test:
-    methods = []
-    def __init__(self):
-        self.methods = [self.method1,self.method2,self.method3]
-    
-    def method1(self,x):
-        x += 1
-        return x
-    
-    def method2(self,x):
-        x += 2
-        return x
-    
-    def method3(self,x):
-        x += 3
-        return x
-    
-    def run(self,x):
-        for method in self.methods:
-            x = method(x)
-    
-        return x
-    
-test1 = test()
-print(test1.run(1))
+from kpps_ced_ms import kpps
+
+
+model = dict(
+simSettings = {'ndim':3,'tEnd':10,'tSteps':100},
+
+speciesSettings = {'nq':1,'qtype':'proton'},
+
+caseSettings = {'distribution':{'random':''},
+                'explicitSetup':{'velocities':[0.,1.,0.]}},
+
+analysisSettings = {'electricField':{'ftype':'sPenning', 'magnitude':1000},
+                    'interactionModelling':'intra',
+                    'magneticField':{'uniform':[0,0,1], 'magnitude':1000},
+                    'timeIntegration':'boris'},
+
+dataSettings = {'write':{'sampleRate':1,'foldername':'simple'},
+                'record':{'sampleRate':1},
+                'plot':{'tPlot':'xyz','sPlot':''}})
+
+
+kpps = kpps(**model)
+kpps.run()

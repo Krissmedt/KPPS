@@ -2,7 +2,6 @@
 """
 Coulomb electrodynamic, magnetostatic 'ced-ms': LINUX
 """
-
 ## Dependencies
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,41 +11,54 @@ from dataHandler import dataHandler
 from caseHandler import caseHandler
 from kpps_analysis import kpps_analysis
 
-## Simulation settings
-simSettings = {'ndim':3,'tEnd':10,'tSteps':100}
-speciesSettings = {'nq':1,'qtype':'proton'}
-caseSettings = {'distribution':{'random':''},
-                'explicitSetup':{'velocities':np.array([0.,1.,0.])}}
+class kpps:
+    simSettings = {}
+    speciesSettings = {}
+    caseSettings = {}
+    
+    eFieldSettings = {}
+    bFieldSettings = {}
+    analysisSettings = {}
+    
+    dataSettings = {}
+    
+    def __init__(self,**kwargs):
+        if 'simSettings' in kwargs:
+            self.simSettings = kwargs['simSettings']
+            
+        if 'speciesSettings' in kwargs:
+            self.speciesSettings = kwargs['speciesSettings']
+            
+        if 'caseSettings' in kwargs:
+            self.caseSettings = kwargs['caseSettings']
+            
+        if 'analysisSettings' in kwargs:
+            self.analysisSettings = kwargs['analysisSettings']
+            
+        if 'dataSettings' in kwargs:
+            self.dataSettings = kwargs['dataSettings']
 
-eFieldSettings = {'ftype':'sPenning', 'magnitude':1000}
-bFieldSettings = {'uniform':[0,0,1], 'magnitude':1000}
-analysisSettings = {'electricField':eFieldSettings,
-                    'interactionModelling':'intra',
-                    'magneticField':bFieldSettings,
-                    'timeIntegration':'boris'}
 
-dataSettings = {'write':{'sampleRate':1,'foldername':'simple'},
-                'record':{'sampleRate':1},
-                'plot':{'tPlot':'xyz','sPlot':''}}
+    def run(self):
+        ## Load required modules
+        particles = species(**self.speciesSettings)
+        sim = simulationManager(**self.simSettings)
+        case = caseHandler(particles,**self.caseSettings)
+        analyser = kpps_analysis(**self.analysisSettings)
+        dHandler = dataHandler(particles,sim,case,**self.dataSettings)
+        
+        
+        ## Main time loop
+        dHandler.run(particles,sim)
+        for ts in range(1,sim.tSteps+1):
+            sim.updateTime()
+            analyser.electric(particles)
+            analyser.magnetic(particles)
+            analyser.timeIntegrator(particles,sim)
+            dHandler.run(particles,sim)
 
 
-## Load required modules
-particles = species(**speciesSettings)
-sim = simulationManager(**simSettings)
-case = caseHandler(particles,**caseSettings)
-analyser = kpps_analysis(**analysisSettings)
-dHandler = dataHandler(particles,sim,case,**dataSettings)
+        ## Plot position results singularly
+        dHandler.plot()
 
-
-## Main time loop
-dHandler.run(particles,sim)
-for ts in range(1,sim.tSteps+1):
-    sim.updateTime()
-    analyser.electric(particles)
-    analyser.magnetic(particles)
-    analyser.timeIntegrator(particles,sim)
-    dHandler.run(particles,sim)
-
-## Plot position results singularly
-dHandler.plot()
-print(dHandler.tArray)
+        return dHandler
