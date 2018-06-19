@@ -52,11 +52,9 @@ class kpps:
         dHandler.run(particles,sim)
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
-            analyser.electric(particles)
-            analyser.magnetic(particles)
-            analyser.timeIntegrator(particles,sim)
+            analyser.fieldIntegrator(particles)
+            analyser.particleIntegrator(particles,sim)
             dHandler.run(particles,sim)
-
 
         ## Plot position results singularly
         dHandler.plot()

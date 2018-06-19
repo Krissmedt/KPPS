@@ -3,6 +3,7 @@ import vtk_writer as vtk_writer
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 ## Class ##
 class dataHandler:
@@ -13,6 +14,7 @@ class dataHandler:
     runOps = []
     plotOps = []
     writer = vtk_writer.VTK_XML_Serial_Unstructured()
+    figureNo = 0
     
     def __init__(self, species, simulationManager, caseHandler, **kwargs):
         if 'write' in kwargs:
@@ -30,6 +32,15 @@ class dataHandler:
         if 'plot' in kwargs:
             self.plotSettings = kwargs['plot']
             self.plotOps.append(self.xyzPlot)
+            
+        if 'single_trajectory_plot' in kwargs:
+            self.trajectorySettings = kwargs[ 'single_trajectory_plot']
+            self.plotOps.append(self.trajectoryPlot)
+            
+            
+        self.xParticle = []
+        self.yParticle = []
+        self.zParticle = []
                     
 
     def run(self,species,simulationManager):
@@ -74,12 +85,11 @@ class dataHandler:
             self.zArray.append(species.pos[:,2])
     
     def xyzPlot(self,**plotSettings):
-        figureNo = 0
         if 'tPlot' in self.plotSettings:
             for char in self.plotSettings['tPlot']:
-                figureNo += 1
+                self.figureNo += 1
                 if char == 'x':
-                    fig = plt.figure(figureNo)
+                    fig = plt.figure(self.figureNo)
                     ax = fig.add_subplot(1, 1, 1)
                     ax.plot(self.tArray,self.xArray)
                     ax.set_xscale('linear')
@@ -88,7 +98,7 @@ class dataHandler:
                     ax.set_ylabel('$x$')
                     
                 elif char == 'y':
-                    fig = plt.figure(figureNo)
+                    fig = plt.figure(self.figureNo)
                     ax = fig.add_subplot(1, 1, 1)
                     ax.plot(self.tArray,self.yArray)
                     ax.set_xscale('linear')
@@ -97,7 +107,7 @@ class dataHandler:
                     ax.set_ylabel('$y$')
                     
                 elif char == 'z':
-                    fig = plt.figure(figureNo)
+                    fig = plt.figure(self.figureNo)
                     ax = fig.add_subplot(1, 1, 1)
                     ax.plot(self.tArray,self.zArray)
                     ax.set_xscale('linear')
@@ -106,10 +116,41 @@ class dataHandler:
                     ax.set_ylabel('$z$')
                     
         if 'sPlot' in self.plotSettings:
-            figureNo += 1
-            plt.figure(figureNo)
+            self.figureNo += 1
+            plt.figure(self.figureNo)
             plt.plot(self.xArray,self.yArray)
+            
+            
+    def trajectoryPlot(self,**trajectorySettings):
+        self.figureNo += 1
         
+        if 'particle' in trajectorySettings:
+            pii = trajectorySettings['particle'] - 1
+        else:
+            pii = 0
+            
+        if 'limits' in trajectorySettings:
+            limits = np.array(trajectorySettings['limits'],dtype=np.float)
+        else:
+            limits = np.array([20,20,15],dtype=np.float)
+        
+        tsteps = len(self.xArray)
+        for ts in range(0,tsteps):
+            self.xParticle.append(self.xArray[ts][pii])
+            self.yParticle.append(self.yArray[ts][pii])
+            self.zParticle.append(self.zArray[ts][pii])
+            
+        self.xParticle = np.array(self.xParticle,dtype=np.float)
+        self.yParticle = np.array(self.yParticle,dtype=np.float)
+        self.zParticle = np.array(self.zParticle,dtype=np.float)
+        
+        fig = plt.figure(self.figureNo)
+        ax = fig.gca(projection='3d')
+        ax.plot3D(self.xParticle, self.yParticle, zs=self.zParticle)
+        ax.set_xlim([-limits[0], limits[0]])
+        ax.set_ylim([-limits[1], limits[1]])
+        ax.set_zlim([-limits[2], limits[2]])
+            
     
     def writeSetup(self,species,simulationManager,caseHandler,**kwargs):
         if 'foldername' in kwargs:
