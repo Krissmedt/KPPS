@@ -17,7 +17,7 @@ class kpps_analysis:
         # Load required particle integration methods
         self.particleIntegration = []
         if 'particleIntegration' in kwargs:
-            if kwargs['particleIntegration'] == 'boris':
+            if kwargs['particleIntegration'] == 'boris_staggered':
                 self.particleIntegration.append(self.boris)
                 
             if kwargs['particleIntegration'] == 'boris_synced':
@@ -169,43 +169,50 @@ class kpps_analysis:
     
     
     ## Time-integration methods
-    def boris(self, species, simulationParameters):
-        nq = len(species.pos)
-        k = simulationParameters.dt * species.nq/(2*species.mq)
-        vPlus = np.zeros((nq,3),dtype=np.float)
-
-        self.fieldGather(species)
+    def boris(self, vel, E, B, dt, alpha, ck=0):
+        """
+            Applies Boris' trick for given velocity, electric and magnetic 
+            field for vector data in the shape (N x 3), i.e. particles as rows 
+            and x,y,z components for the vector as the columns.
+            k = delta_t * alpha / 2
+        """ 
         
-        tau = k*species.B
-        vMinus = species.vel + k*species.E
+        k = dt*alpha/2
+        
+        tau = k*B
+        vMinus = vel + dt/2 * (alpha*E + ck)
         tauMag = np.linalg.norm(tau,axis=1)
         vDash = vMinus + np.cross(vMinus,tau)
         vPlus = vMinus + np.cross(2/(1+tauMag**2)*vDash,tau)
+        vel_new = vPlus + dt/2 * (alpha*E + ck)
+        return vel_new
+    
+    
+    def boris_staggered(self, species, simulationParameters):
+        dt = simulationParameters.dt
+        alpha = species.nq/species.mq
+
+        self.fieldGather(species)
         
-        species.vel = vPlus + k*species.E
+        species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
         species.pos = species.pos + simulationParameters.dt * species.vel
         return species
     
     
     def boris_synced(self, species, simulationParameters):
         dt = simulationParameters.dt
-        k = dt * species.nq/(2*species.mq)
+        alpha = species.nq/species.mq
 
         species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species))
+        
         E_old = species.E
         self.fieldGather(species)
         E_new = species.E
         
         E_half = (E_old+E_new)/2
-        vMinus = species.vel + k*E_half
-
-        t = k*species.B
-        tmag = np.linalg.norm(t)
-        s = 2*t/(1+tmag**2)
-        vDash = vMinus + np.cross(vMinus,t)
-        vPlus = vMinus + np.cross(vDash,s)
-        species.vel = vPlus + k*E_half
-
+        
+        species.vel = self.boris(species.vel,E_half,species.B,dt,alpha)
+        
         return species
     
     
