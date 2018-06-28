@@ -17,7 +17,7 @@ bMag = omegaB/alpha
 eMag = -epsilon*omegaE**2/alpha
 eTransform = np.array([[1,0,0],[0,1,0],[0,0,-2]])
 
-tEnd = 8
+tEnd = 16
 #tEnd = 16.0
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.01,0.005,0.0025,0.00125])
@@ -70,14 +70,22 @@ for ts in range(0,tsteps):
     #print(k*B)
     t += dt[-1]
 
-## Numerical solution ##
-x0 = [10,0,0]
-v0 = [100,0,100]
-    
+## Numerical solution ##    
 for i in range(0,len(dt)):
+    xMod = Rplus*cos(omegaPlus*dt[i]) + Rminus*cos(omegaMinus*dt[i]) + Iplus*sin(omegaPlus*dt[i]) + Iminus*sin(omegaMinus*dt[i])
+    yMod = Iplus*cos(omegaPlus*dt[i]) + Iminus*cos(omegaMinus*dt[i]) - Rplus*sin(omegaPlus*dt[i]) - Rminus*sin(omegaMinus*dt[i])
+    zMod = x0[2] * cos(omegaTilde * dt[i]) + v0[2]/omegaTilde * sin(omegaTilde*dt[i])
+    
+    
+    v_half_dt = [(xMod-x0[0])/(dt[i]),(yMod-x0[1])/(dt[i]),(zMod-x0[2])/(dt[i])]
+
+    xOne = [xMod,yMod,zMod]
+    vHalf = v_half_dt
+    
+    
     finalTs = floor(tEnd/dt[i])
     model = dict(
-            simSettings = {'tEnd':tEnd,'dt':dt[i]},
+            simSettings = {'t0':0,'tEnd':tEnd,'dt':dt[i]},
         
             speciesSettings = {'nq':nq,'mq':mq,'q':q},
             
@@ -86,9 +94,9 @@ for i in range(0,len(dt)):
             
             analysisSettings = {'imposedElectricField':{'general':eTransform, 'magnitude':eMag},
                                 'imposedMagneticField':{'uniform':[0,0,1], 'magnitude':bMag},
-                                'particleIntegration':'boris_SDC',
-                                'M':4,
-                                'K':4},
+                                'particleIntegration':'boris_synced',
+                                'M':3,
+                                'K':3},
             
             dataSettings = {#'write':{'sampleRate':1,'foldername':'simple'},
                             'record':{'sampleRate':1}
@@ -137,6 +145,7 @@ orderTwo = np.zeros(len(dt),dtype=np.float)
 for i in range(0,len(dt)):
     orderOne[i] = a*(dt[i]/dt[-1])
     orderTwo[i] = a*(dt[i]/dt[-1])**2
+
 
 fig = plt.figure(2)
 ax = fig.gca(projection='3d')

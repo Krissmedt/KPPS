@@ -37,10 +37,6 @@ class dataHandler:
             self.trajectorySettings = kwargs[ 'single_trajectory_plot']
             self.plotOps.append(self.trajectoryPlot)
             
-            
-        self.xParticle = []
-        self.yParticle = []
-        self.zParticle = []
                     
 
     def run(self,species,simulationManager):
@@ -133,6 +129,10 @@ class dataHandler:
             limits = np.array(trajectorySettings['limits'],dtype=np.float)
         else:
             limits = np.array([20,20,15],dtype=np.float)
+        
+        self.xParticle = []
+        self.yParticle = []
+        self.zParticle = []
         
         tsteps = len(self.xArray)
         for ts in range(0,tsteps):

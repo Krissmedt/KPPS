@@ -188,17 +188,15 @@ class kpps_analysis:
     
     
     def boris_synced(self, species, simulationParameters):
-        nq = len(species.pos)
-        k = simulationParameters.dt * species.nq/(2*species.mq)
-        
-        self.fieldGather(species)
-        E = species.E
+        dt = simulationParameters.dt
+        k = dt * species.nq/(2*species.mq)
 
-        species.pos = species.pos + simulationParameters.dt * species.vel
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species))
+        E_old = species.E
         self.fieldGather(species)
-        En = species.E
+        E_new = species.E
         
-        E_half = (E+En)/2
+        E_half = (E_old+E_new)/2
         vMinus = species.vel + k*E_half
 
         t = k*species.B
@@ -295,18 +293,22 @@ class kpps_analysis:
         
         for k in range(0,K):
             for m in range(1,M):
-                
                 #Determine next node (m+1) positions
                 sumSX = 0
                 for l in range(1,m+1):
+                    #print(SX[m+1,l])
+                    #print(self.lorentzf(species,x[:,l],v[:,l]))
+                    #print(self.lorentzf(species,xn[:,l],vn[:,l]) - self.lorentzf(species,x[:,l],v[:,l]))
                     sumSX += SX[m+1,l]*(self.lorentzf(species,xn[:,l],vn[:,l]) - self.lorentzf(species,x[:,l],v[:,l]))
-                    
+                #print(sumSX)
                 
                 sumSQ = 0
                 for l in range(1,M+1):
                     sumSQ += SQ[m+1,l]*self.lorentzf(species,x[:,l],v[:,l])
                 
-                xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
+                #xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
+                
+                xn[:,m+1] = xn[:,m] + dm[m]*(v[:,m]) + sumSX + sumSQ
                 
                 
                 #Sample the electric field at the half-step positions
@@ -317,12 +319,15 @@ class kpps_analysis:
                 sumS = 0
                 for l in range(1,M+1):
                     sumS += coll.Smat[m+1,l] * self.lorentzf(species,x[:,l],v[:,l])
-                    
-                ck = -1/2 * (self.lorentzf(species,x[:,m+1],v[:,m+1])+self.lorentzf(species,x[:,m],v[:,m])) + 1/dm[m] * sumS
+                
+                
+                ck = -dm[m]/2 * (self.lorentzf(species,x[:,m+1],v[:,m+1])+self.lorentzf(species,x[:,m],v[:,m])) + sumS
+                
                 t_mag = species.a * self.gatherB(species,xn[:,m]) * simulationManager.dt/2
                 s_mag = 2*t_mag/(1+np.linalg.norm(t_mag)**2)
                 
-                vMinus = vn[:,m] + dm[m]/2 * (species.a * half_E + ck)
+
+                vMinus = vn[:,m] + dm[m]/2 * species.a * half_E + ck/2
                 
                 #Resort 3d to shape d/3 x 3 to define cross-product
                 vMinus = species.toMatrix(vMinus)
@@ -332,7 +337,7 @@ class kpps_analysis:
                 vPlus = vMinus + np.cross((vMinus + np.cross(vMinus,t_mag)),s_mag)
                 vPlus = species.toVector(vPlus)
                 
-                vn[:,m+1] = vPlus + dm[m]/2 * (species.a * half_E + ck)
+                vn[:,m+1] = vPlus + dm[m]/2 * species.a * half_E + ck/2
                 
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
@@ -370,6 +375,11 @@ class kpps_analysis:
         self.fieldGather(species)
         F = species.a*(species.E + np.cross(species.vel,species.B))
         F = species.toVector(F)
+        return F
+    
+    def lorentz_std(self,species):
+        self.fieldGather(species)
+        F = species.a*(species.E + np.cross(species.vel,species.B))
         return F
     
     def FXV(self,species,X,V):
