@@ -2,12 +2,13 @@
 import vtk_writer as vtk_writer
 import os
 import numpy as np
+import math as math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 ## Class ##
 class dataHandler:
-    def __init__(self, species, simulationManager, caseHandler, **kwargs):
+    def __init__(self, **kwargs):
         self.writeEvery = 1
         self.recordEvery = 1
         self.recordIndex = 0
@@ -17,7 +18,16 @@ class dataHandler:
         self.plotOps = []
         self.writer = vtk_writer.VTK_XML_Serial_Unstructured()
         self.figureNo = 0
-        self.label = simulationManager.simID
+        
+        if 'species_obj' in kwargs:
+            species = kwargs['species_obj']
+        
+        if 'caseHandler_obj' in kwargs:
+            caseHandler = kwargs['caseHandler_obj']
+            
+        if 'simManager_obj' in kwargs:
+            simulationManager = kwargs['simManager_obj']
+            self.label = simulationManager.simID
         
         if 'write' in kwargs:
             self.writeSetup(species,
@@ -31,7 +41,8 @@ class dataHandler:
             self.recordSetup(species,simulationManager, **kwargs['record'])
             self.runOps.append(self.recordData)
             self.postOps.append(self.convertToNumpy)
-                    
+            self.postOps.append(self.rhs_tally)
+            
         if 'plot' in kwargs:
             self.plotSettings = kwargs['plot']
             self.plotOps.append(self.xyzPlot)
@@ -40,15 +51,14 @@ class dataHandler:
             self.trajectorySettings = kwargs['trajectory_plot']
             self.plotOps.append(self.trajectoryPlot)
             
-                    
 
     def run(self,species,simulationManager):
         for method in self.runOps:
             method(species,simulationManager)
             
-    def post(self):
+    def post(self,species,simulationManager):
         for method in self.postOps:
-            method()    
+            method(species,simulationManager)    
 
     def plot(self):
         for method in self.plotOps:
@@ -73,9 +83,11 @@ class dataHandler:
     def recordSetup(self,species,simulationManager,**kwargs):
         ## NOTE: For small sampleRate compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
-        if 'sampleRate' in kwargs:
-            self.recordEvery = kwargs['sampleRate']
-          
+        if 'sampleInterval' in kwargs:
+            self.recordEvery = kwargs['sampleInterval']
+        elif 'sampleNo' in kwargs:
+            self.recordEvery = math.floor(simulationManager.tSteps/kwargs['sampleNo'])
+            
         self.tArray = []
         
         self.xArray = []
@@ -90,7 +102,7 @@ class dataHandler:
         
         
     def recordData(self,species,simulationManager):
-        ## NOTE: For small sampleRate compared to large number of time-steps,
+        ## NOTE: For small sampleInterval compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
         if simulationManager.ts % self.recordEvery == 0:
             self.tArray.append(simulationManager.t)
@@ -204,7 +216,7 @@ class dataHandler:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        ax.legend()
+
     
     def writeSetup(self,species,simulationManager,caseHandler,**kwargs):
         if 'foldername' in kwargs:
@@ -220,8 +232,10 @@ class dataHandler:
             
             self.mkDataDir()
             
-        if 'sampleRate' in kwargs:
-            self.writeEvery = kwargs['sampleRate']
+        if 'sampleInterval' in kwargs:
+            self.writeEvery = kwargs['sampleInterval']
+        elif 'sampleNo' in kwargs:
+            self.writeEvery = math.floor(simulationManager.tSteps/kwargs['sampleNo'])
             
 
         
@@ -236,9 +250,11 @@ class dataHandler:
             
             filename = self.dataFoldername + "/" + self.dataFoldername[2:]
             self.writer.writePVD(filename + ".pvd")
+    
+    def rhs_tally(self,species,simulationManager):
+        self.rhs_eval = simulationManager.rhs_dt * simulationManager.tSteps
             
-            
-    def convertToNumpy(self):
+    def convertToNumpy(self,*args):
         self.tArray = np.array(self.tArray)
         self.xArray = np.array(self.xArray)
         self.yArray = np.array(self.yArray)
@@ -248,3 +264,11 @@ class dataHandler:
         self.vzArray = np.array(self.vzArray)
         self.hArray = np.array(self.hArray)
         self.cmArray =  np.array(self.cmArray)
+        
+    def loadData(self,filename,variable):
+        """ Read data file and set the desired array attribute accordingly.
+            For preset data arrays, use variable = 'x','y','z','vx','vy',
+            'vz','cm' or 'h'. Input own variable name for custom variable."""
+            
+        array_name = variable + 'Array'
+        setattr(self,array_name,np.loadtxt(filename))

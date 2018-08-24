@@ -4,15 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-nq = 20
-
+nq = 2
 schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
 
-M = 3
-iterations = [3]
+M = 2
+iterations = [2]
 
-tEnd = 0.1
+tEnd = 20
 #tEnd = 16.0
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4])
@@ -27,7 +26,7 @@ partTraj = np.linspace(1,nq,nq,dtype=np.int)
 
 
 mq = 1.
-alpha = 1.
+alpha = 1
 q = alpha*mq
 
 omegaB = 25.0
@@ -75,7 +74,7 @@ for key, value in schemes.items():
                     
                     caseSettings = {'dimensions':3,
                                     'explicit':{'expType':'clouds','positions':x0,'velocities':v0},
-                                    'dx':5,'dv':dv},
+                                    'dx':dx,'dv':dv},
                     
                     analysisSettings = {'imposedElectricField':{'general':eTransform, 'magnitude':eMag},
                                         'interactionModelling':'intra',
@@ -85,7 +84,7 @@ for key, value in schemes.items():
                                         'K':K,
                                         'nodeType':key,
                                         'penningEnergy':H,
-                                        'centreMass':False,
+                                        'centreMass':True,
                                         'units':' '},
                     
                     dataSettings = {#'write':{'sampleRate':1,'foldername':'simple'},
@@ -97,11 +96,14 @@ for key, value in schemes.items():
             kppsObject = kpps(**model)
             data = kppsObject.run()
             data.convertToNumpy()
-            
+    
             if log == True:
-                filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + str(dt[i]) + "dt.txt"
-                np.savetxt(filename,data.cmArray)
-            
+                filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + str(dt[i]) + "dt.txt"              
+                np.savetxt('x_' + filename,data.xArray)
+                np.savetxt('y_' + filename,data.yArray)
+                np.savetxt('z_' + filename,data.zArray)
+                np.savetxt('h_' + filename,data.hArray)
+                np.savetxt('cm_' + filename,data.cmArray)
             
             label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
             label_traj = label_order + ", dt=" + str(dt[-1])

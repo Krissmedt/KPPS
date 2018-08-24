@@ -1,40 +1,76 @@
 #!/usr/bin/env python3
 
+"""
+For the following analysis class, the most important notation rule is that 
+'pos' and 'vel' variables refer to particle data stored as a Nx3 matrix where 
+'N' is the number of particles and thus each row represents a particle with
+the columns storing the x,y,z components for the variable for each particle.
+
+Conversely, 'x' and 'v' variables refer to particle data stored as a 1xd
+vector, with d=3N, so the x,y,z components of the particle variable occur in
+interchanging sequence like [1x,1y,1z,2x,2y,2z,...,Nx,Ny,Nz].
+"""
+
 ## Dependencies
 import numpy as np
 from math import sqrt, fsum, pi
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
+import time
 
 ## Class
 class kpps_analysis:
-    ## Physical constants
-    mu0 = 1
-    ep0 = 1
-    q0 = 1
-    
-    def __init__(self,**kwargs):
+    def __init__(self,simulationManager,**kwargs):
+        
+        # Initialise pre- and post-analysis lists
+        self.preAnalysis = []
+        self.postAnalysis = []
+        
         # Load required particle integration methods
         self.particleIntegration = []
         if 'particleIntegration' in kwargs:
             if kwargs['particleIntegration'] == 'boris_staggered':
-                self.particleIntegration.append(self.boris)
+                self.particleIntegration.append(self.boris_staggered)
+                simulationManager.rhs_dt = 1
                 
             if kwargs['particleIntegration'] == 'boris_synced':
                 self.particleIntegration.append(self.boris_synced)
+                simulationManager.rhs_dt = 1
                 
             if kwargs['particleIntegration'] == 'boris_SDC':
+                self.preAnalysis.append(self.collSetup)
                 self.particleIntegration.append(self.boris_SDC)
-        
-        if 'M' in kwargs:
-            self.M = kwargs['M']
-        else:
-            self.M = 1
-            
-        if 'K' in kwargs:
-            self.K = kwargs['K']
-        else: 
-            self.K = self.M
+
+                if 'M' in kwargs:
+                    self.M = kwargs['M']
+                else:
+                    self.M = 1
+                    
+                if 'K' in kwargs:
+                    self.K = kwargs['K']
+                else: 
+                    self.K = self.M
+
+                if 'nodeType' in kwargs:
+                    if kwargs['nodeType'] == 'lobatto':
+                        self.ssi = 1    #Set sweep-start-index 'ssi'
+                        self.collocationClass = CollGaussLobatto
+                        self.updateStep = self.lobatto_update
+                        simulationManager.rhs_dt = (self.M - 1)*self.K
+                        
+                    elif kwargs['nodeType'] == 'legendre':
+                        self.ssi = 0 
+                        self.collocationClass = CollGaussLegendre
+                        self.updateStep = self.legendre_update
+                        simulationManager.rhs_dt = (self.M + 1)*self.K
+                        
+                else:
+                    self.ssi = 1
+                    self.collocationClass = CollGaussLobatto
+                    self.updateStep = self.lobatto_update
+                    simulationManager.rhs_dt = (self.M - 1)*self.K
+
+                                
             
         # Load required field integration methods
         self.fieldIntegration = []
@@ -62,22 +98,36 @@ class kpps_analysis:
             self.imposedBParams = kwargs['imposedMagneticField']
         
         
+        # Load post-integration hook methods
+        self.hooks = []
+        if 'penningEnergy' in kwargs:
+            self.preAnalysis.append(self.energy_calc_penning)
+            self.hooks.append(self.energy_calc_penning)
+            self.H = kwargs['penningEnergy']
+            
+        if kwargs['centreMass'] == True:
+            self.preAnalysis.append(self.centreMass)
+            self.hooks.append(self.centreMass)
+
+        
+        ## Physical constants
+        self.mu0 = 1
+        self.ep0 = 1
+        self.q0 = 1
+        
+        if 'units' in kwargs:
+            if kwargs['units'] == 'si':
+                self.makeSI()
+                
+    
     ## Analysis modules
-    def fieldIntegrator(self,species,**kwargs):
+    def fieldIntegrator(self,species,**kwargs):     
         for method in self.fieldIntegration:
             method(species)
-        
+
         return species
 
 
-    def particleIntegrator(self,species,simulationManager, **kwargs):
-        i = 0
-        for method in self.particleIntegration:
-            i += 1
-            method(species, simulationManager)
-        
-        return species
-    
     def fieldGather(self,species,**kwargs):
         #Establish field values at particle positions via methods specified at initialisation.
         
@@ -86,9 +136,35 @@ class kpps_analysis:
         
         for method in self.fieldGathering:
             method(species)
+
+        return species
+    
+
+    def particleIntegrator(self,species,simulationManager, **kwargs):
+        for method in self.particleIntegration:
+            method(species, simulationManager)
+
+        return species
+    
+    def runHooks(self,species,simulationManager,**kwargs):
+        for method in self.hooks:
+            method(species,simulationManager)
+            
+        return species
+    
+    
+    def preAnalyser(self,species,simulationManager,**kwargs):
+        for method in self.preAnalysis:
+            method(species, simulationManager)
+
+        return species
+    
+    def postAnalyser(self,species,simulationManager,**kwargs):
+        for method in self.postAnalysis:
+            method(species, simulationManager)
         
         return species
-
+    
     ## Electric field methods
     def eFieldImposed(self,species,**kwargs):
         k = 1
@@ -104,14 +180,12 @@ class kpps_analysis:
                 direction = np.dot(inputMatrix,species.pos[pii,:])
                 species.E[pii,:] += direction * k
 
-
         return species
 
 
     def coulombIntra(self, species,**kwargs):
         try:
             pos = species.pos
-            E = species.E
         except AttributeError:
             print("Input species object either has no position array named"
                   + " 'pos' or electric field array named 'E'.")
@@ -121,12 +195,13 @@ class kpps_analysis:
         for pii in range(0,nq):
             for pjj in range(0,nq):
                 if pii==pjj:
+                    #E[pii,:] = 0
                     continue
-                E[pii,:] = E[pii,:] + self.coulombForce(species.q,
+                #print(E)
+
+                species.E[pii,:] += species.E[pii,:] + self.coulombForce(species.q,
                                                    pos[pii,:],
                                                    pos[pjj,:])
-        
-        species.E += E
         return species
     
     
@@ -136,12 +211,12 @@ class kpps_analysis:
         particle 2, where the charge of particle 2 'q2' is given in units 
         of the elementary charge q0 (i.e. actual charge = q2*q0).
         """
-        
+
         rpos = pos1-pos2
-        r = sqrt(fsum(rpos**2))
+        r = np.sqrt(np.sum(np.power(rpos,2)))
         rUnit = rpos/r
         
-        Ec = 1/(4*pi*self.ep0) * q2/r**2 * rUnit
+        Ec = 1/(4*pi*self.ep0) * q2*self.q0/r**2 * rUnit
         return Ec
     
     
@@ -171,20 +246,30 @@ class kpps_analysis:
     ## Time-integration methods
     def boris(self, vel, E, B, dt, alpha, ck=0):
         """
-            Applies Boris' trick for given velocity, electric and magnetic 
-            field for vector data in the shape (N x 3), i.e. particles as rows 
-            and x,y,z components for the vector as the columns.
-            k = delta_t * alpha / 2
+        Applies Boris' trick for given velocity, electric and magnetic 
+        field for vector data in the shape (N x 3), i.e. particles as rows 
+        and x,y,z components for the vector as the columns.
+        k = delta_t * alpha / 2
         """ 
         
         k = dt*alpha/2
         
         tau = k*B
+
         vMinus = vel + dt/2 * (alpha*E + ck)
+        
         tauMag = np.linalg.norm(tau,axis=1)
         vDash = vMinus + np.cross(vMinus,tau)
-        vPlus = vMinus + np.cross(2/(1+tauMag**2)*vDash,tau)
+        
+        tm = 2/(1+tauMag**2)
+
+        for col in range(0,3):
+            vDash[:,col] = tm[:] * vDash[:,col]
+
+        vPlus = vMinus + np.cross(vDash,tau)
+        
         vel_new = vPlus + dt/2 * (alpha*E + ck)
+        
         return vel_new
     
     
@@ -201,7 +286,7 @@ class kpps_analysis:
     
     def boris_synced(self, species, simulationParameters):
         dt = simulationParameters.dt
-        alpha = species.nq/species.mq
+        alpha = species.q/species.mq
 
         species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species))
         
@@ -212,37 +297,39 @@ class kpps_analysis:
         E_half = (E_old+E_new)/2
         
         species.vel = self.boris(species.vel,E_half,species.B,dt,alpha)
-        
         return species
+        
     
-    
+    def collSetup(self,species,simulationManager,**kwargs):
+        coll = self.collocationClass(self.M,0,1) #Initialise collocation/quadrature analysis object (class is Daniels old code)
+        self.nodes = coll._getNodes
+        self.weights = coll._getWeights(coll.tleft,coll.tright) #Get M  nodes and weights 
+
+
+        self.Qmat = coll._gen_Qmatrix           #Generate q_(m,j), i.e. the large weights matrix
+        self.Smat = coll._gen_Smatrix           #Generate s_(m,j), i.e. the large node-to-node weights matrix
+
+        self.delta_m = coll._gen_deltas         #Generate vector of node spacings
+
+        
     def boris_SDC(self, species, simulationManager,**kwargs):        
+
         M = self.M
         K = self.K
         d = 3*species.nq
         
-        tleft = simulationManager.t - simulationManager.dt
-        tright = simulationManager.t
+        dt = simulationManager.dt
+        t = simulationManager.t
         
-        #coll = CollGaussLegendre(M,tleft,tright)    #Initialise collocation/quadrature analysis object (class is Daniels old code)
-        coll = CollGaussLobatto(M,tleft,tright)
-        coll.nodes = coll._getNodes
-        coll.weights = coll._getWeights(coll.tleft,coll.tright) #Get M Gauss-Legendre nodes and weights 
-            
-        tau = coll.nodes                          #Nickname the vector of collocation points for ease of use
-        coll.Qmat = coll._gen_Qmatrix           #Generate q_(m,j), i.e. the large weights matrix
-        coll.Smat = coll._gen_Smatrix           #Generate s_(m,j), i.e. the large node-to-node weights matrix
+        #Remap collocation weights from [0,1] to [tn,tn+1]
+        nodes = (t-dt) + self.nodes * dt
+        weights = self.weights * dt 
 
-        coll.delta_m = coll._gen_deltas         #Generate vector of node spacings
-        dm = coll.delta_m
+        Qmat = self.Qmat * dt
+        Smat = self.Smat * dt
 
-        
-        #Define permutation operators
-        Ix = np.array([[1],[0]])
-        Iv = np.array([[0],[1]])
-        Ixv = np.array([[0,1],[0,0]])
-        Id = np.identity(d)
-        
+        dm = self.delta_m * dt
+
         #Define required calculation matrices
         QE = np.zeros((M+1,M+1),dtype=np.float)
         QI = np.zeros((M+1,M+1),dtype=np.float)
@@ -257,129 +344,162 @@ class kpps_analysis:
         QT = 1/2 * (QE + QI)
         QX = QE @ QT + (QE*QE)/2
         SX[:,:] = QX[:,:]
-        SX[1:,:] = QX[1:,:] - QX[0:-1,:]
-        
-        
-        q = np.zeros(M+1,dtype=np.float)
-        q[1:] = coll.weights
-        qv = np.kron(q,Iv)
-        qxv = np.kron(q,Ixv)
-        qQ = q @ coll.Qmat
+        SX[1:,:] = QX[1:,:] - QX[0:-1,:]      
 
-        q = np.kron(q,Id)
-        qv = np.kron(qv,Id)
-        qxv = np.kron(qxv,Id)
-        qQ = np.kron(qQ,Id) 
-        
-        Qx = np.kron(coll.Qmat,Ix)
-        Qx = np.kron(Qx,Id)
-        
-        sx = np.kron(coll.Smat,Ix)
-        SQ = coll.Smat @ coll.Qmat
-
-        I2d = np.identity(2*d)
-        I_P = np.ones(M+1)
-        I_R = np.ones(M+1)
-        I_R[0:M] = 0
-        
-        T_P = np.kron(I2d,I_P)
-        T_R = np.kron(I_R,I2d).transpose()
-
-        x = np.zeros((d,M+1),dtype=np.float)
-        v = np.zeros((d,M+1),dtype=np.float)
+        SQ = Smat @ Qmat
+                        
+        x0 = np.zeros((d,M+1),dtype=np.float)
+        v0 = np.zeros((d,M+1),dtype=np.float)
         
         xn = np.zeros((d,M+1),dtype=np.float)
         vn = np.zeros((d,M+1),dtype=np.float)
         
-        x.transpose()[:,0:] = species.toVector(species.pos)
-        v.transpose()[:,0:] = species.toVector(species.vel)
-        u0 = np.kron(Id,Ix) @ x[:,0] + np.kron(Id,Iv) @ v[:,0]
+        
+        #Populate node solutions with x0, v0
+        for m in range(0,M+1):
+            x0[:,m] = self.toVector(species.pos)
+            v0[:,m] = self.toVector(species.vel)
+
+        x = np.copy(x0)
+        v = np.copy(v0)
         
         xn[:,:] = x[:,:]
         vn[:,:] = v[:,:]
-        
-        for k in range(0,K):
-            for m in range(1,M):
+
+        #print()
+        #print(simulationManager.ts)
+        for k in range(1,K+1):
+            #print("k = " + str(k))
+            for m in range(self.ssi,M):
+                #print("m = " + str(m))
                 #Determine next node (m+1) positions
                 sumSX = 0
                 for l in range(1,m+1):
-                    #print(SX[m+1,l])
-                    #print(self.lorentzf(species,x[:,l],v[:,l]))
-                    #print(self.lorentzf(species,xn[:,l],vn[:,l]) - self.lorentzf(species,x[:,l],v[:,l]))
                     sumSX += SX[m+1,l]*(self.lorentzf(species,xn[:,l],vn[:,l]) - self.lorentzf(species,x[:,l],v[:,l]))
-                #print(sumSX)
-                
+
                 sumSQ = 0
                 for l in range(1,M+1):
                     sumSQ += SQ[m+1,l]*self.lorentzf(species,x[:,l],v[:,l])
                 
-                #xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
-                
-                xn[:,m+1] = xn[:,m] + dm[m]*(v[:,m]) + sumSX + sumSQ
-                
-                
-                #Sample the electric field at the half-step positions
-                half_E = (self.gatherE(species,xn[:,m])+self.gatherE(species,xn[:,m+1]))/2
-                
+                xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
                 
                 #Determine next node (m+1) velocities
                 sumS = 0
                 for l in range(1,M+1):
-                    sumS += coll.Smat[m+1,l] * self.lorentzf(species,x[:,l],v[:,l])
+                    sumS += Smat[m+1,l] * self.lorentzf(species,x[:,l],v[:,l])
+            
+                
+                ck_dm = -1/2 * (self.lorentzf(species,x[:,m+1],v[:,m+1])+self.lorentzf(species,x[:,m],v[:,m])) + 1/dm[m] * sumS
+                #print(ck_dm)
+                
+                #Sample the electric field at the half-step positions (yields form Nx3)
+                half_E = (self.gatherE(species,xn[:,m])+self.gatherE(species,xn[:,m+1]))/2
                 
                 
-                ck = -dm[m]/2 * (self.lorentzf(species,x[:,m+1],v[:,m+1])+self.lorentzf(species,x[:,m],v[:,m])) + sumS
+                #Resort all other 3d vectors to shape Nx3 for use in Boris function
+                v_oldNode = self.toMatrix(vn[:,m])
+                ck_dm = self.toMatrix(ck_dm)
                 
-                t_mag = species.a * self.gatherB(species,xn[:,m]) * simulationManager.dt/2
-                s_mag = 2*t_mag/(1+np.linalg.norm(t_mag)**2)
-                
+                v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
+                vn[:,m+1] = self.toVector(v_new)
 
-                vMinus = vn[:,m] + dm[m]/2 * species.a * half_E + ck/2
-                
-                #Resort 3d to shape d/3 x 3 to define cross-product
-                vMinus = species.toMatrix(vMinus)
-                t_mag = species.toMatrix(t_mag)
-                s_mag = species.toMatrix(s_mag)
-
-                vPlus = vMinus + np.cross((vMinus + np.cross(vMinus,t_mag)),s_mag)
-                vPlus = species.toVector(vPlus)
-                
-                vn[:,m+1] = vPlus + dm[m]/2 * species.a * half_E + ck/2
-                
+            
+            #print(xn)
+            ###print(vn)
+            
+            check_node = 2
+            ch_i = check_node
+            
+            x_res = np.linalg.norm(xn[:,ch_i]-xn[:,ch_i-1]-dm[m]*v[:,0]-sumSQ)
+            v_res = np.linalg.norm(vn[:,ch_i]-vn[:,ch_i-1]-sumS)
+            f_diff = (self.lorentzf(species,xn[:,ch_i],vn[:,ch_i]) 
+                      - self.lorentzf(species,x[:,ch_i],v[:,ch_i]))
+            f_conv = np.linalg.norm(f_diff)
+            
+            
+            print("k = " + str(k) + ", iter f() conv. = " + str(f_conv))
+            print("k = " + str(k) + ", x-residual = " + str(x_res))
+            print("k = " + str(k) + ", v-residual = " + str(v_res))
+            
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
 
-        #F = self.FXV(species,xn,vn)
         
-        #v0 = v[:,0]
-        #vel = v0[:,np.newaxis] + q @ F
-        
-        #x0 = x[:,0]
-        #pos = x0[:,np.newaxis] + q @ self.toVector(v.transpose())[:,np.newaxis] + qQ @ F
-        
+        species = self.updateStep(species,x,v,x0,v0,weights,Qmat)
 
-        pos = xn[:,-1]
-        vel = vn[:,-1]
-        
+        return species
+    
+    
+    def lobatto_update(self,species,x,v,*args):
+        pos = x[:,-1]
+        vel = v[:,-1]
 
         species.pos = species.toMatrix(pos)
         species.vel = species.toMatrix(vel)
-        #Q_coll = Qx @ q + qv
-        #C_coll = T_R + qxv
+
+        return species
+    
+    
+    def legendre_update(self,species,x,v,x0,v0,weights,Qmat):
+        M = self.M
+        d = 3*species.nq
         
-        #u = C_coll @ T_P @ u0 + Q_coll @ F
-        #species.pos = species.toMatrix(u[0::2])
-        #species.vel = species.toMatrix(u[1::2])
+        Id = np.identity(d)
+        q = np.zeros(M+1,dtype=np.float)
+        q[1:] = weights
+        q = np.kron(q,Id)
+        qQ = q @ np.kron(Qmat,Id)
+        
+        V0 = self.toVector(v0.transpose())
+        F = self.FXV(species,x,v)
+        
+        vel = v0[:,0] + q @ F
+        pos = x0[:,0] + q @ V0 + qQ @ F
+        
+        species.pos = species.toMatrix(pos)
+        species.vel = species.toMatrix(vel)
+        return species
+    
+    
+    ## Additional analysis
+    def get_u(self,x,v):
+        assert len(x) == len(v)
+        d = len(x)
+        
+        Ix = np.array([1,0])
+        Iv = np.array([0,1])
+        Id = np.identity(d)
+        
+        u = np.kron(Id,Ix).transpose() @ x + np.kron(Id,Iv).transpose() @ v
+        return u
+    
+    
+    def energy_calc_penning(self,species,simulationManager,**kwargs):
+        x = self.toVector(species.pos)
+        v = self.toVector(species.vel)
+        u = self.get_u(x,v)
+        
+        species.energy = u.transpose() @ self.H @ u
         
         return species
     
     
-    ## Additional methods
-    def lorentzf(self,species,x,v):
-        species.pos = species.toMatrix(x)
-        species.vel = species.toMatrix(v)
+    def centreMass(self,species,simulationManager,**kwargs):
+        nq = np.float(species.nq)
+        mq = np.float(species.mq)
+
+        species.cm[0] = np.sum(species.pos[:,0]*mq)/(nq*mq)
+        species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
+        species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
         
+        
+    ## Additional methods
+    def lorentzf(self,species,xm,vm):
+        species.pos = species.toMatrix(xm)
+        species.vel = species.toMatrix(vm)
+
         self.fieldGather(species)
+
         F = species.a*(species.E + np.cross(species.vel,species.B))
         F = species.toVector(F)
         return F
@@ -389,83 +509,53 @@ class kpps_analysis:
         F = species.a*(species.E + np.cross(species.vel,species.B))
         return F
     
-    def FXV(self,species,X,V):
-        dim = X.shape[0]
-        M = X.shape[1] - 1
+    
+    
+    def FXV(self,species,x,v):
+        dxM = np.shape(x)
+        d = dxM[0]
+        M = dxM[1]-1
         
-        F = np.zeros(dim*(M+1),dtype=np.float)
-        
+        F = np.zeros((d,M+1),dtype=np.float)
         for m in range(0,M+1):
-            species.pos = species.toMatrix(X[:,m])
-            species.vel = species.toMatrix(V[:,m])
-            
-            self.fieldGather(species)
-            
-            Fm = species.a*(species.E + np.cross(species.vel,species.B))
-            F[dim*m:dim*(m+1)] = self.toVector(Fm)
-            
-        F = F[:,np.newaxis]
+            F[:,m] = self.lorentzf(species,x[:,m],v[:,m])
+        
+        F = self.toVector(F.transpose())
         return F
     
     
-    def systemF(self,species,x,v):
-        dim = x.shape[0]
-        M = x.shape[1] - 1
-        
-        Ix = np.array([[1],[0]])
-        Iv = np.array([[0],[1]])
-        Id = np.identity(dim*(M+1))
-        
-        Fv = np.zeros(dim*(M+1),dtype=np.float)
-        Fx = np.zeros(dim*(M+1),dtype=np.float)
-        
-        for m in range(0,M+1):
-            species.pos = species.toMatrix(x[:,m])
-            species.vel = species.toMatrix(v[:,m])
-            
-            self.fieldGather(species)
-            
-            FvN = species.a*(species.E + np.cross(species.vel,species.B))
-            Fv[dim*m:dim*(m+1)] = self.toVector(FvN)
-            
-            Fx[dim*m:dim*(m+1)] = v[:,m]
-            
-        Fx = Fx[:,np.newaxis]
-        Fv = Fv[:,np.newaxis]
-        F = np.kron(Id,Ix) @ Fx + np.kron(Id,Iv) @ Fv
-        return F
     
     def gatherE(self,species,x):
-        species.pos = species.toMatrix(x)
+        species.pos = self.toMatrix(x,3)
         
         self.fieldGather(species)
         
-        return species.toVector(species.E)
+        return species.E
     
     def gatherB(self,species,x):
-        species.pos = species.toMatrix(x)
+        species.pos = self.toMatrix(x,3)
         
         self.fieldGather(species)
         
-        return species.toVector(species.B)
+        return species.B
         
     def toVector(self,storageMatrix):
         rows = storageMatrix.shape[0]
         columns = storageMatrix.shape[1]
-        vector = np.zeros(rows*columns,dtype=np.float)
+        vector = np.zeros(rows*columns)
         
-        for i in range(0,rows):
-            vector[columns*i:columns*(i+1)] = storageMatrix[i,:]
-            
+        for i in range(0,columns):
+            vector[i::3] = storageMatrix[:,i]
         return vector
+    
+    
+    def toMatrix(self,vector,columns=3):
+        rows = int(len(vector)/columns)
+        matrix = np.zeros((rows,columns))
         
-
-    def toMatrix(self,vector):
-        self.matrix = np.zeros((self.nq,3),dtype=np.float)
-        for pii in range(0,self.nq):
-            self.matrix[pii,0] = vector[3*pii]
-            self.matrix[pii,1] = vector[3*pii+1]
-            self.matrix[pii,2] = vector[3*pii+2]
+        for i in range(0,columns):
+            matrix[:,i] = vector[i::columns]
+        return matrix
     
         
     def nope(self,species):

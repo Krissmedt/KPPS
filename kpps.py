@@ -43,8 +43,10 @@ class kpps:
         particles = species(**self.speciesSettings)
         sim = simulationManager(**self.simSettings)
         case = caseHandler(particles,**self.caseSettings)
-        analyser = kpps_analysis(**self.analysisSettings)
-        dHandler = dataHandler(particles,sim,case,**self.dataSettings)
+        analyser = kpps_analysis(sim,**self.analysisSettings)
+        dHandler = dataHandler(species_obj=particles,
+                               caseHandler_obj=case,
+                               simManager_obj=sim, **self.dataSettings)
         
         
         ## Main time loop
@@ -62,7 +64,7 @@ class kpps:
         
         ## Post-analysis and data plotting
         analyser.postAnalyser(particles,sim)
-        dHandler.post()
+        dHandler.post(particles,sim)
         dHandler.plot()
 
         return dHandler
