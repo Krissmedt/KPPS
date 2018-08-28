@@ -30,7 +30,7 @@ if energy_data == True:
             data.loadData(filename,'h')
             
             data.exact_h_Array = np.array(data.exact_h_Array)
-            energyError = abs(data.hArray-data.exact_h_Array)
+            energyError = abs(data.hArray-data.exact_h_Array)/data.exact_h_Array
             label = key + "-" + value + ", M=" + str(M) + ", K=" + str(k)
             
             ##Energy Plot
@@ -46,5 +46,5 @@ h_ax.set_xlabel('$\omega_b t$')
 
 h_ax.set_yscale('log')
 h_ax.set_ylim(10**-12,10**6)
-h_ax.set_ylabel('$\Delta E$')
+h_ax.set_ylabel('$\Delta E^{rel}$')
 h_ax.legend()
