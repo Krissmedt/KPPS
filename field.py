@@ -55,10 +55,10 @@ class field:
             
     
         self.nn = (self.xres+1)*(self.yres+1)*(self.zres+1) #calculate no. of cell nodes
-        self.pos = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
-        self.q = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
-        self.E = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
-        self.B = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.pos = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.q = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.E = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.B = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
 
         self.pos_init(self)
     

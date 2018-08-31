@@ -5,13 +5,13 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 nq = 2
-schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
-schemes = {'lobatto':'boris_SDC'}
+#schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
+schemes = {'legendre':'boris_SDC'}
 
 M = 2
 iterations = [2]
 
-tEnd = 20
+tEnd = 0.01
 #tEnd = 16.0
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4])
@@ -26,7 +26,7 @@ partTraj = np.linspace(1,nq,nq,dtype=np.int)
 
 
 mq = 1.
-alpha = 1
+alpha = 1000
 q = alpha*mq
 
 omegaB = 25.0
@@ -43,8 +43,8 @@ eMag = -epsilon*omegaE**2/alpha
 eTransform = np.array([[1,0,0],[0,1,0],[0,0,-2]])
 
 
-x0 = [[10,0,0]]
-v0 = [[100,0,100]]
+x0 = [[10,0,0],[10.1,0,0]]
+v0 = [[100,0,100],[100,0,100]]
 dx = 0.001
 dv = 5
 
@@ -73,7 +73,7 @@ for key, value in schemes.items():
                     speciesSettings = {'nq':nq,'mq':mq,'q':q},
                     
                     caseSettings = {'dimensions':3,
-                                    'explicit':{'expType':'clouds','positions':x0,'velocities':v0},
+                                    'explicit':{'expType':'direct','positions':x0,'velocities':v0},
                                     'dx':dx,'dv':dv},
                     
                     analysisSettings = {'imposedElectricField':{'general':eTransform, 'magnitude':eMag},

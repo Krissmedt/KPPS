@@ -105,7 +105,7 @@ class kpps_analysis:
             self.hooks.append(self.energy_calc_penning)
             self.H = kwargs['penningEnergy']
             
-        if kwargs['centreMass'] == True:
+        if 'centreMass' in kwargs and kwargs['centreMass'] == True:
             self.preAnalysis.append(self.centreMass)
             self.hooks.append(self.centreMass)
 
@@ -191,7 +191,6 @@ class kpps_analysis:
                   + " 'pos' or electric field array named 'E'.")
         
         nq = len(pos)
-        
         for pii in range(0,nq):
             for pjj in range(0,nq):
                 if pii==pjj:
@@ -202,6 +201,7 @@ class kpps_analysis:
                 species.E[pii,:] += species.E[pii,:] + self.coulombForce(species.q,
                                                    pos[pii,:],
                                                    pos[pjj,:])
+
         return species
     
     
@@ -404,9 +404,7 @@ class kpps_analysis:
                 vn[:,m+1] = self.toVector(v_new)
 
             
-            #print(xn)
-            ###print(vn)
-            
+            """
             check_node = 2
             ch_i = check_node
             
@@ -420,10 +418,11 @@ class kpps_analysis:
             print("k = " + str(k) + ", iter f() conv. = " + str(f_conv))
             print("k = " + str(k) + ", x-residual = " + str(x_res))
             print("k = " + str(k) + ", v-residual = " + str(v_res))
+            """
             
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
-
+            
         
         species = self.updateStep(species,x,v,x0,v0,weights,Qmat)
 
@@ -545,7 +544,7 @@ class kpps_analysis:
         vector = np.zeros(rows*columns)
         
         for i in range(0,columns):
-            vector[i::3] = storageMatrix[:,i]
+            vector[i::columns] = storageMatrix[:,i]
         return vector
     
     

@@ -128,14 +128,14 @@ for key, value in schemes.items():
                                         'centreMass':True},
                     
                     dataSettings = {#'write':{'sampleRate':1,'foldername':'simple'},
-                                    'record':{'sampleRate':sampleRate}
+                                    'record':{'sampleInterval':sampleRate}
                                     ,'plot':{'tPlot':'xyz'}
                                     ,'trajectory_plot':{'particle':1,'limits':[20,20,15]}
                                     })
             
             kppsObject = kpps(**model)
             data = kppsObject.run()
-
+            print(data.vxArray)
 
             if log == True:
                 filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + str(dt[i]) + "dt.txt"
@@ -179,7 +179,7 @@ for key, value in schemes.items():
         ##Energy Plot
         fig2 = plt.figure(51)
         ax2 = fig2.add_subplot(1, 1, 1)
-        ax2.scatter(data.tArray[1:],energyError,label=label_order)
+        ax2.scatter(data.tArray[1:],data.hArray[1:],label=label_order)
         
         if key == 'boris':
             break
@@ -199,12 +199,9 @@ ax.set_ylabel('$\Delta x$')
 ax.legend()
 
 ## Energy plot finish
-ax2.set_xscale('log')
-ax2.set_xlim(10**-1,1)
+ax2.set_xlim(0,tEnd)
 ax2.set_xlabel('$t$')
-
-ax2.set_yscale('log')
-ax2.set_ylim(10**-12,10**6)
+ax2.set_ylim(0,10**4)
 ax2.set_ylabel('$\Delta E$')
 ax2.legend()
 
