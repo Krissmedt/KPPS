@@ -5,7 +5,7 @@ import numpy as np
 from math import pi
 
 ## Class
-class field:
+class fields:
     ## Main Methods
     def __init__(self,**kwargs):
         if 'box' in kwargs:

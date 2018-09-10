@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from species import species
+from fields import fields
 from simulationManager import simulationManager
 from dataHandler import dataHandler
 from caseHandler import caseHandler
@@ -13,6 +14,7 @@ import time
 class kpps:
     simSettings = {}
     speciesSettings = {}
+    fieldSettings = {}
     caseSettings = {}
     
     eFieldSettings = {}
@@ -28,29 +30,32 @@ class kpps:
         if 'speciesSettings' in kwargs:
             self.speciesSettings = kwargs['speciesSettings']
             
+        if 'fieldSettings' in kwargs:
+            self.fieldSettings = kwargs['fieldSettings']
+            
         if 'caseSettings' in kwargs:
             self.caseSettings = kwargs['caseSettings']
             
         if 'analysisSettings' in kwargs:
             self.analysisSettings = kwargs['analysisSettings']
-            
+        
         if 'dataSettings' in kwargs:
             self.dataSettings = kwargs['dataSettings']
-
 
     def run(self):
         ## Load required modules
         particles = species(**self.speciesSettings)
+        fields = fields(**self.fieldSettings)
         sim = simulationManager(**self.simSettings)
         case = caseHandler(particles,**self.caseSettings)
         analyser = kpps_analysis(sim,**self.analysisSettings)
         dHandler = dataHandler(species_obj=particles,
                                caseHandler_obj=case,
-                               simManager_obj=sim, **self.dataSettings)
+                               simManager_obj=sim,**self.dataSettings)
         
         
         ## Main time loop
-        analyser.preAnalyser(particles,sim)
+        analyser.preAnalyser(particles,fields,sim)
         dHandler.run(particles,sim)
         
 

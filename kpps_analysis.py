@@ -69,16 +69,32 @@ class kpps_analysis:
                     self.collocationClass = CollGaussLobatto
                     self.updateStep = self.lobatto_update
                     simulationManager.rhs_dt = (self.M - 1)*self.K
-
-                                
+               
             
-        # Load required field integration methods
+        # Load required field analysis/integration methods
         self.fieldIntegration = []
         if 'fieldIntegration' in kwargs:
-            if kwargs['fieldIntegration'] == 'pic':
-                self.fieldIntegration.append(self.nope)
+            self.fieldParams = kwargs['fieldIntegration']
+            
+            if 'scattering' in self.fieldParams:
+                if self.fieldParams['scattering'] == 'linear':
+                    self.fieldIntegration.append(self.linear_scatt)
+                else:
+                    self.fieldIntegration.append(self.linear_scatt)
+            else:
+                self.fieldIntegration.append(self.linear_scatt)
+            
+            
+            if 'pic' in self.fieldParams:
+                if self.fieldParams['pic'] == 'simple':
+                    self.fieldIntegration.append(self.pic_simple)
+            else:
+                self.fieldIntegration.append(self.pic_simple)
+
+            
+            self.preAnalysis.append(self.initialise_field_mesh)
                 
-                
+            
         # Load required field gathering methods
         self.fieldGathering = []
         if 'imposedElectricField' in kwargs:
@@ -121,21 +137,21 @@ class kpps_analysis:
                 
     
     ## Analysis modules
-    def fieldIntegrator(self,species,**kwargs):     
+    def fieldIntegrator(self,species,fields,**kwargs):     
         for method in self.fieldIntegration:
-            method(species)
+            method(species,fields)
 
         return species
 
 
-    def fieldGather(self,species,**kwargs):
+    def fieldGather(self,species,fields,**kwargs):
         #Establish field values at particle positions via methods specified at initialisation.
         
         species.E = np.zeros((len(species.E),3),dtype=np.float)
         species.B = np.zeros((len(species.B),3),dtype=np.float)
         
         for method in self.fieldGathering:
-            method(species)
+            method(species,fields)
 
         return species
     
@@ -153,9 +169,9 @@ class kpps_analysis:
         return species
     
     
-    def preAnalyser(self,species,simulationManager,**kwargs):
+    def preAnalyser(self,species,fields,simulationManager,**kwargs):
         for method in self.preAnalysis:
-            method(species, simulationManager)
+            method(species, fields, simulationManager)
 
         return species
     
@@ -241,6 +257,29 @@ class kpps_analysis:
 
         return species
         
+    
+    ## Field analysis methods
+    def initialise_field_mesh(self,fields):
+        k = 1
+        if "magnitude" in self.imposedEParams:
+            k = self.imposedEParams["magnitude"]
+            
+        if "sPenning" in self.imposedEParams:
+            direction = np.array(self.imposedEParams['sPenning'])
+            for xi in range(0,len(fields.pos[0,:,0,0])):
+                for yi in range(0,len(fields.pos[0,0,:,0])):
+                    for zi in range(0,len(fields.pos[0,0,0,:])):
+                        fields.E[:,xi,yi,zi] += - fields.pos[:,xi,yi,zi] * direction * k
+                        
+        elif "general" in self.imposedEParams:
+            inputMatrix = np.array(self.imposedEParams['general'])
+            for xi in range(0,len(fields.pos[0,:,0,0])):
+                for yi in range(0,len(fields.pos[0,0,:,0])):
+                    for zi in range(0,len(fields.pos[0,0,0,:])):
+                        direction = np.dot(inputMatrix,fields.pos[:,xi,yi,zi])
+                        fields.E[:,xi,yi,zi] += direction * k
+
+        return fields
     
     
     ## Time-integration methods
