@@ -4,7 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from species import species
-from fields import fields
+from mesh import mesh
 from simulationManager import simulationManager
 from dataHandler import dataHandler
 from caseHandler import caseHandler
@@ -45,31 +45,32 @@ class kpps:
     def run(self):
         ## Load required modules
         particles = species(**self.speciesSettings)
-        fields = fields(**self.fieldSettings)
+        fields = mesh(**self.fieldSettings)
         sim = simulationManager(**self.simSettings)
-        case = caseHandler(particles,**self.caseSettings)
+        case = caseHandler(particles,fields,**self.caseSettings)
         analyser = kpps_analysis(sim,**self.analysisSettings)
         dHandler = dataHandler(species_obj=particles,
+                               mesh_obj=fields,
                                caseHandler_obj=case,
                                simManager_obj=sim,**self.dataSettings)
         
         
         ## Main time loop
         analyser.preAnalyser(particles,fields,sim)
-        dHandler.run(particles,sim)
-        
+        dHandler.run(particles,fields,sim)
 
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
-            analyser.fieldIntegrator(particles)
-            analyser.particleIntegrator(particles,sim) 
-            analyser.runHooks(particles,sim)
-            dHandler.run(particles,sim)
+            analyser.fieldIntegrator(particles,fields)
+            print(fields.B)
+            analyser.particleIntegrator(particles,fields,sim) 
+            analyser.runHooks(particles,fields,sim)
+            dHandler.run(particles,fields,sim)
 
         
         ## Post-analysis and data plotting
-        analyser.postAnalyser(particles,sim)
-        dHandler.post(particles,sim)
+        analyser.postAnalyser(particles,fields,sim)
+        dHandler.post(particles,fields,sim)
         dHandler.plot()
 
         return dHandler

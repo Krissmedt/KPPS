@@ -21,13 +21,17 @@ class dataHandler:
         
         if 'species_obj' in kwargs:
             species = kwargs['species_obj']
-        
+            
+        if 'mesh_obj' in kwargs:
+            fields = kwargs['mesh_obj']
+            
         if 'caseHandler_obj' in kwargs:
             caseHandler = kwargs['caseHandler_obj']
             
         if 'simManager_obj' in kwargs:
             simulationManager = kwargs['simManager_obj']
             self.label = simulationManager.simID
+
         
         if 'write' in kwargs:
             self.writeSetup(species,
@@ -38,7 +42,7 @@ class dataHandler:
             self.runOps.append(self.writeData)
                     
         if 'record' in kwargs:
-            self.recordSetup(species,simulationManager, **kwargs['record'])
+            self.recordSetup(species,fields,simulationManager, **kwargs['record'])
             self.runOps.append(self.recordData)
             self.postOps.append(self.convertToNumpy)
             self.postOps.append(self.rhs_tally)
@@ -52,13 +56,13 @@ class dataHandler:
             self.plotOps.append(self.trajectoryPlot)
             
 
-    def run(self,species,simulationManager):
+    def run(self,species,fields,simulationManager):
         for method in self.runOps:
-            method(species,simulationManager)
+            method(species,fields,simulationManager)
             
-    def post(self,species,simulationManager):
+    def post(self,species,fields,simulationManager):
         for method in self.postOps:
-            method(species,simulationManager)    
+            method(species,fields,simulationManager)    
 
     def plot(self):
         for method in self.plotOps:
@@ -80,7 +84,7 @@ class dataHandler:
         self.dataFoldername = self.dataFoldername + append
         
         
-    def recordSetup(self,species,simulationManager,**kwargs):
+    def recordSetup(self,species,fields,simulationManager,**kwargs):
         ## NOTE: For small sampleRate compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
         if 'sampleInterval' in kwargs:
@@ -101,7 +105,7 @@ class dataHandler:
         self.cmArray = []
         
         
-    def recordData(self,species,simulationManager):
+    def recordData(self,species,fields,simulationManager):
         ## NOTE: For small sampleInterval compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
         if simulationManager.ts % self.recordEvery == 0:
@@ -218,7 +222,7 @@ class dataHandler:
         ax.set_zlabel('z')
 
     
-    def writeSetup(self,species,simulationManager,caseHandler,**kwargs):
+    def writeSetup(self,species,fields,simulationManager,caseHandler,**kwargs):
         if 'foldername' in kwargs:
             if kwargs['foldername'] == "simple":
                 delimiter = "_"
@@ -240,7 +244,7 @@ class dataHandler:
 
         
         
-    def writeData(self,species,simulationManager):
+    def writeData(self,species,fields,simulationManager):
         ts = simulationManager.ts
         pos = species.pos
         
@@ -251,7 +255,7 @@ class dataHandler:
             filename = self.dataFoldername + "/" + self.dataFoldername[2:]
             self.writer.writePVD(filename + ".pvd")
     
-    def rhs_tally(self,species,simulationManager):
+    def rhs_tally(self,species,fields,simulationManager):
         self.rhs_eval = simulationManager.rhs_dt * simulationManager.tSteps
             
     def convertToNumpy(self,*args):

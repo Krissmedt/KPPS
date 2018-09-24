@@ -135,7 +135,6 @@ for key, value in schemes.items():
             
             kppsObject = kpps(**model)
             data = kppsObject.run()
-            print(data.vxArray)
 
             if log == True:
                 filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + str(dt[i]) + "dt.txt"

@@ -81,18 +81,14 @@ class kpps_analysis:
                     self.fieldIntegration.append(self.linear_scatt)
                 else:
                     self.fieldIntegration.append(self.linear_scatt)
-            else:
-                self.fieldIntegration.append(self.linear_scatt)
             
             
             if 'pic' in self.fieldParams:
                 if self.fieldParams['pic'] == 'simple':
                     self.fieldIntegration.append(self.pic_simple)
-            else:
-                self.fieldIntegration.append(self.pic_simple)
 
-            
-            self.preAnalysis.append(self.initialise_field_mesh)
+            if 'imposeFields' in self.fieldParams and self.fieldParams['imposeFields'] == True:
+                self.preAnalysis.append(self.imposed_field_mesh)
                 
             
         # Load required field gathering methods
@@ -156,15 +152,15 @@ class kpps_analysis:
         return species
     
 
-    def particleIntegrator(self,species,simulationManager, **kwargs):
+    def particleIntegrator(self,species,fields,simulationManager, **kwargs):
         for method in self.particleIntegration:
-            method(species, simulationManager)
+            method(species,fields,simulationManager)
 
         return species
     
-    def runHooks(self,species,simulationManager,**kwargs):
+    def runHooks(self,species,fields,simulationManager,**kwargs):
         for method in self.hooks:
-            method(species,simulationManager)
+            method(species,fields,simulationManager)
             
         return species
     
@@ -175,14 +171,14 @@ class kpps_analysis:
 
         return species
     
-    def postAnalyser(self,species,simulationManager,**kwargs):
+    def postAnalyser(self,species,fields,simulationManager,**kwargs):
         for method in self.postAnalysis:
-            method(species, simulationManager)
+            method(species,fields,simulationManager)
         
         return species
     
     ## Electric field methods
-    def eFieldImposed(self,species,**kwargs):
+    def eFieldImposed(self,species,fields,**kwargs):
         k = 1
         if "magnitude" in self.imposedEParams:
             k = self.imposedEParams["magnitude"]
@@ -190,16 +186,18 @@ class kpps_analysis:
         if "sPenning" in self.imposedEParams:
             direction = np.array(self.imposedEParams['sPenning'])
             species.E += - species.pos * direction * k
+            
+            
         elif "general" in self.imposedEParams:
             inputMatrix = np.array(self.imposedEParams['general'])
             for pii in range(0,species.nq):
                 direction = np.dot(inputMatrix,species.pos[pii,:])
                 species.E[pii,:] += direction * k
-
+                        
         return species
 
 
-    def coulombIntra(self, species,**kwargs):
+    def coulombIntra(self, species,fields,**kwargs):
         try:
             pos = species.pos
         except AttributeError:
@@ -238,7 +236,7 @@ class kpps_analysis:
     
     
     ## Magnetic field methods
-    def bFieldImposed(self,species,**kwargs):
+    def bFieldImposed(self,species,fields,**kwargs):
         species.B = np.array(species.B)
         settings = self.imposedBParams
         
@@ -259,7 +257,7 @@ class kpps_analysis:
         
     
     ## Field analysis methods
-    def initialise_field_mesh(self,fields):
+    def imposed_field_mesh(self,species,fields,simulationManager):
         k = 1
         if "magnitude" in self.imposedEParams:
             k = self.imposedEParams["magnitude"]
@@ -278,6 +276,22 @@ class kpps_analysis:
                     for zi in range(0,len(fields.pos[0,0,0,:])):
                         direction = np.dot(inputMatrix,fields.pos[:,xi,yi,zi])
                         fields.E[:,xi,yi,zi] += direction * k
+                        
+        
+        if "magnitude" in self.imposedBParams:
+            bMag = self.imposedBParams["magnitude"]
+        else:
+            bMag = 1
+        if "uniform" in self.imposedBParams:
+            direction = np.array(self.imposedBParams["uniform"])
+            try:
+                for xi in range(0,len(fields.pos[0,:,0,0])):
+                    for yi in range(0,len(fields.pos[0,0,:,0])):
+                        for zi in range(0,len(fields.pos[0,0,0,:])):
+                            fields.B[:,xi,yi,zi] = np.multiply(bMag,direction)
+            except TypeError:
+                print("TypeError raised, did you input a length 3 vector "
+                      + "to define the uniform magnetic field?")
 
         return fields
     
@@ -312,7 +326,7 @@ class kpps_analysis:
         return vel_new
     
     
-    def boris_staggered(self, species, simulationParameters):
+    def boris_staggered(self, species,fields, simulationParameters):
         dt = simulationParameters.dt
         alpha = species.nq/species.mq
 
@@ -323,14 +337,14 @@ class kpps_analysis:
         return species
     
     
-    def boris_synced(self, species, simulationParameters):
+    def boris_synced(self, species,fields, simulationParameters):
         dt = simulationParameters.dt
         alpha = species.q/species.mq
 
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species))
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,fields))
         
         E_old = species.E
-        self.fieldGather(species)
+        self.fieldGather(species,fields)
         E_new = species.E
         
         E_half = (E_old+E_new)/2
@@ -339,7 +353,7 @@ class kpps_analysis:
         return species
         
     
-    def collSetup(self,species,simulationManager,**kwargs):
+    def collSetup(self,species,fields,simulationManager,**kwargs):
         coll = self.collocationClass(self.M,0,1) #Initialise collocation/quadrature analysis object (class is Daniels old code)
         self.nodes = coll._getNodes
         self.weights = coll._getWeights(coll.tleft,coll.tright) #Get M  nodes and weights 
@@ -351,7 +365,7 @@ class kpps_analysis:
         self.delta_m = coll._gen_deltas         #Generate vector of node spacings
 
         
-    def boris_SDC(self, species, simulationManager,**kwargs):        
+    def boris_SDC(self, species,fields, simulationManager,**kwargs):        
 
         M = self.M
         K = self.K
@@ -414,25 +428,26 @@ class kpps_analysis:
                 #Determine next node (m+1) positions
                 sumSX = 0
                 for l in range(1,m+1):
-                    sumSX += SX[m+1,l]*(self.lorentzf(species,xn[:,l],vn[:,l]) - self.lorentzf(species,x[:,l],v[:,l]))
+                    sumSX += SX[m+1,l]*(self.lorentzf(species,fields,xn[:,l],vn[:,l]) - self.lorentzf(species,fields,x[:,l],v[:,l]))
 
                 sumSQ = 0
                 for l in range(1,M+1):
-                    sumSQ += SQ[m+1,l]*self.lorentzf(species,x[:,l],v[:,l])
+                    sumSQ += SQ[m+1,l]*self.lorentzf(species,fields,x[:,l],v[:,l])
                 
                 xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
                 
                 #Determine next node (m+1) velocities
                 sumS = 0
                 for l in range(1,M+1):
-                    sumS += Smat[m+1,l] * self.lorentzf(species,x[:,l],v[:,l])
+                    sumS += Smat[m+1,l] * self.lorentzf(species,fields,x[:,l],v[:,l])
             
                 
-                ck_dm = -1/2 * (self.lorentzf(species,x[:,m+1],v[:,m+1])+self.lorentzf(species,x[:,m],v[:,m])) + 1/dm[m] * sumS
+                ck_dm = -1/2 * (self.lorentzf(species,fields,x[:,m+1],v[:,m+1])
+                        +self.lorentzf(species,fields,x[:,m],v[:,m])) + 1/dm[m] * sumS
                 #print(ck_dm)
                 
                 #Sample the electric field at the half-step positions (yields form Nx3)
-                half_E = (self.gatherE(species,xn[:,m])+self.gatherE(species,xn[:,m+1]))/2
+                half_E = (self.gatherE(species,fields,xn[:,m])+self.gatherE(species,fields,xn[:,m+1]))/2
                 
                 
                 #Resort all other 3d vectors to shape Nx3 for use in Boris function
@@ -463,12 +478,12 @@ class kpps_analysis:
             v[:,:] = vn[:,:]
             
         
-        species = self.updateStep(species,x,v,x0,v0,weights,Qmat)
+        species = self.updateStep(species,fields,x,v,x0,v0,weights,Qmat)
 
         return species
     
     
-    def lobatto_update(self,species,x,v,*args):
+    def lobatto_update(self,species,fields,x,v,*args):
         pos = x[:,-1]
         vel = v[:,-1]
 
@@ -478,7 +493,7 @@ class kpps_analysis:
         return species
     
     
-    def legendre_update(self,species,x,v,x0,v0,weights,Qmat):
+    def legendre_update(self,species,fields,x,v,x0,v0,weights,Qmat):
         M = self.M
         d = 3*species.nq
         
@@ -489,7 +504,7 @@ class kpps_analysis:
         qQ = q @ np.kron(Qmat,Id)
         
         V0 = self.toVector(v0.transpose())
-        F = self.FXV(species,x,v)
+        F = self.FXV(species,fields,x,v)
         
         vel = v0[:,0] + q @ F
         pos = x0[:,0] + q @ V0 + qQ @ F
@@ -512,7 +527,7 @@ class kpps_analysis:
         return u
     
     
-    def energy_calc_penning(self,species,simulationManager,**kwargs):
+    def energy_calc_penning(self,species,fields,simulationManager,**kwargs):
         x = self.toVector(species.pos)
         v = self.toVector(species.vel)
         u = self.get_u(x,v)
@@ -522,7 +537,7 @@ class kpps_analysis:
         return species
     
     
-    def centreMass(self,species,simulationManager,**kwargs):
+    def centreMass(self,species,fields,simulationManager,**kwargs):
         nq = np.float(species.nq)
         mq = np.float(species.mq)
 
@@ -532,48 +547,48 @@ class kpps_analysis:
         
         
     ## Additional methods
-    def lorentzf(self,species,xm,vm):
+    def lorentzf(self,species,fields,xm,vm):
         species.pos = species.toMatrix(xm)
         species.vel = species.toMatrix(vm)
 
-        self.fieldGather(species)
+        self.fieldGather(species,fields)
 
         F = species.a*(species.E + np.cross(species.vel,species.B))
         F = species.toVector(F)
         return F
     
-    def lorentz_std(self,species):
-        self.fieldGather(species)
+    def lorentz_std(self,species,fields):
+        self.fieldGather(species,fields)
         F = species.a*(species.E + np.cross(species.vel,species.B))
         return F
     
     
     
-    def FXV(self,species,x,v):
+    def FXV(self,species,fields,x,v):
         dxM = np.shape(x)
         d = dxM[0]
         M = dxM[1]-1
         
         F = np.zeros((d,M+1),dtype=np.float)
         for m in range(0,M+1):
-            F[:,m] = self.lorentzf(species,x[:,m],v[:,m])
+            F[:,m] = self.lorentzf(species,fields,x[:,m],v[:,m])
         
         F = self.toVector(F.transpose())
         return F
     
     
     
-    def gatherE(self,species,x):
+    def gatherE(self,species,fields,x):
         species.pos = self.toMatrix(x,3)
         
-        self.fieldGather(species)
+        self.fieldGather(species,fields)
         
         return species.E
     
-    def gatherB(self,species,x):
+    def gatherB(self,species,fields,x):
         species.pos = self.toMatrix(x,3)
         
-        self.fieldGather(species)
+        self.fieldGather(species,fields)
         
         return species.B
         
