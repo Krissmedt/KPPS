@@ -65,7 +65,6 @@ class caseHandler:
             species.pos = self.pos[:species.nq,:]
             
         nVel = self.vel.shape[0]
-        print(nVel)
         if nVel <= species.nq:
             species.vel[:nVel,:] = self.vel
         elif nVel > species.nq:

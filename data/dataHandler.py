@@ -54,9 +54,6 @@ class dataHandler:
             self.trajectorySettings = kwargs['trajectory_plot']
             self.plotOps.append(self.trajectoryPlot)
             
-        if 'plotSettings' in kwargs:
-            plt.rcParams.update(kwargs['plotSettings'])
-            
 
     def run(self,species,fields,simulationManager):
         for method in self.runOps:
@@ -211,6 +208,7 @@ class dataHandler:
         fig = plt.figure(self.figureNo)
         ax = fig.gca(projection='3d')
         for pii in range(0,len(particles)):
+            traj = "p" + str(particles[pii])
             ax.plot3D(self.xArray[:,particles[pii]],
                       self.yArray[:,particles[pii]],
                       zs=self.zArray[:,particles[pii]])
@@ -272,16 +270,6 @@ class dataHandler:
         self.hArray = np.array(self.hArray)
         self.cmArray =  np.array(self.cmArray)
         
-        
-    def orderLines(self,order,xRange,yRange):
-        if order < 0:
-            a = yRange[1]/xRange[0]**order
-        else:
-            a = yRange[0]/xRange[0]**order    
-        
-        oLine = [a*xRange[0]**order,a*xRange[1]**order]
-            
-        return oLine
         
     def loadData(self,filename,variables,**kwargs):
         """ Read data file and set the desired array attribute accordingly.
