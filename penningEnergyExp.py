@@ -12,38 +12,69 @@ schemes = {'lobatto':'boris_SDC'}
 
 M = 3
 iterations = [3]
-
-
-#dt = np.array([1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
-#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16,0.0125/32,0.0125/64])
-#dt = dt/omegaB 
-#dt = 0.01
-tEnd = 8                    
-tsteps = 800
 samples = 800
-sampleInterval = floor(tsteps/samples)
-dt = tEnd/tsteps
 
 log = True
-
-nq = 1
-mq = 1
-alpha = 1.
-q = alpha*mq
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
+sim_params = {}
+species_params = {}
+case_params = {}
+analysis_params = {}
+data_params = {}
+
+sim_params['t0'] = 0
+sim_params['tEnd'] = 8
+sim_params['tSteps'] = 800
+sim_params['percentBar'] = False
+dt = sim_params['tEnd']/sim_params['tSteps']
+
+
+species_params['mq'] = 1
+species_params['q'] = 1
+alpha = species_params['q']/species_params['mq']
+
+case_params['dimensions'] = 3
+case_params['explicit'] = {}
+case_params['explicit']['expType'] = 'direct'
+case_params['dx'] = 0.01
+case_params['dv'] = 5
+
+#case_params['positions'] = np.array([[10,0,0]])
+#case_params['velocities'] = np.array([[100,0,100]])
+
+case_params['pos'] = np.array([[10,0,0]])
+case_params['vel'] = np.array([[100,0,100]])
+
 H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
-H = mq/2 * np.diag(H[0])
+H = species_params['mq'] /2 * np.diag(H[0])
 
-bMag = omegaB/alpha
-eMag = -epsilon*omegaE**2/alpha
-eTransform = np.array([[1,0,0],[0,1,0],[0,0,-2]])
+analysis_params['M'] = 3
+analysis_params['centreMass_check'] = False
+analysis_params['residual_check'] = False
+analysis_params['fieldAnalysis'] = 'coulomb'
+analysis_params['E_type'] = 'custom'
+analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
+analysis_params['E_magnitude'] = -epsilon*omegaE**2/alpha
+analysis_params['B_type'] = 'uniform'
+analysis_params['B_transform'] = [0,0,1]
+analysis_params['B_magnitude'] = omegaB/alpha
 
+data_params['record'] = {}
+data_params['record']['sampleInterval'] = floor(sim_params['tSteps']/samples)
 
+data_params['plotSettings'] = {}
+data_params['plotSettings']['legend.fontsize'] = 12
+data_params['plotSettings']['figure.figsize'] = (12,8)
+data_params['plotSettings']['axes.labelsize'] = 20
+data_params['plotSettings']['axes.titlesize'] = 20
+data_params['plotSettings']['xtick.labelsize'] = 16
+data_params['plotSettings']['ytick.labelsize'] = 16
+data_params['plotSettings']['lines.linewidth'] = 3
 
 ## Analytical solution ##
 x0 = np.array([[10,0,0]])
@@ -57,18 +88,18 @@ Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
 Iplus = x0[0,1] - Iminus
 
 
-xAnalyt = np.zeros(tsteps+1,dtype=np.float)
-yAnalyt = np.zeros(tsteps+1,dtype=np.float)
-zAnalyt = np.zeros(tsteps+1,dtype=np.float)
+xAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
+yAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
+zAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
 
-vxAnalyt = np.zeros(tsteps+1,dtype=np.float)
-vyAnalyt = np.zeros(tsteps+1,dtype=np.float)
-vzAnalyt = np.zeros(tsteps+1,dtype=np.float)
+vxAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
+vyAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
+vzAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
 exactEnergy = []
 
 
 t = 0
-for ts in range(0,tsteps+1):
+for ts in range(0,sim_params['tSteps']+1):
     xAnalyt[ts] = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
     yAnalyt[ts] = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
     zAnalyt[ts] = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
@@ -77,7 +108,7 @@ for ts in range(0,tsteps+1):
     vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
     vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
     
-    if ts%sampleInterval == 0:
+    if ts%data_params['record']['sampleInterval'] == 0:
         u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
         exactEnergy.append(u.transpose() @ H @ u)
 
@@ -87,35 +118,24 @@ for ts in range(0,tsteps+1):
 ## Numerical solution ##
 t1 = time.time()
 for key, value in schemes.items():
+    analysis_params['particleIntegration'] = value
+    analysis_params['nodeType'] = key
     for K in iterations:
+        analysis_params['K'] = K
+        
         tNum = []
         xNum = []
         yNum = []
         zNum = []
         dNum = []
-        model = dict(
-                simSettings = {'t0':0,'dt':dt,'tSteps':tsteps,'percentBar':True,'id':value},
-            
-                speciesSettings = {'nq':nq,'mq':mq,'q':q},
-                
-                caseSettings = {'dimensions':3,
-                                'explicit':{'expType':'direct','positions':x0,'velocities':v0}},
-                
-                analysisSettings = {'imposedElectricField':{'general':eTransform, 'magnitude':eMag},
-                                    'imposedMagneticField':{'uniform':[0,0,1], 'magnitude':bMag},
-                                    'particleIntegration':value,
-                                    'M':M,
-                                    'K':K,
-                                    'nodeType':key,
-                                    'penningEnergy':H,
-                                    'centreMass':False},
-                
-                dataSettings = {#'write':{'sampleRate':1,'foldername':'simple'},
-                                'record':{'sampleNo':samples}
-                                ,'plot':{'tPlot':'xyz'}
-                                ,'trajectory_plot':{'particle':1,'limits':[20,20,15]}
-                                })
         
+
+        model = dict(simSettings=sim_params,
+                     speciesSettings=species_params,
+                     analysisSettings=analysis_params,
+                     caseSettings=case_params,
+                     dataSettings=data_params)
+
 
         kppsObject = kpps(**model)
         data = kppsObject.run()

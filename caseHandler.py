@@ -7,27 +7,29 @@ import math as math
 
 ## Class
 class caseHandler:
-    def __init__(self,species,dx=1,dv=10,**kwargs):
+    def __init__(self,species,fields,dx=1,dv=10,**kwargs):
         self.ndim = 3
         self.dx = dx
         self.dv = dv
-        self.pos = np.zeros(species.nq,dtype=np.float)
-        self.vel = np.zeros(species.nq,dtype=np.float)
+        self.pos = np.zeros((species.nq,3),dtype=np.float)
+        self.vel = np.zeros((species.nq,3),dtype=np.float)
         
-        if 'dimensions' in kwargs:
-            self.ndim = kwargs['dimensions']
+        self.params = kwargs
+        for key, value in self.params.items():
+            setattr(self,key,value)
+        
+        try:
+            self.ndim = self.dimensions
+            self.pos = self.positions
+            self.vel = self.velocities
+        except AttributeError:
+            pass
             
-        if 'positions' in kwargs:
-            self.pos = kwargs['positions']
-            
-        if 'velocities' in kwargs:
-            self.vel = kwargs['velocities']
-
-        if 'distribution' in kwargs:
+        if 'distribution' in self.params:
             self.setupDistribute(species)
             
-        if 'explicit' in kwargs:
-            self.setupExplicit(species,**kwargs['explicit'])
+        if 'explicit' in self.params:
+            self.setupExplicit(species,**self.params['explicit'])
             
     
     

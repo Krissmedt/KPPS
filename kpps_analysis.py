@@ -21,6 +21,31 @@ import time
 ## Class
 class kpps_analysis:
     def __init__(self,simulationManager,**kwargs):
+        self.params = kwargs
+        
+        # Set default values
+        self.mu0 = 4*pi*10**(-7) #Vacuum permeability (H/m) 
+        self.ep0 = 8.854187817*10**(-12) #Vacuum permittivity (F/m)
+        self.q0 = 1.602176620898*10**(-19) #Elementary charge (C)
+        
+        self.E_type = 'none'
+        self.E_magnitude = 1
+        self.E_transform = np.zeros((3,3),dtype=np.float)
+        
+        self.coulomb = self.coulomb_cgs
+        self.lambd = 0 
+        
+        self.B_type = 'none'
+        self.B_magnitude = 1
+        self.B_transform = np.zeros((1,3),dtype=np.float)
+        
+        self.imposeFields = False
+        
+
+        
+        # Set params according to inputs
+        for key, value in self.params.items():
+            setattr(self,key,value)
         
         # Initialise pre- and post-analysis lists
         self.preAnalysis = []
@@ -28,110 +53,83 @@ class kpps_analysis:
         
         # Load required particle integration methods
         self.particleIntegration = []
-        if 'particleIntegration' in kwargs:
-            if kwargs['particleIntegration'] == 'boris_staggered':
+        if 'particleIntegration' in self.params:
+            if self.params['particleIntegration'] == 'boris_staggered':
                 self.particleIntegration.append(self.boris_staggered)
                 simulationManager.rhs_dt = 1
                 
-            if kwargs['particleIntegration'] == 'boris_synced':
+            if self.params['particleIntegration'] == 'boris_synced':
                 self.particleIntegration.append(self.boris_synced)
                 simulationManager.rhs_dt = 1
                 
-            if kwargs['particleIntegration'] == 'boris_SDC':
+            if self.params['particleIntegration'] == 'boris_SDC':
                 self.preAnalysis.append(self.collSetup)
                 self.particleIntegration.append(self.boris_SDC)
 
-                if 'M' in kwargs:
-                    self.M = kwargs['M']
-                else:
-                    self.M = 1
-                    
-                if 'K' in kwargs:
-                    self.K = kwargs['K']
-                else: 
-                    self.K = self.M
 
-                if 'nodeType' in kwargs:
-                    if kwargs['nodeType'] == 'lobatto':
-                        self.ssi = 1    #Set sweep-start-index 'ssi'
-                        self.collocationClass = CollGaussLobatto
-                        self.updateStep = self.lobatto_update
-                        simulationManager.rhs_dt = (self.M - 1)*self.K
-                        
-                    elif kwargs['nodeType'] == 'legendre':
-                        self.ssi = 0 
-                        self.collocationClass = CollGaussLegendre
-                        self.updateStep = self.legendre_update
-                        simulationManager.rhs_dt = (self.M + 1)*self.K
-                        
-                else:
-                    self.ssi = 1
-                    self.collocationClass = CollGaussLobatto
-                    self.updateStep = self.lobatto_update
-                    simulationManager.rhs_dt = (self.M - 1)*self.K
+        if 'nodeType' in self.params:
+            if self.params['nodeType'] == 'lobatto':
+                self.ssi = 1    #Set sweep-start-index 'ssi'
+                self.collocationClass = CollGaussLobatto
+                self.updateStep = self.lobatto_update
+                simulationManager.rhs_dt = (self.M - 1)*self.K
+                
+            elif self.params['nodeType'] == 'legendre':
+                self.ssi = 0 
+                self.collocationClass = CollGaussLegendre
+                self.updateStep = self.legendre_update
+                simulationManager.rhs_dt = (self.M + 1)*self.K
+                    
+            else:
+                self.ssi = 1
+                self.collocationClass = CollGaussLobatto
+                self.updateStep = self.lobatto_update
+                simulationManager.rhs_dt = (self.M - 1)*self.K
                
             
         # Load required field analysis/integration methods
         self.fieldIntegration = []
-        if 'fieldIntegration' in kwargs:
-            self.fieldParams = kwargs['fieldIntegration']
-            
-            if 'scattering' in self.fieldParams:
-                if self.fieldParams['scattering'] == 'linear':
-                    self.fieldIntegration.append(self.linear_scatt)
-                else:
-                    self.fieldIntegration.append(self.linear_scatt)
-            
-            
-            if 'pic' in self.fieldParams:
-                if self.fieldParams['pic'] == 'simple':
-                    self.fieldIntegration.append(self.pic_simple)
-
-            if 'imposeFields' in self.fieldParams and self.fieldParams['imposeFields'] == True:
-                self.preAnalysis.append(self.imposed_field_mesh)
-                
-            
-        # Load required field gathering methods
         self.fieldGathering = []
-        if 'imposedElectricField' in kwargs:
+        if self.fieldAnalysis == 'single' or 'coulomb':
             self.fieldGathering.append(self.eFieldImposed)
-            self.imposedEParams = kwargs['imposedElectricField']
-            
-        if 'interactionModelling' in kwargs:
-            if kwargs['interactionModelling'] == 'full':
-                self.fieldGathering.append(self.nope)
-            elif kwargs['interactionModelling'] == 'intra':
-                self.fieldGathering.append(self.coulombIntra)   
-            else:
-                self.fieldGathering.append(self.nope) 
-                
-        if 'imposedMagneticField' in kwargs:
             self.fieldGathering.append(self.bFieldImposed)
-            self.imposedBParams = kwargs['imposedMagneticField']
+                
+        if self.fieldAnalysis == 'coulomb':
+              self.fieldGathering.append(self.coulomb)   
+              
+        if self.fieldAnalysis == 'pic':
+            self.fieldGathering.append(self.scatter) 
+            self.fieldIntegration.append(self.pic_simple)
+
+            if self.imposeFields  == True:
+                self.preAnalysis.append(self.imposed_field_mesh)
         
         
         # Load post-integration hook methods
         self.hooks = []
-        if 'penningEnergy' in kwargs:
+        if 'penningEnergy' in self.params:
             self.preAnalysis.append(self.energy_calc_penning)
             self.hooks.append(self.energy_calc_penning)
-            self.H = kwargs['penningEnergy']
+            self.H = self.params['penningEnergy']
             
-        if 'centreMass' in kwargs and kwargs['centreMass'] == True:
+        if self.params['centreMass_check'] == True:
             self.preAnalysis.append(self.centreMass)
             self.hooks.append(self.centreMass)
-
+            
+        if 'residual_check' in self.params and self.params['residual_check'] == True:
+            self.hooks.append(self.display_residuals)
         
         ## Physical constants
-        self.mu0 = 1
-        self.ep0 = 1
-        self.q0 = 1
-        
         if 'units' in kwargs:
-            if kwargs['units'] == 'si':
+            if self.params['units'] == 'si':
                 self.makeSI()
+                self.coulomb = self.coulomb_si
+            elif self.params['units'] == 'cgs':
+                pass
+            elif self.params['units'] == 'custom':
+                pass
+
                 
-    
     ## Analysis modules
     def fieldIntegrator(self,species,fields,**kwargs):     
         for method in self.fieldIntegration:
@@ -179,111 +177,64 @@ class kpps_analysis:
     
     ## Electric field methods
     def eFieldImposed(self,species,fields,**kwargs):
-        k = 1
-        if "magnitude" in self.imposedEParams:
-            k = self.imposedEParams["magnitude"]
-            
-        if "sPenning" in self.imposedEParams:
-            direction = np.array(self.imposedEParams['sPenning'])
-            species.E += - species.pos * direction * k
-            
-            
-        elif "general" in self.imposedEParams:
-            inputMatrix = np.array(self.imposedEParams['general'])
+        if self.E_type == "custom":
             for pii in range(0,species.nq):
-                direction = np.dot(inputMatrix,species.pos[pii,:])
-                species.E[pii,:] += direction * k
+                direction = np.dot(self.E_transform,species.pos[pii,:])
+                species.E[pii,:] += direction * self.E_magnitude
                         
         return species
-
-
-    def coulombIntra(self, species,fields,**kwargs):
-        try:
-            pos = species.pos
-        except AttributeError:
-            print("Input species object either has no position array named"
-                  + " 'pos' or electric field array named 'E'.")
+    
+    
+    def coulomb_pair(self,species,pii,pjj):
+        rpos = species.pos[pii,:] - species.pos[pjj,:]
+        denom = np.power(np.linalg.norm(rpos)**2 + self.lambd**2,3/2)
+        species.E[pii,:] += species.q*rpos/denom
         
-        nq = len(pos)
-        for pii in range(0,nq):
-            for pjj in range(0,nq):
-                if pii==pjj:
-                    #E[pii,:] = 0
-                    continue
-                #print(E)
-
-                species.E[pii,:] += species.E[pii,:] + self.coulombForce(species.q,
-                                                   pos[pii,:],
-                                                   pos[pjj,:])
+        
+    def coulomb_cgs(self, species,fields,**kwargs):
+        for pii in range(0,species.nq):
+            for pjj in range(0,pii):
+                self.coulomb_pair(species,pii,pjj)
+              
+            for pjj in range(pii+1,species.nq):
+                self.coulomb_pair(species,pii,pjj)
 
         return species
     
     
-    def coulombForce(self,q2,pos1,pos2):
-        """
-        Returns the electric field contribution on particle 1 w.r.t. 
-        particle 2, where the charge of particle 2 'q2' is given in units 
-        of the elementary charge q0 (i.e. actual charge = q2*q0).
-        """
-
-        rpos = pos1-pos2
-        r = np.sqrt(np.sum(np.power(rpos,2)))
-        rUnit = rpos/r
+    def coulomb_si(self, species,fields,**kwargs):
+        species.E = self.coulomb_cgs(species,fields) * 1/(4*pi*self.ep0)
         
-        Ec = 1/(4*pi*self.ep0) * q2*self.q0/r**2 * rUnit
-        return Ec
-    
+        return species
+
     
     
     ## Magnetic field methods
     def bFieldImposed(self,species,fields,**kwargs):
-        species.B = np.array(species.B)
-        settings = self.imposedBParams
-        
-        if "magnitude" in settings:
-            bMag = settings["magnitude"]
-        else:
-            bMag = 1
-        
-        if "uniform" in settings:
-            direction = np.array(settings["uniform"])
+        if self.B_type == 'uniform':
             try:
-                species.B[:,0:] = np.multiply(bMag,direction)
+                species.B[:,0:] = np.multiply(self.B_magnitude,self.B_transform)
             except TypeError:
                 print("TypeError raised, did you input a length 3 vector "
-                      + "to define the uniform magnetic field?")
-
+                      + "as transform to define the uniform magnetic field?")
         return species
         
     
     ## Field analysis methods
     def imposed_field_mesh(self,species,fields,simulationManager):
-        k = 1
-        if "magnitude" in self.imposedEParams:
-            k = self.imposedEParams["magnitude"]
-            
-        if "sPenning" in self.imposedEParams:
-            direction = np.array(self.imposedEParams['sPenning'])
-            for xi in range(0,len(fields.pos[0,:,0,0])):
-                for yi in range(0,len(fields.pos[0,0,:,0])):
-                    for zi in range(0,len(fields.pos[0,0,0,:])):
-                        fields.E[:,xi,yi,zi] += - fields.pos[:,xi,yi,zi] * direction * k
-                        
-        elif "general" in self.imposedEParams:
-            inputMatrix = np.array(self.imposedEParams['general'])
+        k = self.E_magnitude
+               
+        if self.E_type == "custom":
+            inputMatrix = np.array(self.E_transform)
             for xi in range(0,len(fields.pos[0,:,0,0])):
                 for yi in range(0,len(fields.pos[0,0,:,0])):
                     for zi in range(0,len(fields.pos[0,0,0,:])):
                         direction = np.dot(inputMatrix,fields.pos[:,xi,yi,zi])
-                        fields.E[:,xi,yi,zi] += direction * k
-                        
+                        fields.E[:,xi,yi,zi] += direction * k        
         
-        if "magnitude" in self.imposedBParams:
-            bMag = self.imposedBParams["magnitude"]
-        else:
-            bMag = 1
-        if "uniform" in self.imposedBParams:
-            direction = np.array(self.imposedBParams["uniform"])
+        bMag = self.B_magnitude
+        if self.B_type == "uniform":
+            direction = np.array(self.B_transform)
             try:
                 for xi in range(0,len(fields.pos[0,:,0,0])):
                     for yi in range(0,len(fields.pos[0,0,:,0])):
@@ -291,7 +242,7 @@ class kpps_analysis:
                             fields.B[:,xi,yi,zi] = np.multiply(bMag,direction)
             except TypeError:
                 print("TypeError raised, did you input a length 3 vector "
-                      + "to define the uniform magnetic field?")
+                      + "as transform to define the uniform magnetic field?")
 
         return fields
     
@@ -400,7 +351,12 @@ class kpps_analysis:
         SX[1:,:] = QX[1:,:] - QX[0:-1,:]      
 
         SQ = Smat @ Qmat
-                        
+        
+        self.x_con = np.zeros((K,M))
+        self.x_res = np.zeros((K,M))
+        self.v_con = np.zeros((K,M))
+        self.v_res = np.zeros((K,M))
+        
         x0 = np.zeros((d,M+1),dtype=np.float)
         v0 = np.zeros((d,M+1),dtype=np.float)
         
@@ -418,11 +374,12 @@ class kpps_analysis:
         
         xn[:,:] = x[:,:]
         vn[:,:] = v[:,:]
-
+        
         #print()
         #print(simulationManager.ts)
         for k in range(1,K+1):
             #print("k = " + str(k))
+            
             for m in range(self.ssi,M):
                 #print("m = " + str(m))
                 #Determine next node (m+1) positions
@@ -434,17 +391,19 @@ class kpps_analysis:
                 for l in range(1,M+1):
                     sumSQ += SQ[m+1,l]*self.lorentzf(species,fields,x[:,l],v[:,l])
                 
-                xn[:,m+1] = xn[:,m] + dm[m]*v[:,0] + sumSX + sumSQ
+                xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
+                xn[:,m+1] = xQuad + sumSX 
+                
                 
                 #Determine next node (m+1) velocities
                 sumS = 0
                 for l in range(1,M+1):
                     sumS += Smat[m+1,l] * self.lorentzf(species,fields,x[:,l],v[:,l])
-            
+                
+                vQuad = vn[:,m] + sumS
                 
                 ck_dm = -1/2 * (self.lorentzf(species,fields,x[:,m+1],v[:,m+1])
                         +self.lorentzf(species,fields,x[:,m],v[:,m])) + 1/dm[m] * sumS
-                #print(ck_dm)
                 
                 #Sample the electric field at the half-step positions (yields form Nx3)
                 half_E = (self.gatherE(species,fields,xn[:,m])+self.gatherE(species,fields,xn[:,m+1]))/2
@@ -456,28 +415,14 @@ class kpps_analysis:
                 
                 v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
                 vn[:,m+1] = self.toVector(v_new)
-
-            
-            """
-            check_node = 2
-            ch_i = check_node
-            
-            x_res = np.linalg.norm(xn[:,ch_i]-xn[:,ch_i-1]-dm[m]*v[:,0]-sumSQ)
-            v_res = np.linalg.norm(vn[:,ch_i]-vn[:,ch_i-1]-sumS)
-            f_diff = (self.lorentzf(species,xn[:,ch_i],vn[:,ch_i]) 
-                      - self.lorentzf(species,x[:,ch_i],v[:,ch_i]))
-            f_conv = np.linalg.norm(f_diff)
-            
-            
-            print("k = " + str(k) + ", iter f() conv. = " + str(f_conv))
-            print("k = " + str(k) + ", x-residual = " + str(x_res))
-            print("k = " + str(k) + ", v-residual = " + str(v_res))
-            """
-            
+                
+                
+                self.calc_residuals(k,m,x,xn,xQuad,v,vn,vQuad)
+                
+                
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
-            
-        
+                
         species = self.updateStep(species,fields,x,v,x0,v0,weights,Qmat)
 
         return species
@@ -515,6 +460,28 @@ class kpps_analysis:
     
     
     ## Additional analysis
+    def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
+        self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
+        self.x_res[k-1,m] = np.average(np.linalg.norm(xn[:,m+1]-xQuad))
+        
+        self.v_res[k-1,m] = np.average(np.linalg.norm(vn[:,m+1]-vQuad))
+        self.v_con[k-1,m] = np.average(np.abs(vn[:,m+1] - v[:,m+1]))
+        
+        
+    def display_residuals(self,species,fields,simulationManager):
+        print("Position convergence:")
+        print(self.x_con)
+        
+        print("Velocity convergence:")  
+        print(self.v_con)
+        
+        print("Position residual:")
+        print(self.x_res)
+        
+        print("Velocity residual:")
+        print(self.v_res)
+        
+        
     def get_u(self,x,v):
         assert len(x) == len(v)
         d = len(x)

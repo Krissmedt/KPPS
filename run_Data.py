@@ -40,7 +40,7 @@ if order_data == True:
     data = dataHandler()
     for key, value in schemes.items():
         for k in K:
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(k) + "_" + str(0.1) + "dt.txt"
+            filename = key + "_" + value + "_"  + str(M) + "_" + str(k) + "_" + str(0.4) + "dt.txt"
             data.loadData(filename,['dt','rhs','xRel'])
 
             

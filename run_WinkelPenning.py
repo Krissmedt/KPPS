@@ -4,18 +4,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
+
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
 
 M = 3
-iterations = [3]
+iterations = [1,2,4,8,16]
+          
+omegaB = 25.0
+omegaE = 4.9
+epsilon = -1
 
-#dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
-#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])
-#dt = dt/omegaB                     
-dt = np.array([0.01])
+dt = np.linspace(10**-1,10,10)
+dt = dt/omegaB
+dt = np.flip(dt,axis=0)
 
-log = True
+log = False
 
 omegaB = 25.0
 omegaE = 4.9
@@ -46,10 +50,6 @@ case_params['dv'] = 0
 
 case_params['pos'] = np.array([[10,0,0]])
 case_params['vel'] = np.array([[100,0,100]])
-
-H1 = epsilon*omegaE**2
-H = np.array([[H1,1,H1,1,-2*H1,1]])
-H = species_params['mq']/2 * np.diag(H[0])
 
 analysis_params['M'] = 3
 analysis_params['centreMass_check'] = True
@@ -177,7 +177,7 @@ for key, value in schemes.items():
             dataArray[:,1] = rhs_evals
             dataArray[:,2] = xRel
             
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + str(dt[i]) + "dt.txt"
+            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + "winkel"
             np.savetxt(filename,dataArray)
             
             
