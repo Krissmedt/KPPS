@@ -9,7 +9,6 @@ from simulationManager import simulationManager
 from dataHandler import dataHandler
 from caseHandler import caseHandler
 from kpps_analysis import kpps_analysis
-import time
 
 class kpps:
     simSettings = {}
@@ -38,21 +37,29 @@ class kpps:
             
         if 'analysisSettings' in kwargs:
             self.analysisSettings = kwargs['analysisSettings']
-        
+
         if 'dataSettings' in kwargs:
             self.dataSettings = kwargs['dataSettings']
+            
 
     def run(self):
         ## Load required modules
         particles = species(**self.speciesSettings)
         fields = mesh(**self.fieldSettings)
         sim = simulationManager(**self.simSettings)
-        case = caseHandler(particles,fields,**self.caseSettings)
-        analyser = kpps_analysis(sim,**self.analysisSettings)
-        dHandler = dataHandler(species_obj=particles,
-                               mesh_obj=fields,
-                               caseHandler_obj=case,
-                               simManager_obj=sim,**self.dataSettings)
+        
+        case = caseHandler(species=particles,
+                           mesh=fields,
+                           **self.caseSettings)
+        
+        analyser = kpps_analysis(simulationManager=sim,
+                                 **self.analysisSettings)
+        
+        dHandler = dataHandler(species=particles,
+                               mesh=fields,
+                               caseHandler=case,
+                               simulationManager=sim,
+                               **self.dataSettings)
         
         
         ## Main time loop

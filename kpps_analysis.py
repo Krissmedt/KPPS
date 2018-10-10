@@ -20,10 +20,8 @@ import time
 
 ## Class
 class kpps_analysis:
-    def __init__(self,simulationManager,**kwargs):
-        self.params = kwargs
-        
-        # Set default values
+    def __init__(self,**kwargs):
+        ## Default values
         self.mu0 = 4*pi*10**(-7) #Vacuum permeability (H/m) 
         self.ep0 = 8.854187817*10**(-12) #Vacuum permittivity (F/m)
         self.q0 = 1.602176620898*10**(-19) #Elementary charge (C)
@@ -41,11 +39,13 @@ class kpps_analysis:
         
         self.imposeFields = False
         
-
+        self.simulationManager = None
         
-        # Set params according to inputs
+        ## Iterate through keyword arguments and store all in object (self)
+        self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
+        
         
         # Initialise pre- and post-analysis lists
         self.preAnalysis = []
@@ -56,11 +56,11 @@ class kpps_analysis:
         if 'particleIntegration' in self.params:
             if self.params['particleIntegration'] == 'boris_staggered':
                 self.particleIntegration.append(self.boris_staggered)
-                simulationManager.rhs_dt = 1
+                self.simulationManager.rhs_dt = 1
                 
             if self.params['particleIntegration'] == 'boris_synced':
                 self.particleIntegration.append(self.boris_synced)
-                simulationManager.rhs_dt = 1
+                self.simulationManager.rhs_dt = 1
                 
             if self.params['particleIntegration'] == 'boris_SDC':
                 self.preAnalysis.append(self.collSetup)
@@ -72,19 +72,19 @@ class kpps_analysis:
                 self.ssi = 1    #Set sweep-start-index 'ssi'
                 self.collocationClass = CollGaussLobatto
                 self.updateStep = self.lobatto_update
-                simulationManager.rhs_dt = (self.M - 1)*self.K
+                self.simulationManager.rhs_dt = (self.M - 1)*self.K
                 
             elif self.params['nodeType'] == 'legendre':
                 self.ssi = 0 
                 self.collocationClass = CollGaussLegendre
                 self.updateStep = self.legendre_update
-                simulationManager.rhs_dt = (self.M + 1)*self.K
+                self.simulationManager.rhs_dt = (self.M + 1)*self.K
                     
             else:
                 self.ssi = 1
                 self.collocationClass = CollGaussLobatto
                 self.updateStep = self.lobatto_update
-                simulationManager.rhs_dt = (self.M - 1)*self.K
+                self.simulationManager.rhs_dt = (self.M - 1)*self.K
                
             
         # Load required field analysis/integration methods

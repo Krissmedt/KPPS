@@ -7,55 +7,65 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ## Class ##
 class dataHandler:
-    def __init__(self, **kwargs):
-        self.writeEvery = 1
-        self.recordEvery = 1
+    def __init__(self,**kwargs):
+        ## Default values and initialisation
+        self.write_type = 'periodic'
+        self.record_type = 'periodic'
+        self.record = False
+        self.write = False
+        self.component_plots = False
+        self.trajectory_plots = False
+        
         self.recordIndex = 0
-        self.dataFoldername = "./"
+        self.vtkFoldername = "./"
         self.runOps = []
         self.postOps = []
         self.plotOps = []
         self.figureNo = 0
+        self.sampleInterval = 1
+        self.samples = 1
+        self.plot_params = {}
+        self.components = ' '
         
-        if 'species_obj' in kwargs:
-            species = kwargs['species_obj']
-            
-        if 'mesh_obj' in kwargs:
-            fields = kwargs['mesh_obj']
-            
-        if 'caseHandler_obj' in kwargs:
-            caseHandler = kwargs['caseHandler_obj']
-            
-        if 'simManager_obj' in kwargs:
-            simulationManager = kwargs['simManager_obj']
-            self.label = simulationManager.simID
-
+        ## Dummy values - Need to be set in params for class to work!
+        self.pos = np.zeros((1,3),dtype=np.float)
+        self.vel = np.zeros((1,3),dtype=np.float)
+        self.species = None
+        self.mesh = None
+        self.simulationManager = None
+        self.caseHandler = None
         
-        if 'write' in kwargs:
-            self.writeSetup(species,
-                            fields,
-                            simulationManager,
-                            caseHandler,
-                            **kwargs['write'])
+        ## Iterate through keyword arguments and store all in object (self)
+        self.params = kwargs
+        for key, value in self.params.items():
+            setattr(self,key,value)
+            
+        try:
+            self.label = self.simulationManager.simID
+        except AttributeError:
+            self.label = 'none'
+            
+        if self.write == True:
+            self.writeSetup(self.species,
+                            self.mesh,
+                            self.simulationManager,
+                            self.caseHandler)
             
             self.runOps.append(self.writeData)
                     
-        if 'record' in kwargs:
-            self.recordSetup(species,fields,simulationManager, **kwargs['record'])
+        if self.record == True:
+            self.recordSetup(self.species,self.mesh,self.simulationManager)
             self.runOps.append(self.recordData)
             self.postOps.append(self.convertToNumpy)
             self.postOps.append(self.rhs_tally)
             
-        if 'plot' in kwargs:
-            self.plotSettings = kwargs['plot']
+        if self.component_plots == True:
             self.plotOps.append(self.xyzPlot)
             
-        if 'trajectory_plot' in kwargs:
-            self.trajectorySettings = kwargs['trajectory_plot']
+        if self.trajectory_plots == True:
             self.plotOps.append(self.trajectoryPlot)
             
-        if 'plotSettings' in kwargs:
-            plt.rcParams.update(kwargs['plotSettings'])
+        plt.rcParams.update(self.plot_params)
             
 
     def run(self,species,fields,simulationManager):
@@ -110,6 +120,11 @@ class dataHandler:
     def recordData(self,species,fields,simulationManager):
         ## NOTE: For small sampleInterval compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
+        if self.record_type == 'periodic':
+            self.recordEvery = self.sampleInterval
+        elif self.record_type == 'total':
+            self.recordEvery = math.floor(simulationManager.tSteps/self.samples)
+        
         if simulationManager.ts % self.recordEvery == 0:
             self.tArray.append(simulationManager.t)
             
@@ -126,87 +141,83 @@ class dataHandler:
 
 
     def xyzPlot(self):
-        if 'tPlot' in self.plotSettings:
-            for char in self.plotSettings['tPlot']:
-                self.figureNo += 1
-                if char == 'x':
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.xArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$x$')
-                    
-                elif char == 'y':
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.yArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$y$')
-                    
-                elif char == 'z':
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.zArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$z$')
-                    
-                elif char == 'v':
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.vxArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$vx$')
-                    
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.vyArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$vy$')
-                    
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.vzArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$vz$')
-                    
-                elif char == 'E':
-                    fig = plt.figure(self.figureNo)
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.plot(self.tArray,self.hArray)
-                    ax.set_xscale('linear')
-                    ax.set_xlabel('$t$')
-                    ax.set_yscale('linear')
-                    ax.set_ylabel('$h$')
-                    
-        if 'sPlot' in self.plotSettings:
+        for char in self.components:
             self.figureNo += 1
-            plt.figure(self.figureNo)
-            plt.plot(self.xArray,self.yArray)
+            if char == 'x':
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.xArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$x$')
+                
+            elif char == 'y':
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.yArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$y$')
+                
+            elif char == 'z':
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.zArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$z$')
+                
+            elif char == 'v':
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.vxArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$vx$')
+                
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.vyArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$vy$')
+                
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.vzArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$vz$')
+                
+            elif char == 'E':
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                ax.plot(self.tArray,self.hArray)
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel('$h$')
             
             
     def trajectoryPlot(self):
         self.figureNo += 1
-        if 'particles' in self.trajectorySettings:
-            particles = np.array(self.trajectorySettings['particles']) - 1
-        else:
-            particles = [0]
+
+        try:
+            particles = self.trajectories - 1
+            particles = np.array(particles,dtype=np.int)
+        except TypeError:
+            if self.trajectories == 'all':
+                particles = np.linspace(0,len(self.xArray)-1,
+                                        len(self.xArray)-1,
+                                        dtype=np.int)
             
-        if 'limits' in self.trajectorySettings:
-            limits = np.array(self.trajectorySettings['limits'],dtype=np.float)
-        else:
-            limits = np.array([20,20,15],dtype=np.float)
+        limits = np.array(self.domain_limits,dtype=np.float)
         
         fig = plt.figure(self.figureNo)
         ax = fig.gca(projection='3d')
@@ -226,26 +237,23 @@ class dataHandler:
     def writeSetup(self,species,fields,simulationManager,caseHandler,**kwargs):
         import vtk_writer as vtk_writer
         self.writer = vtk_writer.VTK_XML_Serial_Unstructured()
-        if 'foldername' in kwargs:
-            if kwargs['foldername'] == "simple":
-                delimiter = "_"
-                
-                entries = ['kpps',
-                           str(caseHandler.ndim) + 'D',
-                           str(species.nq) + 'p',
-                           str(simulationManager.tSteps) + 'k']
-                
-                self.dataFoldername += delimiter.join(entries)
+        if self.foldernaming == 'simple':
+            delimiter = "_"
             
-            self.mkDataDir()
+            entries = ['kpps',
+                       str(caseHandler.ndim) + 'D',
+                       str(species.nq) + 'p',
+                       str(simulationManager.tSteps) + 'k']
             
-        if 'sampleInterval' in kwargs:
-            self.writeEvery = kwargs['sampleInterval']
-        elif 'sampleNo' in kwargs:
-            self.writeEvery = math.floor(simulationManager.tSteps/kwargs['sampleNo'])
+            self.vtkFoldername += delimiter.join(entries)
+        
+        self.mkDataDir()
+        if self.write_type == 'periodic':
+            self.writeEvery = self.sampleInterval
+        elif self.write_type == 'total':
+            self.writeEvery = math.floor(simulationManager.tSteps/self.samples)
             
 
-        
         
     def writeData(self,species,fields,simulationManager):
         ts = simulationManager.ts

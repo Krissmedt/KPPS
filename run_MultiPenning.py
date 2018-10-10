@@ -34,23 +34,18 @@ sim_params['percentBar'] = False
 
 
 species_params['nq'] = 10
-species_params['mq'] = 1
+species_params['mq'] = 1000
 species_params['q'] = 1
 alpha = species_params['q']/species_params['mq']
 
 case_params['dimensions'] = 3
-case_params['explicit'] = {}
-case_params['explicit']['expType'] = 'clouds'
+case_params['particle_init'] = 'clouds'
 case_params['dx'] = 0.01
-case_params['dv'] = 0
-
-#case_params['positions'] = np.array([[10,0,0]])
-#case_params['velocities'] = np.array([[100,0,100]])
-
+case_params['dv'] = 5
 case_params['pos'] = np.array([[10,0,0]])
 case_params['vel'] = np.array([[100,0,100]])
 
-analysis_params['M'] = 3
+analysis_params['M'] = M
 analysis_params['centreMass_check'] = True
 analysis_params['residual_check'] = False
 analysis_params['fieldAnalysis'] = 'coulomb'
@@ -61,23 +56,25 @@ analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/alpha
 
-data_params['record'] = {}
-data_params['record']['sampleInterval'] = 1
+data_params['sampleInterval'] = 1
+data_params['record'] = True
+data_params['write'] = False
+data_params['component_plots'] = True
+data_params['components'] = 'xyz'
+data_params['trajectory_plots'] = True
+data_params['trajectories'] = 'all'
+data_params['domain_limits'] = [20,20,15]
 
-data_params['plot'] = {}
-data_params['plot']['tPlot'] = 'xyz'
-data_params['trajectory_plot'] = {}
-data_params['trajectory_plot']['particles'] = np.linspace(1,10,10,dtype=np.int)
-data_params['trajectory_plot']['limits'] = [20,20,15]
+plot_params = {}
+plot_params['legend.fontsize'] = 12
+plot_params['figure.figsize'] = (12,8)
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 3
 
-data_params['plotSettings'] = {}
-data_params['plotSettings']['legend.fontsize'] = 12
-data_params['plotSettings']['figure.figsize'] = (12,8)
-data_params['plotSettings']['axes.labelsize'] = 20
-data_params['plotSettings']['axes.titlesize'] = 20
-data_params['plotSettings']['xtick.labelsize'] = 16
-data_params['plotSettings']['ytick.labelsize'] = 16
-data_params['plotSettings']['lines.linewidth'] = 3
+data_params['plot_params'] = plot_params
 
 
 

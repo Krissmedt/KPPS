@@ -7,57 +7,52 @@ import math as math
 
 ## Class
 class caseHandler:
-    def __init__(self,species,fields,dx=1,dv=10,**kwargs):
-        self.ndim = 3
-        self.dx = dx
-        self.dv = dv
-        self.pos = np.zeros((species.nq,3),dtype=np.float)
-        self.vel = np.zeros((species.nq,3),dtype=np.float)
+    def __init__(self,**kwargs):
         
+        ## Default values
+        self.particle_init = 'direct'
+        self.ndim = 3
+        self.dx = 1
+        self.dv = 10
+        
+        ## Dummy values - Need to be set in params for class to work!
+        self.pos = np.zeros((1,3),dtype=np.float)
+        self.vel = np.zeros((1,3),dtype=np.float)
+        self.species = None
+        self.mesh = None
+        
+        ## Iterate through keyword arguments and store all in object
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
-        
+            
+         # check for other intuitive parameter names
         try:
             self.ndim = self.dimensions
             self.pos = self.positions
             self.vel = self.velocities
         except AttributeError:
             pass
-            
+        
+        ## Main functionality - setup mesh and species for specific case
         if 'distribution' in self.params:
-            self.setupDistribute(species)
+            self.setupDistribute(self.species)
             
         if 'explicit' in self.params:
-            self.setupExplicit(species,**self.params['explicit'])
+            self.setupExplicit(self.species,**self.params['explicit'])
             
     
-    
-    def setupExplicit(self,species,expType='direct',**kwargs):
-        if 'positions' in kwargs:
-            self.pos = np.array(kwargs['positions'])
+        if self.particle_init == 'direct':
+            self.direct(self.species)
+        elif self.particle_init == 'clouds':
+            self.clouds(self.species)
+        elif self.particle_init == 'random':
+            self.randDis(self.species)
+        elif self.particle_init == 'even':
+            self.evenPos(self.species)
                 
-        if 'velocities' in kwargs:
-            self.vel = np.array(kwargs['velocities'])
-    
-        if expType == 'direct':
-            self.direct(species)
-        elif expType == 'clouds':
-            self.clouds(species)
-            
-        return species
-                
-                
-    def setupDistribute(self,species,disType='random',**kwargs):
-        if disType == 'even':
-            self.evenPos(species)
-        elif disType == 'random':
-            self.randDis(species)
-        elif disType == 'point_clouds':
-            self.pointClouds
-    
 
-## Explicit setup methods:
+    ## Setup Methods
     def direct(self,species,**kwargs):
         nPos = self.pos.shape[0]
         if nPos <= species.nq:
@@ -79,8 +74,7 @@ class caseHandler:
         for xi in range(0,len(self.pos)):
             species.pos[xi*ppc:(xi+1)*ppc,:] = self.pos[xi] + self.random(ppc,self.dx)
             species.vel[xi*ppc:(xi+1)*ppc,:] = self.vel[xi] + self.random(ppc,self.dv)
-
-## Distributed setup methods:     
+     
     def evenPos(self,species):
         return species
     

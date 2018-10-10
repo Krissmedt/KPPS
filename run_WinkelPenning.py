@@ -37,48 +37,46 @@ sim_params['percentBar'] = False
 
 species_params['mq'] = 1
 species_params['q'] = 1
-alpha = species_params['q']/species_params['mq']
+species_params['a'] = 1
 
 case_params['dimensions'] = 3
-case_params['explicit'] = {}
-case_params['explicit']['expType'] = 'clouds'
-case_params['dx'] = 0.01
-case_params['dv'] = 0
-
-#case_params['positions'] = np.array([[10,0,0]])
-#case_params['velocities'] = np.array([[100,0,100]])
-
+case_params['particle_init'] = 'direct'
 case_params['pos'] = np.array([[10,0,0]])
 case_params['vel'] = np.array([[100,0,100]])
 
-analysis_params['M'] = 3
-analysis_params['centreMass_check'] = True
+H1 = epsilon*omegaE**2
+H = np.array([[H1,1,H1,1,-2*H1,1]])
+H = species_params['mq']/2 * np.diag(H[0])
+
+analysis_params['M'] = M
+analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
 analysis_params['fieldAnalysis'] = 'coulomb'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
-analysis_params['E_magnitude'] = -epsilon*omegaE**2/alpha
+analysis_params['E_magnitude'] = -epsilon*omegaE**2/species_params['a']
 analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
-analysis_params['B_magnitude'] = omegaB/alpha
+analysis_params['B_magnitude'] = omegaB/species_params['a']
 
-data_params['record'] = {}
-data_params['record']['sampleInterval'] = 1
+data_params['sampleInterval'] = 1
+data_params['record'] = True
+data_params['component_plots'] = True
+data_params['components'] = 'xyz'
+data_params['trajectory_plots'] = True
+data_params['trajectories'] = [1]
+data_params['domain_limits'] = [20,20,15]
 
-data_params['plot'] = {}
-data_params['plot']['tPlot'] = 'xyz'
-data_params['trajectory_plot'] = {}
-data_params['trajectory_plot']['particles'] = [1]
-data_params['trajectory_plot']['limits'] = [20,20,15]
+plot_params = {}
+plot_params['legend.fontsize'] = 12
+plot_params['figure.figsize'] = (12,8)
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 3
 
-data_params['plotSettings'] = {}
-data_params['plotSettings']['legend.fontsize'] = 12
-data_params['plotSettings']['figure.figsize'] = (12,8)
-data_params['plotSettings']['axes.labelsize'] = 20
-data_params['plotSettings']['axes.titlesize'] = 20
-data_params['plotSettings']['xtick.labelsize'] = 16
-data_params['plotSettings']['ytick.labelsize'] = 16
-data_params['plotSettings']['lines.linewidth'] = 3
+data_params['plot_params'] = plot_params
 
 
 ## Analytical solution ##
@@ -118,7 +116,7 @@ for ts in range(0,tsteps):
     vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
     vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
     
-    if ts%data_params['record']['sampleInterval'] == 0:
+    if ts%data_params['sampleInterval'] == 0:
         u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
         exactEnergy.append(u.transpose() @ H @ u)
 

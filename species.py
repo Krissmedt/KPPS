@@ -8,48 +8,58 @@ from math import pi
 class species:
     ## Main Methods
     def __init__(self,**kwargs):
-        if 'nq' in kwargs:
-            self.nq = kwargs['nq']
-        else:
-            self.nq = 1
+        ## Default values
+        self.nq = 1
+        self.q = 1
+        self.mq = 1
+        self.a = 1    #charge-to-mass ratio alpha
+        self.energy = 0.
+        self.cm = np.array([0,0,0])
+        
+         # physical constants
+        self.mu0 = 1
+        self.ep0 = 1
+        self.q0 = 1
+        
+        ## Iterate through keyword arguments and store all in object (self)
+        self.params = kwargs
+        for key, value in self.params.items():
+            setattr(self,key,value)
             
-        if 'q' in kwargs:
-            self.q = kwargs['q']
-        else:
-            self.q = 1
             
-        if 'mq' in kwargs:
-            self.mq = kwargs['mq']
-        else:
-            self.mq = 1
-            
-        if 'qtype' in kwargs:
-            if kwargs['qtype'] == "proton":
+        if 'qtype' in self.params:
+            if self.params['qtype'] == "proton":
                 self.qtype = 'proton'
                 self.q = 1
                 self.mq = 1836.152672197
-            elif kwargs['qtype'] == "electron":
+            elif self.params['qtype'] == "electron":
                 self.qtype = 'electron'
                 self.q = -1
                 self.mq = 1
             else:
                 self.qtype = 'custom'
-    
 
-        self.a = self.q/self.mq    #define mass-charge ratio alpha
+        try:
+            self.mq = self.params['q'] / self.params['a']
+        except KeyError:
+            pass
+        
+        try:
+            self.q = self.params['a'] * self.params['mq']
+        except KeyError:
+            pass
+        
+        try:
+            self.a = self.params['q'] / self.params['mq']
+        except KeyError:
+            pass
+        
+        ## Initialise number-dependent arrays
         self.E = np.zeros((self.nq,3),dtype=np.float) 
         self.B = np.zeros((self.nq,3),dtype=np.float) 
         self.F = np.zeros((self.nq,3),dtype=np.float) 
         self.vel = np.zeros((self.nq,3),dtype=np.float)
         self.pos = np.zeros((self.nq,3),dtype=np.float)
-        self.energy = 0.
-        self.cm = np.array([0,0,0])
-        
-        ## Physical constants
-        self.mu0 = 1
-        self.ep0 = 1
-        self.q0 = 1
-        
         
     ## Additional Methods
     def toVector(self,storageMatrix):
