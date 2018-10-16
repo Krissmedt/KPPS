@@ -13,9 +13,7 @@ iterations = [3]
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
-
-#dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
-#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])              
+        
 dt = np.array([0.01])
 
 log = False
@@ -28,22 +26,25 @@ analysis_params = {}
 data_params = {}
 
 sim_params['t0'] = 0
-sim_params['tEnd'] = 1
+sim_params['tEnd'] = 0.01
 sim_params['percentBar'] = False
 
 species_params['mq'] = 1
 species_params['q'] = 1
-species_params['a'] = 1
+species_params['a'] = 8
 
 case_params['dimensions'] = 3
 case_params['particle_init'] = 'direct'
 case_params['dx'] = 0.01
 case_params['dv'] = 5
-case_params['pos'] = np.array([[10,0,0]])
-case_params['vel'] = np.array([[100,0,100]])
+case_params['pos'] = np.array([[0,0,0]])
+case_params['vel'] = np.array([[0,0,0]])
 
 case_params['mesh_init'] = 'box'
-case_params['resolution'] = [1,2,3]
+case_params['xlimits'] = [-15,15]
+case_params['ylimits'] = [-15,15]
+case_params['zlimits'] = [-15,15]
+case_params['resolution'] = [1,1,1]
 case_params['store_node_pos'] = True
 
 H1 = epsilon*omegaE**2
@@ -53,7 +54,7 @@ H = species_params['mq']/2 * np.diag(H[0])
 analysis_params['M'] = M
 analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
-analysis_params['fieldAnalysis'] = 'coulomb'
+analysis_params['fieldAnalysis'] = 'pic'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
 analysis_params['E_magnitude'] = -epsilon*omegaE**2/species_params['a']
@@ -66,7 +67,7 @@ data_params['record'] = True
 data_params['write'] = False
 data_params['component_plots'] = False
 data_params['components'] = 'xyz'
-data_params['trajectory_plots'] = False
+data_params['trajectory_plots'] = True
 data_params['trajectories'] = [1]
 data_params['domain_limits'] = [20,20,15]
 
@@ -164,7 +165,6 @@ for key, value in schemes.items():
 
             kppsObject = kpps(**model)
             data = kppsObject.run()
-            
             
             rhs_evals[i] = data.rhs_eval
             

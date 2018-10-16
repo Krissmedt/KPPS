@@ -42,8 +42,10 @@ class dataHandler:
             
         try:
             self.label = self.simulationManager.simID
+            self.simType = self.simulationManager.simType
         except AttributeError:
             self.label = 'none'
+            self.simType = 'none'
             
         if self.write == True:
             self.writeSetup(self.species,
@@ -55,9 +57,13 @@ class dataHandler:
                     
         if self.record == True:
             self.recordSetup(self.species,self.mesh,self.simulationManager)
-            self.runOps.append(self.recordData)
+            self.runOps.append(self.record_particleData)
+            
+            if self.simType == 'pic':
+                self.runOps.append(self.record_meshData)
+                
             self.postOps.append(self.convertToNumpy)
-            self.postOps.append(self.rhs_tally)
+            
             
         if self.component_plots == True:
             self.plotOps.append(self.xyzPlot)
@@ -65,6 +71,7 @@ class dataHandler:
         if self.trajectory_plots == True:
             self.plotOps.append(self.trajectoryPlot)
             
+        self.postOps.append(self.rhs_tally)   
         plt.rcParams.update(self.plot_params)
             
 
@@ -99,10 +106,10 @@ class dataHandler:
     def recordSetup(self,species,fields,simulationManager,**kwargs):
         ## NOTE: For small sampleRate compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
-        if 'sampleInterval' in kwargs:
-            self.recordEvery = kwargs['sampleInterval']
-        elif 'sampleNo' in kwargs:
-            self.recordEvery = math.floor(simulationManager.tSteps/kwargs['sampleNo'])
+        if self.record_type == 'periodic':
+            self.recordEvery = self.sampleInterval
+        elif self.record_type == 'total':
+            self.recordEvery = math.floor(simulationManager.tSteps/self.samples)
             
         self.tArray = []
         
@@ -113,18 +120,18 @@ class dataHandler:
         self.vyArray = []
         self.vzArray = []
         
+        self.mesh_q = []
+        self.mesh_E = []
+        self.mesh_B = []
+        self.mesh_pos = fields.pos
+        
         self.hArray = []
         self.cmArray = []
         
         
-    def recordData(self,species,fields,simulationManager):
+    def record_particleData(self,species,fields,simulationManager):
         ## NOTE: For small sampleInterval compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
-        if self.record_type == 'periodic':
-            self.recordEvery = self.sampleInterval
-        elif self.record_type == 'total':
-            self.recordEvery = math.floor(simulationManager.tSteps/self.samples)
-        
         if simulationManager.ts % self.recordEvery == 0:
             self.tArray.append(simulationManager.t)
             
@@ -138,7 +145,14 @@ class dataHandler:
             
             self.hArray.append(species.energy)
             self.cmArray.append(np.copy(species.cm))
-
+            
+    def record_meshData(self,species,fields,simulationManager):
+        ## NOTE: For small sampleInterval compared to large number of time-steps,
+        ## data held in memory can quickly exceed system capabilities!
+        if simulationManager.ts % self.recordEvery == 0:
+            self.mesh_q.append(fields.q)
+            self.mesh_E.append(fields.E)
+            self.mesh_B.append(fields.B)
 
     def xyzPlot(self):
         for char in self.components:
@@ -207,16 +221,15 @@ class dataHandler:
             
     def trajectoryPlot(self):
         self.figureNo += 1
-
+        
         try:
-            particles = self.trajectories - 1
-            particles = np.array(particles,dtype=np.int)
+            particles = np.array(self.trajectories,dtype=np.int) - 1
         except TypeError:
             if self.trajectories == 'all':
                 particles = np.linspace(0,len(self.xArray)-1,
                                         len(self.xArray)-1,
                                         dtype=np.int)
-            
+
         limits = np.array(self.domain_limits,dtype=np.float)
         
         fig = plt.figure(self.figureNo)

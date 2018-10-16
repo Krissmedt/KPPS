@@ -7,6 +7,7 @@ class simulationManager:
     def __init__(self,**kwargs):
         ## Default values
         self.simID = 'none'
+        self.simType = 'pic'
         self.t0 = 0
         self.tEnd = 1
         self.dt = 1

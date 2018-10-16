@@ -10,10 +10,25 @@ class caseHandler:
     def __init__(self,**kwargs):
         
         ## Default values
-        self.particle_init = 'direct'
         self.ndim = 3
+        self.custom_case = None  #Assign custom case class to this
+        
+        ## Default species values
+        self.particle_init = 'none'
         self.dx = 1
         self.dv = 10
+
+        
+        ## Default mesh values
+        self.mesh_init = 'none'
+        
+        self.xlimits = np.array([0,1],dtype=np.float)
+        self.ylimits = np.array([0,1],dtype=np.float)
+        self.zlimits = np.array([0,1],dtype=np.float)
+        
+        self.mesh_dh = '[1,1,1]' # will raise ValueError and ignore if not set
+        self.mesh_res = np.array([1,1,1],dtype=np.int)
+        self.store_node_pos = False
         
         ## Dummy values - Need to be set in params for class to work!
         self.pos = np.zeros((1,3),dtype=np.float)
@@ -21,28 +36,40 @@ class caseHandler:
         self.species = None
         self.mesh = None
         
+
         ## Iterate through keyword arguments and store all in object
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
             
          # check for other intuitive parameter names
-        try:
-            self.ndim = self.dimensions
-            self.pos = self.positions
-            self.vel = self.velocities
-        except AttributeError:
-            pass
+        name_dict = {}
+        name_dict['ndim'] = ['dimensions']
+        name_dict['pos'] = ['positions']
+        name_dict['vel'] = ['velocities']
+        name_dict['mesh_dh'] = ['spacing']
+        name_dict['mesh_res'] = ['resolution','res']
+        
+        for key, value in name_dict.items():
+            for name in value:
+                try:
+                    getattr(self,name)
+                    setattr(self,key,self.params[name])
+                except AttributeError:
+                    pass
+
         
         ## Main functionality - setup mesh and species for specific case
+        ## Species setup
         if 'distribution' in self.params:
             self.setupDistribute(self.species)
             
         if 'explicit' in self.params:
             self.setupExplicit(self.species,**self.params['explicit'])
             
-    
-        if self.particle_init == 'direct':
+        if self.particle_init == 'none':
+            pass
+        elif self.particle_init == 'direct':
             self.direct(self.species)
         elif self.particle_init == 'clouds':
             self.clouds(self.species)
@@ -50,9 +77,37 @@ class caseHandler:
             self.randDis(self.species)
         elif self.particle_init == 'even':
             self.evenPos(self.species)
-                
+        elif self.particle_init == 'custom' and self.mesh_init != 'custom':
+            self.custom_case(self.species)
+            
+        ## Mesh setup
+        # Take single digit inputs and assign to each axis
+        try: 
+            dh = np.zeros(3,dtype=np.float)
+            dh[:] = self.mesh_dh
+            self.mesh_dh = dh
+        except ValueError:
+            res = np.zeros(3,dtype=np.int)
+            res[:] = self.mesh_res
+            self.mesh_res = res
 
-    ## Setup Methods
+        
+        
+        if self.mesh_init == 'none':
+            pass
+        elif self.mesh_init == 'box':
+            self.mesh.domain_type = self.mesh_init
+            self.box(self.mesh)     
+        elif self.mesh_init == 'custom' and self.particle_init != 'custom':
+            self.custom_case(self.mesh)
+            
+            
+        ## Other setup
+        elif self.mesh_init == 'custom' and self.particle_init == 'custom':
+            self.custom_case(self.species,self.mesh)
+            
+            
+    ## Species methods
     def direct(self,species,**kwargs):
         nPos = self.pos.shape[0]
         if nPos <= species.nq:
@@ -81,7 +136,67 @@ class caseHandler:
     def randDis(self,species):
         species.pos = self.random(species.nq,self.dx)
         species.vel = self.random(species.nq,self.dv)
+        
+        
+    ## Mesh methods
+    def box(self,mesh):
+        
+        try:
+            assert self.xlimits[1] - self.xlimits[0] > 0
+            assert self.ylimits[1] - self.ylimits[0] > 0
+            assert self.zlimits[1] - self.zlimits[0] > 0
+        except AssertionError:
+            print("One of the input box-edge limits is not positive " +
+                  "in length. Reverting to default 1x1x1 cube.")
+            self.xlimits = np.array([0,1])
+            self.ylimits = np.array([0,1])
+            self.zlimits = np.array([0,1])
+        
+
+        try:
+            xres = (self.xlimits[1] - self.xlimits[0])/self.mesh_dh[0]
+            yres = (self.ylimits[1] - self.ylimits[0])/self.mesh_dh[1]
+            zres = (self.zlimits[1] - self.zlimits[0])/self.mesh_dh[2]
+            self.mesh_res = np.array([xres,yres,zres],dtype=np.int)
+        except TypeError:
+            dx = (self.xlimits[1] - self.xlimits[0])/self.mesh_res[0]
+            dy = (self.ylimits[1] - self.ylimits[0])/self.mesh_res[1]
+            dz = (self.zlimits[1] - self.zlimits[0])/self.mesh_res[2]
+            self.mesh_dh = np.array([dx,dy,dz])   
+
+
+        mesh.xlimits = self.xlimits 
+        mesh.ylimits = self.ylimits
+        mesh.zlimits = self.zlimits
+        
+        mesh.dh = self.mesh_dh
+        mesh.dx = self.mesh_dh[0]
+        mesh.dy = self.mesh_dh[1]
+        mesh.dz = self.mesh_dh[2]
+        
+        mesh.res = self.mesh_res
+        mesh.xres = self.mesh_res[0]
+        mesh.yres = self.mesh_res[1]
+        mesh.zres = self.mesh_res[2]
+        
+        mesh.cells = np.prod(mesh.res)
+        mesh.nn = np.prod(mesh.res+1)
+        
+        mesh.q = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.E = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.B = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+
+        if self.store_node_pos == True:
+            mesh.pos = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+            for xi in range(0,mesh.xres+1):
+                mesh.pos[0,xi,:,:] = mesh.xlimits[0] + mesh.dx * xi
+            for yi in range(0,mesh.yres+1):
+                mesh.pos[1,:,yi,:] = mesh.ylimits[0] + mesh.dy * yi
+            for zi in range(0,mesh.zres+1):
+                mesh.pos[2,:,:,zi] = mesh.zlimits[0] + mesh.dz * zi
+
     
+    ## Additional methods
     def random(self,rows,deviance):
         output = np.zeros((rows,self.ndim),dtype=np.float)
         for nd in range(0,self.ndim):
