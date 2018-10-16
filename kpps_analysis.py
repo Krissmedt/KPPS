@@ -262,14 +262,14 @@ class kpps_analysis:
             rpos = pos - (O + li * mesh.dh)
             w = self.trilinear_weights(rpos,mesh.dh)
 
-            mesh.q[li[0],li[1],li[2]] = species.q * w[0]
-            mesh.q[li[0],li[1]+1,li[2]] = species.q * w[1]
-            mesh.q[li[0],li[1]+1,li[2]+1] = species.q * w[2]
-            mesh.q[li[0],li[1],li[2]+1] = species.q * w[3]
-            mesh.q[li[0]+1,li[1],li[2]] = species.q * w[4]
-            mesh.q[li[0]+1,li[1]+1,li[2]] = species.q * w[5]
-            mesh.q[li[0]+1,li[1]+1,li[2]+1] = species.q * w[6]
-            mesh.q[li[0]+1,li[1],li[2]+1] = species.q * w[7]
+            mesh.q[li[0],li[1],li[2]] += species.q * w[0]
+            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[1]
+            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[2]
+            mesh.q[li[0],li[1],li[2]+1] += species.q * w[3]
+            mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
+            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[5]
+            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[6]
+            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[7]
             
             
     def trilinear_weights(self,rpos,dh):
