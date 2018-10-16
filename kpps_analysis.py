@@ -37,6 +37,7 @@ class kpps_analysis:
         self.B_magnitude = 1
         self.B_transform = np.zeros((1,3),dtype=np.float)
         
+        self.scatter = self.trilinear_qScatter
         self.imposeFields = False
         
         self.simulationManager = None
@@ -50,6 +51,12 @@ class kpps_analysis:
         # Initialise pre- and post-analysis lists
         self.preAnalysis = []
         self.postAnalysis = []
+        
+        # Set critical simulation parameters in the simulation manager
+        try:
+            self.simulationManager.simType = self.fieldAnalysis
+        except AttributeError:
+            print("Simulation manager not found or missing attribute 'simType'.")
         
         # Load required particle integration methods
         self.particleIntegration = []
@@ -98,8 +105,7 @@ class kpps_analysis:
               self.fieldGathering.append(self.coulomb)   
               
         if self.fieldAnalysis == 'pic':
-            self.fieldGathering.append(self.scatter) 
-            self.fieldIntegration.append(self.pic_simple)
+            self.fieldIntegration.append(self.scatter) 
 
             if self.imposeFields  == True:
                 self.preAnalysis.append(self.imposed_field_mesh)
@@ -246,6 +252,40 @@ class kpps_analysis:
 
         return fields
     
+    
+    def trilinear_qScatter(self,species,mesh):
+        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        for pii in range(0,species.nq):
+            pos = species.pos[pii]
+            li = np.floor(pos/mesh.dh) #calculate lowest indeces 'li' of current cell
+            li = np.array(li,dtype=np.int)
+            rpos = pos - (O + li * mesh.dh)
+            w = self.trilinear_weights(rpos,mesh.dh)
+
+            mesh.q[li[0],li[1],li[2]] = species.q * w[0]
+            mesh.q[li[0],li[1]+1,li[2]] = species.q * w[1]
+            mesh.q[li[0],li[1]+1,li[2]+1] = species.q * w[2]
+            mesh.q[li[0],li[1],li[2]+1] = species.q * w[3]
+            mesh.q[li[0]+1,li[1],li[2]] = species.q * w[4]
+            mesh.q[li[0]+1,li[1]+1,li[2]] = species.q * w[5]
+            mesh.q[li[0]+1,li[1]+1,li[2]+1] = species.q * w[6]
+            mesh.q[li[0]+1,li[1],li[2]+1] = species.q * w[7]
+            
+            
+    def trilinear_weights(self,rpos,dh):
+        h = rpos/dh
+        w = np.zeros(8,dtype=np.float)
+        w[0] = (1-h[0])*(1-h[1])*(1-h[2])
+        w[1] = (1-h[0])*(1-h[1])*(h[2])
+        w[2] = (1-h[0])*(h[1])*(h[2])
+        w[3] = (1-h[0])*(h[1])*(1-h[2])
+        w[4] = (h[0])*(1-h[1])*(1-h[2])
+        w[5] = (h[0])*(1-h[1])*(h[2])
+        w[6] = (h[0])*(h[1])*(h[2])
+        w[7] = (h[0])*(h[1])*(1-h[2])
+        
+        return w
+         
     
     ## Time-integration methods
     def boris(self, vel, E, B, dt, alpha, ck=0):
