@@ -37,9 +37,10 @@ class kpps_analysis:
         self.B_magnitude = 1
         self.B_transform = np.zeros((1,3),dtype=np.float)
         
+        self.centreMass_check = False
+        self.fieldAnalysis = 'none'
         self.scatter = self.trilinear_qScatter
         self.imposeFields = False
-        
         self.simulationManager = None
         
         ## Iterate through keyword arguments and store all in object (self)
@@ -118,7 +119,7 @@ class kpps_analysis:
             self.hooks.append(self.energy_calc_penning)
             self.H = self.params['penningEnergy']
             
-        if self.params['centreMass_check'] == True:
+        if self.centreMass_check == True:
             self.preAnalysis.append(self.centreMass)
             self.hooks.append(self.centreMass)
             
@@ -252,6 +253,28 @@ class kpps_analysis:
 
         return fields
     
+    def trilinear_gather(self,species,mesh):
+        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        for pii in range(0,species.nq):
+            pos = species.pos[pii]
+            li = np.floor(pos/mesh.dh) #calculate lowest indeces 'li' of current cell
+            li = np.array(li,dtype=np.int)
+            rpos = pos - (O + li * mesh.dh)
+            w = self.trilinear_weights(rpos,mesh.dh)
+            
+            i,j,k = li
+            print(w)
+            species.E[pii] = (w[0]*mesh.E[:,i,j,k] +
+                              w[1]*mesh.E[:,i,j+1,k] +
+                              w[2]*mesh.E[:,i,j+1,k+1] + 
+                              w[3]*mesh.E[:,i,j,k+1] +
+                              w[4]*mesh.E[:,i+1,j,k] +
+                              w[5]*mesh.E[:,i+1,j+1,k] +
+                              w[6]*mesh.E[:,i+1,j+1,k+1] + 
+                              w[7]*mesh.E[:,i+1,j+1,k])
+            
+        return species
+            
     
     def trilinear_qScatter(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
@@ -270,6 +293,8 @@ class kpps_analysis:
             mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[5]
             mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[6]
             mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[7]
+            
+        return mesh
             
             
     def trilinear_weights(self,rpos,dh):

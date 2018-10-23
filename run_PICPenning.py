@@ -165,7 +165,7 @@ for key, value in schemes.items():
 
             kppsObject = kpps(**model)
             data = kppsObject.run()
-            
+            print(data.mesh_q)
             rhs_evals[i] = data.rhs_eval
             
             xRel[i] = abs(data.xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
