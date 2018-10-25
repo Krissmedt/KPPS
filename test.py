@@ -1,23 +1,49 @@
-from kpps_ced_ms import kpps
+import numpy as np
+
+n = 3
+Dk = np.zeros((n,n),dtype=np.float)
+Ek = np.zeros((n**2,n**2),dtype=np.float)
+Fk = np.zeros((n**3,n**3),dtype=np.float)
+
+k = 2/(1 + 1 + 1)
+
+# Setup 1D FD matrix
+Dk[0,0] = -k
+Dk[0,1] = 1
+Dk[-1,-1] = -k
+Dk[-1,-2] = 1/1
+
+for i in range(1,n-1):
+    Dk[i,i] = -k
+    Dk[i,i-1] = 1/1
+    Dk[i,i+1] = 1/1
+
+# Setup 2D FD matrix
+I = np.identity(n)/1
+
+Ek[0:n,0:n] = Dk
+Ek[0:n,n:(2*n)] = I
+Ek[(n-1)*n:,(n-1)*n:] = Dk
+Ek[(n-1)*n:,(n-2)*n:(n-1)*n] = I
+
+for i in range(n,((n-1)*n-1),n):
+    Ek[i:(i+n),i:(i+n)] = Dk
+    Ek[i:(i+n),(i-n):i] = I
+    Ek[i:(i+n),(i+n):(i+2*n)] = I
+    
+# Setup 3D FD matrix
+J = np.identity(n**2)/1
+
+Fk[0:n**2,0:n**2] = Ek
+Fk[0:n**2,n**2:(2*n**2)] = J
+Fk[(n-1)*n**2:,(n-1)*n**2:] = Ek
+Fk[(n-1)*n**2:,(n-2)*n**2:(n-1)*n**2] = J
 
 
-model = dict(
-simSettings = {'ndim':3,'tEnd':10,'tSteps':100},
-
-speciesSettings = {'nq':1,'qtype':'proton'},
-
-caseSettings = {'distribution':{'random':''},
-                'explicitSetup':{'velocities':[0.,1.,0.]}},
-
-analysisSettings = {'electricField':{'ftype':'sPenning', 'magnitude':1000},
-                    'interactionModelling':'intra',
-                    'magneticField':{'uniform':[0,0,1], 'magnitude':1000},
-                    'timeIntegration':'boris'},
-
-dataSettings = {'write':{'sampleRate':1,'foldername':'simple'},
-                'record':{'sampleRate':1},
-                'plot':{'tPlot':'xyz','sPlot':''}})
+for i in range(n**2,((n-1)*n**2-1),n**2):
+    Fk[i:(i+n**2),i:(i+n**2)] = Ek
+    Fk[i:(i+n**2),(i-n**2):i] = J
+    Fk[i:(i+n**2),(i+n**2):(i+2*n**2)] = J
 
 
-kpps = kpps(**model)
-kpps.run()
+print(Fk[12:18,12:18])

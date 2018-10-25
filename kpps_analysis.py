@@ -40,6 +40,7 @@ class kpps_analysis:
         self.centreMass_check = False
         self.fieldAnalysis = 'none'
         self.scatter = self.trilinear_qScatter
+        self.fIntegrator = self.poisson_cube2nd
         self.imposeFields = False
         self.simulationManager = None
         
@@ -106,7 +107,9 @@ class kpps_analysis:
               self.fieldGathering.append(self.coulomb)   
               
         if self.fieldAnalysis == 'pic':
+            self.preAnalyser.append(poisson_cube2nd_setup)
             self.fieldIntegration.append(self.scatter) 
+            self.fieldIntegration.append(self.fIntegrator)
 
             if self.imposeFields  == True:
                 self.preAnalysis.append(self.imposed_field_mesh)
@@ -138,7 +141,7 @@ class kpps_analysis:
 
                 
     ## Analysis modules
-    def fieldIntegrator(self,species,fields,**kwargs):     
+    def fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
         for method in self.fieldIntegration:
             method(species,fields)
 
@@ -253,6 +256,81 @@ class kpps_analysis:
 
         return fields
     
+    def poisson_cube2nd_setup(self,species,fields,**kwargs):
+        n = fields.nn
+        Dk = np.zeros((n,n),dtype=np.float)
+        Ek = np.zeros((n**2,n**2),dtype=np.float)
+        Fk = np.zeros((n**3,n**3),dtype=np.float)
+        
+        k = 2/(fields.dx + fields.dy + fields.dz)
+
+        # Setup 1D FD matrix
+        Dk[0,0] = -k
+        Dk[0,1] = 1/fields.dy
+        Dk[-1,-1] = -k
+        Dk[-1,-2] = 1/fields.dy
+        
+        for i in range(1,n):
+            Dk[i,i] = -k
+            Dk[i,i-1] = 1/fields.dy
+            Dk[i,i+1] = 1/fields.dy
+        
+        # Setup 2D FD matrix
+        I = np.identity(n)/fields.dy
+        
+        Ek[0:n,0:n] = Dk
+        Ek[0:n,n:(2*n)] = I
+        Ek[(n-1)*n:-1,(n-1)*n:-1] = Dk
+        Ek[(n-1)*n:-1,] = I
+        
+        
+        Dk = np.zeros((n,n),dtype=np.float)
+        Ek = np.zeros((n**2,n**2),dtype=np.float)
+        Fk = np.zeros((n**3,n**3),dtype=np.float)
+        
+        k = 2/(fields.dx + fields.dy + fields.dz)
+        
+        # Setup 1D FD matrix
+        Dk[0,0] = -k
+        Dk[0,1] = 1
+        Dk[-1,-1] = -k
+        Dk[-1,-2] = 1/1
+        
+        for i in range(1,n-1):
+            Dk[i,i] = -k
+            Dk[i,i-1] = 1/fields.dy
+            Dk[i,i+1] = 1/fields.dy
+        
+        # Setup 2D FD matrix
+        I = np.identity(n)/1
+        
+        Ek[0:n,0:n] = Dk
+        Ek[0:n,n:(2*n)] = I
+        Ek[(n-1)*n:,(n-1)*n:] = Dk
+        Ek[(n-1)*n:,(n-2)*n:(n-1)*n] = I
+        
+        for i in range(n,((n-1)*n-1),n):
+            Ek[i:(i+n),i:(i+n)] = Dk
+            Ek[i:(i+n),(i-n):i] = I
+            Ek[i:(i+n),(i+n):(i+2*n)] = I
+            
+        # Setup 3D FD matrix
+        J = np.identity(n**2)/fields.dx
+        
+        Fk[0:n**2,0:n**2] = Ek
+        Fk[0:n**2,n**2:(2*n**2)] = J
+        Fk[(n-1)*n**2:,(n-1)*n**2:] = Ek
+        Fk[(n-1)*n**2:,(n-2)*n**2:(n-1)*n**2] = J
+        
+        for i in range(n**2,((n-1)*n**2-1),n**2):
+            Fk[i:(i+n**2),i:(i+n**2)] = Ek
+            Fk[i:(i+n**2),(i-n**2):i] = J
+            Fk[i:(i+n**2),(i+n**2):(i+2*n**2)] = J
+            
+    
+    def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
+
+        
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
@@ -276,7 +354,7 @@ class kpps_analysis:
         return species
             
     
-    def trilinear_qScatter(self,species,mesh):
+    def trilinear_qScatter(self,species,mesh,simulationManager,):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
             pos = species.pos[pii]
