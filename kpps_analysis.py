@@ -40,7 +40,9 @@ class kpps_analysis:
         self.centreMass_check = False
         self.fieldAnalysis = 'none'
         self.scatter = self.trilinear_qScatter
+        self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
+        self.gather = self.trilinear_gather
         self.imposeFields = False
         self.simulationManager = None
         
@@ -99,7 +101,7 @@ class kpps_analysis:
         # Load required field analysis/integration methods
         self.fieldIntegration = []
         self.fieldGathering = []
-        if self.fieldAnalysis == 'single' or 'coulomb':
+        if self.fieldAnalysis == 'single' or 'coulomb' or 'pic':
             self.fieldGathering.append(self.eFieldImposed)
             self.fieldGathering.append(self.bFieldImposed)
                 
@@ -107,9 +109,10 @@ class kpps_analysis:
               self.fieldGathering.append(self.coulomb)   
               
         if self.fieldAnalysis == 'pic':
-            self.preAnalyser.append(poisson_cube2nd_setup)
+            self.preAnalysis.append(self.fIntegrator_setup)
             self.fieldIntegration.append(self.scatter) 
             self.fieldIntegration.append(self.fIntegrator)
+            self.fieldGathering.append(self.gather)   
 
             if self.imposeFields  == True:
                 self.preAnalysis.append(self.imposed_field_mesh)
@@ -143,7 +146,7 @@ class kpps_analysis:
     ## Analysis modules
     def fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
         for method in self.fieldIntegration:
-            method(species,fields)
+            method(species,fields,simulationManager)
 
         return species
 
@@ -160,7 +163,7 @@ class kpps_analysis:
         return species
     
 
-    def particleIntegrator(self,species,fields,simulationManager, **kwargs):
+    def particleIntegrator(self,species,fields,simulationManager,**kwargs):
         for method in self.particleIntegration:
             method(species,fields,simulationManager)
 
@@ -256,34 +259,9 @@ class kpps_analysis:
 
         return fields
     
-    def poisson_cube2nd_setup(self,species,fields,**kwargs):
-        n = fields.nn
-        Dk = np.zeros((n,n),dtype=np.float)
-        Ek = np.zeros((n**2,n**2),dtype=np.float)
-        Fk = np.zeros((n**3,n**3),dtype=np.float)
-        
-        k = 2/(fields.dx + fields.dy + fields.dz)
-
-        # Setup 1D FD matrix
-        Dk[0,0] = -k
-        Dk[0,1] = 1/fields.dy
-        Dk[-1,-1] = -k
-        Dk[-1,-2] = 1/fields.dy
-        
-        for i in range(1,n):
-            Dk[i,i] = -k
-            Dk[i,i-1] = 1/fields.dy
-            Dk[i,i+1] = 1/fields.dy
-        
-        # Setup 2D FD matrix
-        I = np.identity(n)/fields.dy
-        
-        Ek[0:n,0:n] = Dk
-        Ek[0:n,n:(2*n)] = I
-        Ek[(n-1)*n:-1,(n-1)*n:-1] = Dk
-        Ek[(n-1)*n:-1,] = I
-        
-        
+    def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
+        ## WON'T WORK FOR dx =/= dy =/= dz
+        n = np.int(fields.res[0 ]+1)
         Dk = np.zeros((n,n),dtype=np.float)
         Ek = np.zeros((n**2,n**2),dtype=np.float)
         Fk = np.zeros((n**3,n**3),dtype=np.float)
@@ -326,69 +304,104 @@ class kpps_analysis:
             Fk[i:(i+n**2),i:(i+n**2)] = Ek
             Fk[i:(i+n**2),(i-n**2):i] = J
             Fk[i:(i+n**2),(i+n**2):(i+2*n**2)] = J
+        
+        self.Fk = Fk
+        return self.Fk
             
     
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-
+        
+        rho = self.meshtoVector(fields.q)
+        phi = np.linalg.solve(self.Fk,rho) #Need to figure out BC and add to rho
+        phi = self.vectortoMesh(phi,fields.res+1)
+        
+        ## Differentiate over electric potential for electric field
+        n = np.shape(phi)
+        print(n)
+        #E-field x-component differentiation
+        print(fields.E[0,:,:,:])
+        print(phi[0:n[0]-2,:,:])
+        #fields.E[0,0,:,:] = 2*(phi[0,:,:]-phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = phi[0:n[0]-2,:,:] - phi[2:n[0],:,:]
+        fields.E[0,n[0]-1,:,:] = 2*(phi[n[0]-2,:,:]-phi[n[0]-1,:,:])
+        
+        #E-field y-component differentiation
+        fields.E[1,:,0,:] = 2*(phi[:,0,:]-phi[:,1,:])
+        fields.E[1,:,1:n[0]-1,:] = phi[:,0:n[0]-2,:] - phi[:,2:n[0],:]
+        fields.E[0,:,n[0]-1,:] = 2*(phi[:,n[0]-2,:]-phi[:,n[0]-1,:])
+        
+        #E-field z-component differentiation
+        fields.E[2,:,:,0] = 2*(phi[:,:,0]-phi[:,:,1])
+        fields.E[2,:,:,1:n[0]-1] = phi[:,:,0:n[0]-2] - phi[:,:,2:n[0]]
+        fields.E[0,:,:,n[0]-1] = 2*(phi[:,:,n[0]-2]-phi[:,:,n[0]-1])
+        
+        fields.E[0,:,:,:]/(2*fields.dx)
+        fields.E[1,:,:,:]/(2*fields.dy)
+        fields.E[2,:,:,:]/(2*fields.dz)
+        
+        return fields
         
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
-            pos = species.pos[pii]
-            li = np.floor(pos/mesh.dh) #calculate lowest indeces 'li' of current cell
-            li = np.array(li,dtype=np.int)
-            rpos = pos - (O + li * mesh.dh)
+            li = self.cell_index(species.pos[pii],O,mesh.dh)
+            rpos = species.pos[pii] - O - li*mesh.dh
             w = self.trilinear_weights(rpos,mesh.dh)
             
             i,j,k = li
-            print(w)
             species.E[pii] = (w[0]*mesh.E[:,i,j,k] +
-                              w[1]*mesh.E[:,i,j+1,k] +
-                              w[2]*mesh.E[:,i,j+1,k+1] + 
-                              w[3]*mesh.E[:,i,j,k+1] +
+                              w[1]*mesh.E[:,i,j,k+1] +
+                              w[2]*mesh.E[:,i,j+1,k] + 
+                              w[3]*mesh.E[:,i,j+1,k+1] +
                               w[4]*mesh.E[:,i+1,j,k] +
-                              w[5]*mesh.E[:,i+1,j+1,k] +
-                              w[6]*mesh.E[:,i+1,j+1,k+1] + 
-                              w[7]*mesh.E[:,i+1,j+1,k])
+                              w[5]*mesh.E[:,i+1,j,k+1] +
+                              w[6]*mesh.E[:,i+1,j+1,k] + 
+                              w[7]*mesh.E[:,i+1,j+1,k+1])
             
         return species
             
     
-    def trilinear_qScatter(self,species,mesh,simulationManager,):
+    def trilinear_qScatter(self,species,mesh,simulationManager):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
-            pos = species.pos[pii]
-            li = np.floor(pos/mesh.dh) #calculate lowest indeces 'li' of current cell
-            li = np.array(li,dtype=np.int)
-            rpos = pos - (O + li * mesh.dh)
+            li = self.cell_index(species.pos[pii],O,mesh.dh)
+            rpos = species.pos[pii] - O - li*mesh.dh
             w = self.trilinear_weights(rpos,mesh.dh)
-
+            
             mesh.q[li[0],li[1],li[2]] += species.q * w[0]
-            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[1]
-            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[2]
-            mesh.q[li[0],li[1],li[2]+1] += species.q * w[3]
+            mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
+            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
+            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
             mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
-            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[5]
-            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[6]
-            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[7]
+            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
+            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
+            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
+            
+        mesh.q = mesh.q/mesh.dv
             
         return mesh
             
             
     def trilinear_weights(self,rpos,dh):
         h = rpos/dh
+        
         w = np.zeros(8,dtype=np.float)
         w[0] = (1-h[0])*(1-h[1])*(1-h[2])
         w[1] = (1-h[0])*(1-h[1])*(h[2])
-        w[2] = (1-h[0])*(h[1])*(h[2])
-        w[3] = (1-h[0])*(h[1])*(1-h[2])
+        w[2] = (1-h[0])*(h[1])*(1-h[2])
+        w[3] = (1-h[0])*(h[1])*(h[2])
         w[4] = (h[0])*(1-h[1])*(1-h[2])
         w[5] = (h[0])*(1-h[1])*(h[2])
-        w[6] = (h[0])*(h[1])*(h[2])
-        w[7] = (h[0])*(h[1])*(1-h[2])
+        w[6] = (h[0])*(h[1])*(1-h[2])
+        w[7] = (h[0])*(h[1])*(h[2])
         
         return w
-         
+    
+    def cell_index(self,pos,O,dh):
+        li = np.floor((pos-O)/dh)
+        li = np.array(li,dtype=np.int)
+        
+        return li
     
     ## Time-integration methods
     def boris(self, vel, E, B, dt, alpha, ck=0):
@@ -720,7 +733,28 @@ class kpps_analysis:
             matrix[:,i] = vector[i::columns]
         return matrix
     
-        
+    def meshtoVector(self,mesh):
+        shape = np.shape(mesh)
+        x = np.zeros(shape[0]*shape[1]*shape[2],dtype=np.float)
+        xi = 0
+        for i in range(0,shape[0]):
+            for j in range(0,shape[1]):
+                for k in range(0,shape[2]):
+                    x[xi] = mesh[i,j,k]
+                    xi += 1
+        return x
+    
+    
+    def vectortoMesh(self,x,shape):
+        mesh = np.zeros(shape,dtype=np.float)
+        xi = 0
+        for i in range(0,shape[0]):
+            for j in range(0,shape[1]):
+                for k in range(0,shape[2]):
+                    mesh[i,j,k] = x[xi]
+                    xi += 1
+        return mesh
+    
     def nope(self,species):
         return species
     

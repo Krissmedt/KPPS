@@ -134,8 +134,8 @@ class caseHandler:
         return species
     
     def randDis(self,species):
-        species.pos = self.random(species.nq,self.dx)
-        species.vel = self.random(species.nq,self.dv)
+        species.pos = self.pos[0] + self.random(species.nq,self.dx)
+        species.vel = self.vel[0] + self.random(species.nq,self.dv)
         
         
     ## Mesh methods
@@ -173,6 +173,7 @@ class caseHandler:
         mesh.dx = self.mesh_dh[0]
         mesh.dy = self.mesh_dh[1]
         mesh.dz = self.mesh_dh[2]
+        mesh.dv = mesh.dx*mesh.dy*mesh.dz        
         
         mesh.res = self.mesh_res
         mesh.xres = self.mesh_res[0]
@@ -201,6 +202,6 @@ class caseHandler:
         output = np.zeros((rows,self.ndim),dtype=np.float)
         for nd in range(0,self.ndim):
             for i in range(0,rows):
-                output[i,nd] = rand.uniform(-deviance,deviance)
+                output[i,nd] = np.random.uniform(-deviance,deviance)
         
         return output

@@ -68,7 +68,7 @@ class kpps:
 
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
-            analyser.fieldIntegrator(particles,fields)
+            analyser.fieldIntegrator(particles,fields,sim)
             analyser.particleIntegrator(particles,fields,sim) 
             analyser.runHooks(particles,fields,sim)
             dHandler.run(particles,fields,sim)

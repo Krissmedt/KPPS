@@ -17,6 +17,7 @@ class mesh:
         self.dx = 1
         self.dy = 1
         self.dz = 1
+        self.dv = 1
         
         self.res = 1
         self.xres = 1
