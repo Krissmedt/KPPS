@@ -22,6 +22,7 @@ class caseHandler:
         ## Default mesh values
         self.mesh_init = 'none'
         
+        self.limits = np.array([0,1],dtype=np.float)
         self.xlimits = np.array([0,1],dtype=np.float)
         self.ylimits = np.array([0,1],dtype=np.float)
         self.zlimits = np.array([0,1],dtype=np.float)
@@ -33,6 +34,7 @@ class caseHandler:
         ## Dummy values - Need to be set in params for class to work!
         self.pos = np.zeros((1,3),dtype=np.float)
         self.vel = np.zeros((1,3),dtype=np.float)
+        self.sim = None
         self.species = None
         self.mesh = None
         
@@ -44,7 +46,6 @@ class caseHandler:
             
          # check for other intuitive parameter names
         name_dict = {}
-        name_dict['ndim'] = ['dimensions']
         name_dict['pos'] = ['positions']
         name_dict['vel'] = ['velocities']
         name_dict['mesh_dh'] = ['spacing']
@@ -58,6 +59,10 @@ class caseHandler:
                 except AttributeError:
                     pass
 
+        try:
+            self.ndim = self.sim.ndim
+        except AttributeError:
+            pass
         
         ## Main functionality - setup mesh and species for specific case
         ## Species setup
@@ -82,6 +87,13 @@ class caseHandler:
             
         ## Mesh setup
         # Take single digit inputs and assign to each axis
+        try:
+            self.xlimits = self.limits
+            self.ylimits = self.limits
+            self.zlimits = self.limits
+        except AttributeError:
+            pass
+        
         try: 
             dh = np.zeros(3,dtype=np.float)
             dh[:] = self.mesh_dh

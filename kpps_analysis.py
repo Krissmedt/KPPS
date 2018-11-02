@@ -60,7 +60,7 @@ class kpps_analysis:
         try:
             self.simulationManager.simType = self.fieldAnalysis
         except AttributeError:
-            print("Simulation manager not found or missing attribute 'simType'.")
+            pass
         
         # Load required particle integration methods
         self.particleIntegration = []
@@ -259,56 +259,30 @@ class kpps_analysis:
 
         return fields
     
-    def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
-        ## WON'T WORK FOR dx =/= dy =/= dz
-        n = np.int(fields.res[0 ]+1)
-        Dk = np.zeros((n,n),dtype=np.float)
-        Ek = np.zeros((n**2,n**2),dtype=np.float)
-        Fk = np.zeros((n**3,n**3),dtype=np.float)
-        
-        k = 2/(fields.dx + fields.dy + fields.dz)
-        
-        # Setup 1D FD matrix
-        Dk[0,0] = -k
-        Dk[0,1] = 1
-        Dk[-1,-1] = -k
-        Dk[-1,-2] = 1/1
-        
-        for i in range(1,n-1):
-            Dk[i,i] = -k
-            Dk[i,i-1] = 1/fields.dy
-            Dk[i,i+1] = 1/fields.dy
-        
-        # Setup 2D FD matrix
-        I = np.identity(n)/1
-        
-        Ek[0:n,0:n] = Dk
-        Ek[0:n,n:(2*n)] = I
-        Ek[(n-1)*n:,(n-1)*n:] = Dk
-        Ek[(n-1)*n:,(n-2)*n:(n-1)*n] = I
-        
-        for i in range(n,((n-1)*n-1),n):
-            Ek[i:(i+n),i:(i+n)] = Dk
-            Ek[i:(i+n),(i-n):i] = I
-            Ek[i:(i+n),(i+n):(i+2*n)] = I
-            
-        # Setup 3D FD matrix
-        J = np.identity(n**2)/fields.dx
-        
-        Fk[0:n**2,0:n**2] = Ek
-        Fk[0:n**2,n**2:(2*n**2)] = J
-        Fk[(n-1)*n**2:,(n-1)*n**2:] = Ek
-        Fk[(n-1)*n**2:,(n-2)*n**2:(n-1)*n**2] = J
-        
-        for i in range(n**2,((n-1)*n**2-1),n**2):
-            Fk[i:(i+n**2),i:(i+n**2)] = Ek
-            Fk[i:(i+n**2),(i-n**2):i] = J
-            Fk[i:(i+n**2),(i+n**2):(i+2*n**2)] = J
-        
-        self.Fk = Fk
-        return self.Fk
-            
     
+    def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
+        nz = fields.res[2]+1
+        ny = fields.res[1]+1
+        nx = fields.res[0]+1
+        
+        k = -2/(fields.dx**2 + fields.dy**2 + fields.dz**2)
+        
+        lz,mz,uz = self.diagonals(nz)
+        self.Dk = k*mz + (1/fields.dz**2)*(lz+uz)
+        
+        if simulationManager.ndim > 1:
+            I = np.identity(nz)
+            ly,my,uy = self.diagonals(ny)
+            self.Ek = np.kron(my,self.Dk) + np.kron(ly+uy,I/fields.dy**2)
+           
+        if simulationManager.ndim > 2:
+            J = np.identity(nz*ny)
+            lx,mx,ux = self.diagonals(nx)
+            self.Fk = np.kron(mx,self.Ek) + np.kron(lx+ux,J/fields.dx**2)
+
+        return self.Dk, self.Ek, self.Fk
+    
+        
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
         
         rho = self.meshtoVector(fields.q)
@@ -754,6 +728,13 @@ class kpps_analysis:
                     mesh[i,j,k] = x[xi]
                     xi += 1
         return mesh
+    
+    def diagonals(self,N):
+        lower = np.tri(N,k=-1) - np.tri(N,k=-2) 
+        middle = np.identity(N)
+        upper = np.tri(N,k=1) - np.tri(N,k=0) 
+    
+        return lower, middle, upper
     
     def nope(self,species):
         return species

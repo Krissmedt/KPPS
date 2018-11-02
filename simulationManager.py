@@ -8,6 +8,7 @@ class simulationManager:
         ## Default values
         self.simID = 'none'
         self.simType = 'pic'
+        self.ndim = 3
         self.t0 = 0
         self.tEnd = 1
         self.dt = 1
@@ -17,6 +18,19 @@ class simulationManager:
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
+            
+        # check for other intuitive parameter names
+        name_dict = {}
+        name_dict['ndim'] = ['dimensions']
+        name_dict['ndim'] = ['dimension']
+        
+        for key, value in name_dict.items():
+            for name in value:
+                try:
+                    getattr(self,name)
+                    setattr(self,key,self.params[name])
+                except AttributeError:
+                    pass
         
         ## Try to determine correct end-time, time-step -size and -number combo 
         try:
@@ -38,8 +52,6 @@ class simulationManager:
         self.hookFunctions = []
         if 'percentBar' in kwargs and kwargs['percentBar'] == True:
             self.hookFunctions.append(self.displayProgress)
-        
-        self.inputPrint()
         
         self.ts = 0
         self.t = self.t0
