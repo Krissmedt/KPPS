@@ -22,7 +22,6 @@ class caseHandler:
         ## Default mesh values
         self.mesh_init = 'none'
         
-        self.limits = np.array([0,1],dtype=np.float)
         self.xlimits = np.array([0,1],dtype=np.float)
         self.ylimits = np.array([0,1],dtype=np.float)
         self.zlimits = np.array([0,1],dtype=np.float)
