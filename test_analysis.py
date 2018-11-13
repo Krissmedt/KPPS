@@ -37,7 +37,6 @@ class Test_units:
         
         self.case_params = case_params
         
-        sim_params['dimensions'] = 3
         self.sim = simulationManager()
         self.kpa = kpps_analysis()
         
@@ -126,7 +125,12 @@ class Test_units:
         case = caseHandler(species=p,mesh=m,**case_params)
 
         kpa = kpps_analysis()
-        Dk,Ek,Fk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        self.sim.ndim = 1
+        Dk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        self.sim.ndim = 2
+        Ek= kpa.poisson_cube2nd_setup(p,m,self.sim)
+        self.sim.ndim = 3
+        Fk = kpa.poisson_cube2nd_setup(p,m,self.sim)
 
         #Test all FDM matrices are the correct size
         assert np.all(Dk.shape == m.zres+1)
@@ -135,18 +139,18 @@ class Test_units:
         
         #Test 1D matrix values
         assert Dk[1,0] == 1/m.dz**2
-        assert Dk[1,1] == -2/(m.dx**2+m.dy**2+m.dz**2)
+        assert Dk[1,1] == -2*(1/m.dz**2)
         assert Dk[1,2] == 1/m.dz**2
         
         #Test 2D matrix values
         assert Ek[1,0] == 1/m.dz**2
-        assert Ek[1,1] == -2/(m.dx**2+m.dy**2+m.dz**2)
+        assert Ek[1,1] == -2*(1/m.dy**2+1/m.dz**2)
         assert Ek[1,2] == 1/m.dz**2
         assert Ek[1,1+np.int(m.zres+1)] == 1/m.dy**2
         
         #Test 3D matrix values
         assert Fk[1,0] == 1/m.dz**2
-        assert Fk[1,1] == -2/(m.dx**2+m.dy**2+m.dz**2)
+        assert Fk[1,1] == -2*(1/m.dx**2+1/m.dy**2+1/m.dz**2)
         assert Fk[1,2] == 1/m.dz**2
         assert Fk[1,1+np.int(m.zres+1)] == 1/m.dy**2
         assert Fk[1,1+np.int((m.zres+1)*(m.yres+1))] == 1/m.dx**2

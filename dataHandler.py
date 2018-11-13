@@ -9,12 +9,13 @@ from mpl_toolkits.mplot3d import Axes3D
 class dataHandler:
     def __init__(self,**kwargs):
         ## Default values and initialisation
-        self.write_type = 'periodic'
-        self.record_type = 'periodic'
+        self.writeEvery = 1
+        self.recordEvery = 1
         self.record = False
         self.write = False
         self.component_plots = False
         self.trajectory_plots = False
+        self.domain_limits = [[0,1],[0,1],[0,1]]
         
         self.recordIndex = 0
         self.vtkFoldername = "./"
@@ -22,23 +23,43 @@ class dataHandler:
         self.postOps = []
         self.plotOps = []
         self.figureNo = 0
-        self.sampleInterval = 1
-        self.samples = 1
         self.plot_params = {}
         self.components = ' '
         
-        ## Dummy values - Need to be set in params for class to work!
+        ## Dummy values - Need to be set in params!
         self.pos = np.zeros((1,3),dtype=np.float)
         self.vel = np.zeros((1,3),dtype=np.float)
         self.species = None
         self.mesh = None
         self.simulationManager = None
         self.caseHandler = None
+        self.samplePeriod_w = None
+        self.samples_w = None
+        self.samplePeriod_rec = None
+        self.samples_rec = None
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
+            
+         # check for other intuitive parameter names
+        name_dict = {}
+        name_dict['samplePeriod_wrt'] = ['samplePeriod']
+        name_dict['samplePeriod_rec'] = ['samplePeriod']
+        name_dict['samples_wrt'] = ['samples']
+        name_dict['samples_rec'] = ['samples']
+        
+        for key, value in name_dict.items():
+            for name in value:
+                try:
+                    getattr(self,name)
+                    setattr(self,key,self.params[name])
+                except AttributeError:
+                    pass
+                
+        # Transform potential lists into numpy arrays
+        self.domain_limits = np.array(self.domain_limits,dtype=np.float)
             
         try:
             self.label = self.simulationManager.simID
@@ -46,6 +67,8 @@ class dataHandler:
         except AttributeError:
             self.label = 'none'
             self.simType = 'none'
+            
+
             
         if self.write == True:
             self.writeSetup(self.species,
@@ -106,10 +129,14 @@ class dataHandler:
     def recordSetup(self,species,fields,simulationManager,**kwargs):
         ## NOTE: For small sampleRate compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
-        if self.record_type == 'periodic':
-            self.recordEvery = self.sampleInterval
-        elif self.record_type == 'total':
-            self.recordEvery = math.floor(simulationManager.tSteps/self.samples)
+        try:
+            self.recordEvery = 0 + self.samplePeriod_rec
+        except TypeError:
+            try:
+                self.recordEvery = math.floor(simulationManager.tSteps
+                                             /self.samples_rec)
+            except TypeError:
+                pass
             
         self.tArray = []
         
@@ -122,9 +149,10 @@ class dataHandler:
         
         self.mesh_q = []
         self.mesh_E = []
+        self.mesh_CE = []
         self.mesh_B = []
+        self.mesh_phi = []
         self.mesh_pos = fields.pos
-        
         self.hArray = []
         self.cmArray = []
         
@@ -151,10 +179,13 @@ class dataHandler:
         ## data held in memory can quickly exceed system capabilities!
         if simulationManager.ts % self.recordEvery == 0:
             self.mesh_q.append(fields.q)
+            self.mesh_phi.append(fields.phi)
             self.mesh_E.append(fields.E)
             self.mesh_B.append(fields.B)
+            self.mesh_CE.append(fields.CE)
 
     def xyzPlot(self):
+        limits = self.domain_limits
         for char in self.components:
             self.figureNo += 1
             if char == 'x':
@@ -165,6 +196,7 @@ class dataHandler:
                 ax.set_xlabel('$t$')
                 ax.set_yscale('linear')
                 ax.set_ylabel('$x$')
+                ax.set_ylim([limits[0,0], limits[0,1]])
                 
             elif char == 'y':
                 fig = plt.figure(self.figureNo)
@@ -174,6 +206,7 @@ class dataHandler:
                 ax.set_xlabel('$t$')
                 ax.set_yscale('linear')
                 ax.set_ylabel('$y$')
+                ax.set_ylim([limits[1,0], limits[1,1]])
                 
             elif char == 'z':
                 fig = plt.figure(self.figureNo)
@@ -183,6 +216,7 @@ class dataHandler:
                 ax.set_xlabel('$t$')
                 ax.set_yscale('linear')
                 ax.set_ylabel('$z$')
+                ax.set_ylim([limits[2,0], limits[2,1]])
                 
             elif char == 'v':
                 fig = plt.figure(self.figureNo)
@@ -230,7 +264,7 @@ class dataHandler:
                                         len(self.xArray)-1,
                                         dtype=np.int)
 
-        limits = np.array(self.domain_limits,dtype=np.float)
+        limits = self.domain_limits
         
         fig = plt.figure(self.figureNo)
         ax = fig.gca(projection='3d')
@@ -239,9 +273,9 @@ class dataHandler:
                       self.yArray[:,particles[pii]],
                       zs=self.zArray[:,particles[pii]])
             
-        ax.set_xlim([-limits[0], limits[0]])
-        ax.set_ylim([-limits[1], limits[1]])
-        ax.set_zlim([-limits[2], limits[2]])
+        ax.set_xlim([limits[0,0], limits[0,1]])
+        ax.set_ylim([limits[1,0], limits[1,1]])
+        ax.set_zlim([limits[2,0], limits[2,1]])
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
@@ -259,14 +293,18 @@ class dataHandler:
                        str(simulationManager.tSteps) + 'k']
             
             self.vtkFoldername += delimiter.join(entries)
+            
+        try:
+            self.writeEvery = 0 + self.samplePeriod_wrt
+        except TypeError:
+            try:
+                self.writeEvery = math.floor(simulationManager.tSteps
+                                             /self.samples_wrt)
+            except TypeError:
+                pass
         
         self.mkDataDir()
-        if self.write_type == 'periodic':
-            self.writeEvery = self.sampleInterval
-        elif self.write_type == 'total':
-            self.writeEvery = math.floor(simulationManager.tSteps/self.samples)
             
-
         
     def writeData(self,species,fields,simulationManager):
         ts = simulationManager.ts

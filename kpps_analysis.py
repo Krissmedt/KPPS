@@ -13,6 +13,7 @@ interchanging sequence like [1x,1y,1z,2x,2y,2z,...,Nx,Ny,Nz].
 
 ## Dependencies
 import numpy as np
+import scipy.sparse as sps
 from math import sqrt, fsum, pi
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
@@ -31,13 +32,16 @@ class kpps_analysis:
         self.E_transform = np.zeros((3,3),dtype=np.float)
         
         self.coulomb = self.coulomb_cgs
+        self.unit_scale_poisson = 4*pi
         self.lambd = 0 
         
         self.B_type = 'none'
         self.B_magnitude = 1
         self.B_transform = np.zeros((1,3),dtype=np.float)
         
+        self.hooks = []
         self.centreMass_check = False
+        self.coulomb_field_check = False
         self.fieldAnalysis = 'none'
         self.scatter = self.trilinear_qScatter
         self.fIntegrator_setup = self.poisson_cube2nd_setup
@@ -119,11 +123,14 @@ class kpps_analysis:
         
         
         # Load post-integration hook methods
-        self.hooks = []
         if 'penningEnergy' in self.params:
             self.preAnalysis.append(self.energy_calc_penning)
             self.hooks.append(self.energy_calc_penning)
             self.H = self.params['penningEnergy']
+        
+        if self.coulomb_field_check == True:
+            self.preAnalysis.append(self.coulomb_field)
+            self.hooks.append(self.coulomb_field)
             
         if self.centreMass_check == True:
             self.preAnalysis.append(self.centreMass)
@@ -137,8 +144,9 @@ class kpps_analysis:
             if self.params['units'] == 'si':
                 self.makeSI()
                 self.coulomb = self.coulomb_si
+                self.unit_scale_poisson = 1/self.ep0
             elif self.params['units'] == 'cgs':
-                pass
+                self.unit_scale_poisson = 4*pi
             elif self.params['units'] == 'custom':
                 pass
 
@@ -147,7 +155,6 @@ class kpps_analysis:
     def fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
         for method in self.fieldIntegration:
             method(species,fields,simulationManager)
-
         return species
 
 
@@ -159,11 +166,11 @@ class kpps_analysis:
         
         for method in self.fieldGathering:
             method(species,fields)
-
         return species
     
 
     def particleIntegrator(self,species,fields,simulationManager,**kwargs):
+        #print(species.E)      
         for method in self.particleIntegration:
             method(species,fields,simulationManager)
 
@@ -194,7 +201,7 @@ class kpps_analysis:
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
                 species.E[pii,:] += direction * self.E_magnitude
-                        
+        
         return species
     
     
@@ -202,8 +209,8 @@ class kpps_analysis:
         rpos = species.pos[pii,:] - species.pos[pjj,:]
         denom = np.power(np.linalg.norm(rpos)**2 + self.lambd**2,3/2)
         species.E[pii,:] += species.q*rpos/denom
-        
-        
+
+
     def coulomb_cgs(self, species,fields,**kwargs):
         for pii in range(0,species.nq):
             for pjj in range(0,pii):
@@ -211,7 +218,7 @@ class kpps_analysis:
               
             for pjj in range(pii+1,species.nq):
                 self.coulomb_pair(species,pii,pjj)
-
+                
         return species
     
     
@@ -259,55 +266,83 @@ class kpps_analysis:
 
         return fields
     
+    def coulomb_field(self,species,fields,simulationManager,**kwargs):
+        #Needs mesh position storing turned on
+        rpos_array = np.zeros((3,fields.xres+1,
+                      fields.yres+1,
+                      fields.zres+1),dtype=np.float)
+        fields.CE = np.zeros((3,fields.xres+1,
+                              fields.yres+1,
+                              fields.zres+1),dtype=np.float)
+        
+        for pii in range(0,species.nq):
+            rpos_array[0,:,:,:] = fields.pos[0,:,:,:] - species.pos[pii][0]
+            rpos_array[1,:,:,:] = fields.pos[1,:,:,:] - species.pos[pii][1]
+            rpos_array[2,:,:,:] = fields.pos[2,:,:,:] - species.pos[pii][2]
+            
+            rmag_array = np.sum(rpos_array**2,axis=0)**(1/2)
+            
+            fields.CE[0,:,:,:] += rpos_array[0,:,:,:] / rmag_array**3
+            fields.CE[1,:,:,:] += rpos_array[1,:,:,:] / rmag_array**3
+            fields.CE[2,:,:,:] += rpos_array[2,:,:,:] / rmag_array**3
+        return fields
     
     def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
+        self.FDMat = None
+        
         nz = fields.res[2]+1
         ny = fields.res[1]+1
         nx = fields.res[0]+1
         
-        k = -2/(fields.dx**2 + fields.dy**2 + fields.dz**2)
+        k = np.zeros(3,dtype=np.float)
+        k[0] = -2*(1/fields.dz**2)
+        k[1] = -2*(1/fields.dy**2 + 1/fields.dz**2)
+        k[2] = -2*(1/fields.dx**2 + 1/fields.dy**2 + 1/fields.dz**2)
         
-        lz,mz,uz = self.diagonals(nz)
-        self.Dk = k*mz + (1/fields.dz**2)*(lz+uz)
+        diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
+        Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))      
+        self.FDMat = Dk
         
-        if simulationManager.ndim > 1:
-            I = np.identity(nz)
-            ly,my,uy = self.diagonals(ny)
-            self.Ek = np.kron(my,self.Dk) + np.kron(ly+uy,I/fields.dy**2)
-           
-        if simulationManager.ndim > 2:
-            J = np.identity(nz*ny)
-            lx,mx,ux = self.diagonals(nx)
-            self.Fk = np.kron(mx,self.Ek) + np.kron(lx+ux,J/fields.dx**2)
+        if simulationManager.ndim >= 2:
+            I = sps.identity(nz)
+            diag = sps.diags([1],shape=(ny,ny))
+            off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
+            Ek = sps.kron(diag,Dk) + sps.kron(off_diag,I/fields.dy**2)
+            self.FDMat = Ek
+            
+        if simulationManager.ndim == 3:
+            J = sps.identity(nz*ny)
+            diag = sps.diags([1],shape=(nx,nx))
+            off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
+            Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
+            self.FDMat = Fk
 
-        return self.Dk, self.Ek, self.Fk
+        return self.FDMat
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-        
-        rho = self.meshtoVector(fields.q)
-        phi = np.linalg.solve(self.Fk,rho) #Need to figure out BC and add to rho
+        rho = self.meshtoVector(fields.q/fields.dv * self.unit_scale_poisson)
+        phi = sps.linalg.spsolve(self.FDMat,rho) #Need to figure out BC and add to rho
         phi = self.vectortoMesh(phi,fields.res+1)
+        fields.phi = phi
         
         ## Differentiate over electric potential for electric field
         n = np.shape(phi)
-        print(n)
+
         #E-field x-component differentiation
-        print(fields.E[0,:,:,:])
-        print(phi[0:n[0]-2,:,:])
-        #fields.E[0,0,:,:] = 2*(phi[0,:,:]-phi[1,:,:])
-        fields.E[0,1:n[0]-1,:,:] = phi[0:n[0]-2,:,:] - phi[2:n[0],:,:]
-        fields.E[0,n[0]-1,:,:] = 2*(phi[n[0]-2,:,:]-phi[n[0]-1,:,:])
+        fields.E[0,0,:,:] = -2*(phi[0,:,:]-phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = -(phi[0:n[0]-2,:,:] - phi[2:n[0],:,:])
+        fields.E[0,n[0]-1,:,:] = -2*(phi[n[0]-2,:,:]-phi[n[0]-1,:,:])
         
         #E-field y-component differentiation
-        fields.E[1,:,0,:] = 2*(phi[:,0,:]-phi[:,1,:])
-        fields.E[1,:,1:n[0]-1,:] = phi[:,0:n[0]-2,:] - phi[:,2:n[0],:]
-        fields.E[0,:,n[0]-1,:] = 2*(phi[:,n[0]-2,:]-phi[:,n[0]-1,:])
+        fields.E[1,:,0,:] = -2*(phi[:,0,:]-phi[:,1,:])
+        fields.E[1,:,1:n[0]-1,:] = -(phi[:,0:n[0]-2,:] - phi[:,2:n[0],:])
+        fields.E[0,:,n[0]-1,:] = -2*(phi[:,n[0]-2,:]-phi[:,n[0]-1,:])
         
         #E-field z-component differentiation
-        fields.E[2,:,:,0] = 2*(phi[:,:,0]-phi[:,:,1])
-        fields.E[2,:,:,1:n[0]-1] = phi[:,:,0:n[0]-2] - phi[:,:,2:n[0]]
-        fields.E[0,:,:,n[0]-1] = 2*(phi[:,:,n[0]-2]-phi[:,:,n[0]-1])
+        fields.E[2,:,:,0] = -2*(phi[:,:,0]-phi[:,:,1])
+        fields.E[2,:,:,1:n[0]-1] = -(phi[:,:,0:n[0]-2] - phi[:,:,2:n[0]])
+        fields.E[0,:,:,n[0]-1] = -2*(phi[:,:,n[0]-2]-phi[:,:,n[0]-1])
         
         fields.E[0,:,:,:]/(2*fields.dx)
         fields.E[1,:,:,:]/(2*fields.dy)
@@ -350,8 +385,6 @@ class kpps_analysis:
             mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
             mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
             mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
-            
-        mesh.q = mesh.q/mesh.dv
             
         return mesh
             
@@ -420,8 +453,8 @@ class kpps_analysis:
     
     def boris_synced(self, species,fields, simulationParameters):
         dt = simulationParameters.dt
-        alpha = species.q/species.mq
-
+        alpha = species.a
+        
         species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,fields))
         
         E_old = species.E

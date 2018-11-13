@@ -58,19 +58,18 @@ class caseHandler:
                 except AttributeError:
                     pass
 
+        # Transform potential list inputs into numpy
+        self.pos = np.array(self.pos)
+        self.vel = np.array(self.vel)
+        
+        #
         try:
             self.ndim = self.sim.ndim
         except AttributeError:
             pass
         
         ## Main functionality - setup mesh and species for specific case
-        ## Species setup
-        if 'distribution' in self.params:
-            self.setupDistribute(self.species)
-            
-        if 'explicit' in self.params:
-            self.setupExplicit(self.species,**self.params['explicit'])
-            
+        ## Species setup      
         if self.particle_init == 'none':
             pass
         elif self.particle_init == 'direct':
@@ -185,7 +184,8 @@ class caseHandler:
         mesh.dy = self.mesh_dh[1]
         mesh.dz = self.mesh_dh[2]
         mesh.dv = mesh.dx*mesh.dy*mesh.dz        
-        
+        print(mesh.dx)
+        print(mesh.dv)
         mesh.res = self.mesh_res
         mesh.xres = self.mesh_res[0]
         mesh.yres = self.mesh_res[1]

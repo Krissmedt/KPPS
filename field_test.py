@@ -1,115 +1,204 @@
 import numpy as np
+import copy as cp
+import matplotlib.pyplot as plt
+from math import floor
 from species import species
 from mesh import mesh
 from caseHandler import caseHandler
 from simulationManager import simulationManager
-
 from kpps_analysis import kpps_analysis
+from kpps import kpps
 
 class Test_fields:
     def setup(self):
-        species_params = {}
         case_params = {}
         
-        species_params['nq'] = 8
-        species_params['mq'] = 1
-        species_params['q'] = 8
-        self.spec_params = species_params
-        
-        case_params['particle_init'] = 'direct'
-        case_params['vel'] = np.zeros((8,3),dtype=np.float)
-        case_params['pos'] = np.array([[1,1,1],[1,-1,1],[1,-1,-1],[1,1,-1],
-                                      [-1,-1,-1],[-1,1,-1],[-1,1,1],[-1,-1,1]])
+        case_params['dimensions'] = 3
+        case_params['particle_init'] = 'none'
+        case_params['dx'] = 0.1
+        case_params['dv'] = 0
+        case_params['pos'] = np.array([[10,0,0],[-10,0,0]])
+        case_params['vel'] = np.array([[0,0,0],[0,0,0]])
         
         case_params['mesh_init'] = 'box'
-        case_params['xlimits'] = [-2,2]
-        case_params['ylimits'] = [-2,2]
-        case_params['zlimits'] = [-2,2]
-        case_params['resolution'] = [2]
+        case_params['xlimits'] = [0,1]
+        case_params['ylimits'] = [0,1]
+        case_params['zlimits'] = [0,1]
+        case_params['resolution'] = [5,5,5]
         case_params['store_node_pos'] = True
         
         self.case_params = case_params
         
-        self.sim = simulationManager()
-        self.kpa = kpps_analysis()
+    def test_laplacian_1d(self):
+        sim = simulationManager()
+        p = species()
+        kpa = kpps_analysis()
         
-    def test_trilinearScatter(self):
-        p = species(**self.spec_params)
         m = mesh()
+        case = caseHandler(mesh=m,**self.case_params)
+        sim.ndim = 1
         
-        # Simple test - '8 particles, 8 cells, 1 cube'
-        case = caseHandler(species=p,mesh=m,**self.case_params)
+        z = m.pos[2,0,0,:]
+        Lz = m.zlimits[1]
+        phi = z*(z-Lz)
+        phi = phi[np.newaxis,np.newaxis,:] 
+        phi_D_vector = kpa.meshtoVector(phi)
+        Dk = kpa.poisson_cube2nd_setup(p,m,sim)
+        b = np.dot(Dk,phi_D_vector)
         
-        assert m.q[0,0,0] == 0
-        self.kpa.trilinear_qScatter(p,m,self.sim)
-        assert m.q[0,0,0] == 1/m.dv
-        assert m.q[1,1,1] == 8/m.dv
-        assert m.q[1,1,0] == 4/m.dv
-        assert m.q[1,0,0] == 2/m.dv
+        bSum = (m.res[2]-1)*2
+        assert np.allclose(b[1:-1],np.ones(m.res[2]-1)*2)
+        assert bSum-0.001 <= np.sum(b[1:-1]) <= bSum+0.001
+        return b, phi
+    
+    def test_laplacian_2d(self):
+        sim = simulationManager()
+        p = species()
+        kpa = kpps_analysis()
         
-        # Distribution test - does the scattered charge add back up?
-        p.nq = 20
-        p.q = 1
-        
-        case2_params = self.case_params
-        case2_params['particle_init'] = 'random'
-        case2_params['pos'] =  np.array([[0,0,0]])
-        case2_params['dx'] = 2
-
-        case2 = caseHandler(species=p,mesh=m,**case2_params)
-        self.kpa.trilinear_qScatter(p,m,self.sim)
-        charge_sum = np.sum(m.q)
-
-        assert 19.99/m.dv <= charge_sum <= 20.01/m.dv
-        
-        # 2D test - does the function work just in the plane?
-        p.nq = 4
-        p.q = 1
-
-        case3_params = self.case_params
-        case3_params['particle_init'] = 'direct'
-        case3_params['pos'] =  np.array([[0.5,0.5,0],[1.5,0.5,0],
-                                        [0.5,1.5,0],[1.5,1.5,0]])
-
-        case3 = caseHandler(species=p,mesh=m,**case3_params)
-
-        self.kpa.trilinear_qScatter(p,m,self.sim)
-
-        assert m.q[:,:,2].all() == np.zeros((3,3)).all() 
-        assert m.q[:,:,0].all() == np.zeros((3,3)).all() 
-        assert m.q[1:,1:,1].all() == np.array([[1,1],[1,1]]/m.dv).all()
-        assert np.sum(m.q[:,:,1]) == p.nq*p.q/m.dv
-        
-    def test_trilinearGather(self):
-        p = species(**self.spec_params)
         m = mesh()
-        case = caseHandler(species=p,mesh=m,**self.case_params)
+        case = caseHandler(mesh=m,**self.case_params)
+        sim.ndim = 2
         
-        m.E[0,:,:,:] = 1
-        m.E[1,:,:,:] = 2
-        m.E[2,:,:,:] = 3
-        self.kpa.trilinear_gather(p,m)
-        assert p.E[0,0] == 1
-        assert p.E[0,1] == 2
-        assert p.E[0,2] == 3
+        z = m.pos[2,0,0,:]
+        Lz = m.zlimits[1]
+        y = m.pos[1,0,:,0]
+        Ly = m.ylimits[1]
         
-        m.E[:,:,:,0] = 1
-        m.E[:,:,:,1] = 2
-        m.E[:,:,:,2] = 3
+        
+        phi = np.zeros((m.res[1:3]+1),dtype=np.float)
+        sol = np.zeros((m.res[1:3]+1),dtype=np.float)
+        for zi in range(0,m.res[2]+1):
+            for yi in range(0,m.res[1]+1):
+                phi[yi,zi] = z[zi]*(z[zi]-Lz)*y[yi]*(y[yi]-Ly)
+                sol[yi,zi] = 2*z[zi]*(z[zi]-Lz)+2*y[yi]*(y[yi]-Ly)
+                
+        phi = phi[np.newaxis,:,:] 
+        phi_E_vector = kpa.meshtoVector(phi)
+        
+        Ek = kpa.poisson_cube2nd_setup(p,m,sim)
+        
+        b = np.dot(Ek,phi_E_vector)
+        b = kpa.vectortoMesh(b,phi.shape)
+        
+        assert np.allclose(b[0,1:-1,1:-1],sol[1:-1,1:-1])
+        assert np.sum(b[0,1:-1,1:-1]) <= np.sum(sol[1:-1,1:-1])+0.01
+        assert np.sum(b[0,1:-1,1:-1]) >= np.sum(sol[1:-1,1:-1])-0.01
+        return b, phi, phi_E_vector, sol
+        
+    def test_laplacian_3d(self):
+        sim = simulationManager()
+        p = species()
+        kpa = kpps_analysis()
+        
+        m = mesh()
+        case = caseHandler(mesh=m,**self.case_params)
+        sim.ndim = 3
+        
+        z = m.pos[2,0,0,:]
+        Lz = m.zlimits[1]
+        y = m.pos[1,0,:,0]
+        Ly = m.ylimits[1]
+        x = m.pos[0,:,0,0]
+        Lx = m.xlimits[1]
+        
+        phi = np.zeros((m.res[0:3]+1),dtype=np.float)
+        sol = np.zeros((m.res[0:3]+1),dtype=np.float)
+        for zi in range(0,m.res[2]+1):
+            for yi in range(0,m.res[1]+1):
+                for xi in range(0,m.res[0]+1):
+                    phi[xi,yi,zi] = (z[zi]*(z[zi]-Lz)
+                                    *y[yi]*(y[yi]-Ly)
+                                    *x[xi]*(x[xi]-Lx))
+                    sol[xi,yi,zi] = (2*z[zi]*(z[zi]-Lz)*y[yi]*(y[yi]-Ly)
+                                    +2*y[yi]*(y[yi]-Ly)*x[xi]*(x[xi]-Lx)
+                                    +2*x[xi]*(x[xi]-Lx)*z[zi]*(z[zi]-Lz))
+        
+        phi_F_vector = kpa.meshtoVector(phi)
+                    
+        Fk = kpa.poisson_cube2nd_setup(p,m,sim)
+        
+        b = np.dot(Fk,phi_F_vector)
+        b = kpa.vectortoMesh(b,phi.shape)
 
-        p.nq = 4
-        p.E = np.zeros((p.nq,3))
-        p.pos = np.array([[1,1,-1.5],[1,1,-0.5],
-                          [1,1,0.5],[1,1,1.5]],dtype=np.float)
-        self.kpa.trilinear_gather(p,m)
-        linearIncrease = np.array([1.25,1.75,2.25,2.75])
-        assert p.E[:,0].all() == linearIncrease.all()
-        assert p.E[:,1].all() == linearIncrease.all()
-        assert p.E[:,2].all() == linearIncrease.all()
+        assert np.allclose(b[1:-1,1:-1,1:-1],sol[1:-1,1:-1,1:-1])
+        assert np.sum(b[1:-1,1:-1,1:-1]) <= np.sum(sol[1:-1,1:-1,1:-1])+0.01
+        assert np.sum(b[1:-1,1:-1,1:-1]) >= np.sum(sol[1:-1,1:-1,1:-1])-0.01
+        return b, phi, phi_F_vector, sol
+    
+    
+    def test_2particles(self):
+        p_params = {}
+        sim_params = {}
+        case_params = cp.copy(self.case_params)
+        analysis_params = {}
+        data_params = {}
         
+        p_params['nq'] = 2
+        p_params['q'] = 1
+        p_params['mq'] = 1
+        
+        sim_params['dt'] = 0.01
+        sim_params['tEnd'] = 0.1
+        sim_params['percentBar'] = True
+        
+        case_params['particle_init'] = 'direct'
+        case_params['pos'] =  [[2.45,5,5],[7.45,5,5]]
+        case_params['resolution'] = [20,20,20]
+        case_params['xlimits'] = [0,10]
+        case_params['ylimits'] = [0,10]
+        case_params['zlimits'] = [0,10]
+        
+        analysis_params['fieldAnalysis'] = 'pic'
+        analysis_params['particleIntegration'] = 'boris_synced'
+        analysis_params['coulomb_field_check'] = True
+        
+        data_params['samplePeriod'] = 1
+        data_params['record'] = True
+        data_params['component_plots'] = True
+        data_params['components'] = 'xyz'
+        data_params['domain_limits'] = [[0,10],[0,10],[0,10]]
+        
+        model1 = {'simSettings':sim_params,'speciesSettings':p_params,
+                 'caseSettings':case_params,'analysisSettings':analysis_params,
+                 'dataSettings':data_params}
+        
+        kpps1 = kpps(**model1)
+        pic_data = kpps1.run()
+        
+        analysis_params['fieldAnalysis'] = 'coulomb'
+        
+        model2 = {'simSettings':sim_params,'speciesSettings':p_params,
+                 'caseSettings':case_params,'analysisSettings':analysis_params,
+                 'dataSettings':data_params}
+        
+        kpps2 = kpps(**model2)
+        colmb_data = kpps2.run()
+        
+        return pic_data, colmb_data
+    
 tf = Test_fields()
 tf.setup()
-tf.test_trilinearScatter()
-tf.test_trilinearGather() 
-        
-        
+#tf.test_laplacian_3d()
+pic_data, colmb_data = tf.test_2particles()
+
+E = pic_data.mesh_E[1]
+CE = pic_data.mesh_CE[1]
+pos = pic_data.mesh_pos
+
+zplane = floor(pos.shape[2]/4)
+X = pos[0,:,:,zplane]
+Y = pos[1,:,:,zplane]
+Ex = E[0,:,:,zplane]
+Ey = E[1,:,:,zplane]
+
+CEx = CE[0,:,:,zplane]
+CEy = CE[1,:,:,zplane]
+
+fig = plt.figure(4)
+ax = fig.add_subplot(1, 1, 1)
+ax.quiver(X,Y,Ex,Ey,units='width')
+
+fig = plt.figure(5)
+ax = fig.add_subplot(1, 1, 1)
+ax.quiver(X,Y,CEx,CEy,units='width')
