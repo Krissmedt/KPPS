@@ -34,7 +34,7 @@ sim_params['percentBar'] = False
 
 
 species_params['nq'] = 10
-species_params['mq'] = 1000
+species_params['mq'] = 100
 species_params['q'] = 1
 alpha = species_params['q']/species_params['mq']
 

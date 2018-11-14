@@ -184,8 +184,6 @@ class caseHandler:
         mesh.dy = self.mesh_dh[1]
         mesh.dz = self.mesh_dh[2]
         mesh.dv = mesh.dx*mesh.dy*mesh.dz        
-        print(mesh.dx)
-        print(mesh.dv)
         mesh.res = self.mesh_res
         mesh.xres = self.mesh_res[0]
         mesh.yres = self.mesh_res[1]

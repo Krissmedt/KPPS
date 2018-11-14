@@ -59,15 +59,36 @@ class dataHandler:
                     pass
                 
         # Transform potential lists into numpy arrays
-        self.domain_limits = np.array(self.domain_limits,dtype=np.float)
-            
+        self.domain_limits = np.array(self.domain_limits,dtype=np.float)            
+        
+        
         try:
             self.label = self.simulationManager.simID
             self.simType = self.simulationManager.simType
         except AttributeError:
             self.label = 'none'
             self.simType = 'none'
-            
+        
+        if self.domain_limits.shape != (3,2):
+            try:
+                lim = self.domain_limits
+                self.domain_limits = np.zeros((3,2),dtype=np.float)
+                self.domain_limits[:,0] = -lim
+                self.domain_limits[:,1] = lim
+            except IndexError:
+                print("Domain limit input not recognised")
+        else:
+            try: 
+                self.domain_limits[0,:] = self.caseHandler.limits
+                self.domain_limits[1,:] = self.caseHandler.limits
+                self.domain_limits[2,:] = self.caseHandler.limits
+            except AttributeError:
+                try:
+                    self.domain_limits[0,:] = self.caseHandler.xlimits
+                    self.domain_limits[1,:] = self.caseHandler.ylimits
+                    self.domain_limits[2,:] = self.caseHandler.zlimits
+                except AttributeError:
+                    print("Domain limit input not recognised")
 
             
         if self.write == True:
@@ -96,6 +117,9 @@ class dataHandler:
             
         self.postOps.append(self.rhs_tally)   
         plt.rcParams.update(self.plot_params)
+        
+
+
             
 
     def run(self,species,fields,simulationManager):
@@ -258,10 +282,10 @@ class dataHandler:
         
         try:
             particles = np.array(self.trajectories,dtype=np.int) - 1
-        except TypeError:
+        except (TypeError,ValueError):
             if self.trajectories == 'all':
-                particles = np.linspace(0,len(self.xArray)-1,
-                                        len(self.xArray)-1,
+                particles = np.linspace(0,len(self.xArray[0])-1,
+                                        len(self.xArray[0])-1,
                                         dtype=np.int)
 
         limits = self.domain_limits

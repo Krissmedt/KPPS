@@ -61,11 +61,11 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 
 data_params['sampleInterval'] = 1
 data_params['record'] = True
-data_params['component_plots'] = True
+data_params['component_plots'] = False
 data_params['components'] = 'xyz'
 data_params['trajectory_plots'] = True
 data_params['trajectories'] = [1]
-data_params['domain_limits'] = [20,20,15]
+data_params['domain_limits'] = [[-20,20],[-20,20],[-15,15]]
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
