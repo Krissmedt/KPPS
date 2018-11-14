@@ -1,6 +1,7 @@
 import numpy as np
 import copy as cp
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from math import floor
 from species import species
 from mesh import mesh
@@ -156,7 +157,7 @@ class Test_fields:
         data_params['samplePeriod'] = 1
         data_params['record'] = True
         data_params['component_plots'] = True
-        data_params['components'] = 'xyz'
+        data_params['components'] = 'x'
         data_params['domain_limits'] = [[0,10],[0,10],[0,10]]
         
         model1 = {'simSettings':sim_params,'speciesSettings':p_params,
@@ -186,19 +187,26 @@ E = pic_data.mesh_E[1]
 CE = pic_data.mesh_CE[1]
 pos = pic_data.mesh_pos
 
-zplane = floor(pos.shape[2]/4)
+zplane = floor(pos.shape[2]/2)-1
 X = pos[0,:,:,zplane]
 Y = pos[1,:,:,zplane]
-Ex = E[0,:,:,zplane]
-Ey = E[1,:,:,zplane]
 
-CEx = CE[0,:,:,zplane]
-CEy = CE[1,:,:,zplane]
+EE = np.hypot(E[0,:,:,zplane],E[1,:,:,zplane])
+Ex = E[0,:,:,zplane]/EE
+Ey = E[1,:,:,zplane]/EE
+
+CEE = np.hypot(CE[0,:,:,zplane],CE[1,:,:,zplane])
+CEx = CE[0,:,:,zplane]/CEE
+CEy = CE[1,:,:,zplane]/CEE
 
 fig = plt.figure(4)
 ax = fig.add_subplot(1, 1, 1)
-ax.quiver(X,Y,Ex,Ey,units='width')
+Eplot = ax.quiver(X,Y,Ex,Ey,EE,pivot='mid',units='width',cmap='coolwarm')
+         #norm=colors.LogNorm(vmin=EE.min(),vmax=EE.max()))
+fig.colorbar(Eplot,extend='max')
 
 fig = plt.figure(5)
 ax = fig.add_subplot(1, 1, 1)
-ax.quiver(X,Y,CEx,CEy,units='width')
+CEplot = ax.quiver(X,Y,CEx,CEy,CEE,pivot='mid',units='width',cmap='coolwarm')
+          #norm=colors.LogNorm(vmin=CEE.min(),vmax=CEE.max()))
+fig.colorbar(CEplot,extend='max')
