@@ -40,7 +40,7 @@ if order_data == True:
     data = dataHandler()
     for key, value in schemes.items():
         for k in K:
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(k) + "_" + str(0.4) + "dt.txt"
+            filename = key + "_" + value + "_"  + str(M) + "_" + str(k) + "_" + "winkel"
             data.loadData(filename,['dt','rhs','xRel'])
 
             
@@ -55,12 +55,12 @@ if order_data == True:
             ##Order Plot w/ dt
             fig_dt = plt.figure(51)
             ax_dt = fig_dt.add_subplot(1, 1, 1)
-            ax_dt.plot(data.dtArray,data.xRelArray,label=label_order)
+            ax_dt.plot(data.dtArray*omegaB,data.xRelArray,label=label_order)
        
 
     ## Order plot finish
     ax_rhs.set_xscale('log')
-    ax_rhs.set_xlim(10**3,10**5)
+    ax_rhs.set_xlim(10**3,5*10**5)
     ax_rhs.set_xlabel('Number of RHS evaluations')
     ax_rhs.set_yscale('log')
     ax_rhs.set_ylim(10**(-5),10**1)
@@ -77,10 +77,10 @@ if order_data == True:
     
     ## Order plot finish
     ax_dt.set_xscale('log')
-    ax_dt.set_xlim(10**-3,10**-1)
-    ax_dt.set_xlabel('$\Omega_B \Delta t$')
+    ax_dt.set_xlim(10**-1,10**1)
+    ax_dt.set_xlabel('$\omega_B \Delta t$')
     ax_dt.set_yscale('log')
-    ax_dt.set_ylim(10**(-7),10**1)
+    ax_dt.set_ylim(10**(-5),10**1)
     ax_dt.set_ylabel('$\Delta x^{(rel)}$')
     
     xRange = ax_dt.get_xlim()

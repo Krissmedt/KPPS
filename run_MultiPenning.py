@@ -4,94 +4,108 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-nq = 2
+
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
-schemes = {'legendre':'boris_SDC'}
+schemes = {'lobatto':'boris_SDC'}
 
-M = 2
-iterations = [2]
+M = 3
+iterations = [3]
 
-tEnd = 0.01
-#tEnd = 16.0
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
-#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4])
-#dt = dt/omegaB 
-                        
+#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])
+#dt = dt/omegaB                     
 dt = np.array([0.01])
 
-sampleRate = 1
-
-log = False
-partTraj = np.linspace(1,nq,nq,dtype=np.int)
-
-
-mq = 1.
-alpha = 1000
-q = alpha*mq
+log = True
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
-H1 = epsilon*omegaE**2
-H = np.array([[H1,1,H1,1,-2*H1,1]])
-H = mq/2 * np.diag(H[0])
-H = np.kron(H,np.identity(nq))
+sim_params = {}
+species_params = {}
+case_params = {}
+analysis_params = {}
+data_params = {}
 
-bMag = omegaB/alpha
-eMag = -epsilon*omegaE**2/alpha
-eTransform = np.array([[1,0,0],[0,1,0],[0,0,-2]])
+sim_params['t0'] = 0
+sim_params['tEnd'] = 1
+sim_params['percentBar'] = False
 
 
-x0 = [[10,0,0],[10.1,0,0]]
-v0 = [[100,0,100],[100,0,100]]
-dx = 0.001
-dv = 5
+species_params['nq'] = 10
+species_params['mq'] = 1000
+species_params['q'] = 1
+alpha = species_params['q']/species_params['mq']
 
-tsteps = floor(tEnd/dt[-1]) +1
+case_params['dimensions'] = 3
+case_params['particle_init'] = 'clouds'
+case_params['dx'] = 0.01
+case_params['dv'] = 5
+case_params['pos'] = np.array([[10,0,0]])
+case_params['vel'] = np.array([[100,0,100]])
+
+analysis_params['M'] = M
+analysis_params['centreMass_check'] = True
+analysis_params['residual_check'] = False
+analysis_params['fieldAnalysis'] = 'coulomb'
+analysis_params['E_type'] = 'custom'
+analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
+analysis_params['E_magnitude'] = -epsilon*omegaE**2/alpha
+analysis_params['B_type'] = 'uniform'
+analysis_params['B_transform'] = [0,0,1]
+analysis_params['B_magnitude'] = omegaB/alpha
+
+data_params['sampleInterval'] = 1
+data_params['record'] = True
+data_params['write'] = False
+data_params['component_plots'] = True
+data_params['components'] = 'xyz'
+data_params['trajectory_plots'] = True
+data_params['trajectories'] = 'all'
+data_params['domain_limits'] = [20,20,15]
+
+plot_params = {}
+plot_params['legend.fontsize'] = 12
+plot_params['figure.figsize'] = (12,8)
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 3
+
+data_params['plot_params'] = plot_params
 
 
 
 ## Numerical solution ##
 figNo = 50
 for key, value in schemes.items():
+    analysis_params['particleIntegration'] = value
+    analysis_params['nodeType'] = key
+    
     for K in iterations:
+        analysis_params['K'] = K
+        
         tNum = []
         xNum = []
         yNum = []
         zNum = []
         dNum = []
+        
         for i in range(0,len(dt)): 
-            finalTs = floor(tEnd/dt[i])
+            sim_params['dt'] = dt[i]
+            
+            finalTs = floor(sim_params['tEnd']/dt[i])
+            
+            model = dict(simSettings=sim_params,
+                         speciesSettings=species_params,
+                         analysisSettings=analysis_params,
+                         caseSettings=case_params,
+                         dataSettings=data_params)
             
             label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
             label = label_order + ", dt=" + str(dt[-1])
-            
-            model = dict(
-                    simSettings = {'t0':0,'tEnd':tEnd,'dt':dt[i],'id':label,'percentBar':False},
-                
-                    speciesSettings = {'nq':nq,'mq':mq,'q':q},
-                    
-                    caseSettings = {'dimensions':3,
-                                    'explicit':{'expType':'direct','positions':x0,'velocities':v0},
-                                    'dx':dx,'dv':dv},
-                    
-                    analysisSettings = {'imposedElectricField':{'general':eTransform, 'magnitude':eMag},
-                                        'interactionModelling':'intra',
-                                        'imposedMagneticField':{'uniform':[0,0,1], 'magnitude':bMag},
-                                        'particleIntegration':value,
-                                        'M':M,
-                                        'K':K,
-                                        'nodeType':key,
-                                        'penningEnergy':H,
-                                        'centreMass':True,
-                                        'units':' '},
-                    
-                    dataSettings = {#'write':{'sampleRate':1,'foldername':'simple'},
-                                    'record':{'sampleRate':sampleRate}
-                                    ,'plot':{'tPlot':'xyz'}
-                                    ,'trajectory_plot':{'particles':partTraj,'limits':[20,20,15]}
-                                    })
             
             kppsObject = kpps(**model)
             data = kppsObject.run()

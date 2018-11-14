@@ -5,42 +5,53 @@ from math import floor
 class simulationManager:
     ## Main Methods
     def __init__(self,**kwargs):
-        if 't0' in kwargs:
-            self.t0 = kwargs['t0']
-        else:
-            self.t0 = 0
+        ## Default values
+        self.simID = 'none'
+        self.simType = 'pic'
+        self.ndim = 3
+        self.t0 = 0
+        self.tEnd = 1
+        self.dt = 1
+        self.tSteps = 1
         
+        ## Iterate through keyword arguments and store all in object (self)
+        self.params = kwargs
+        for key, value in self.params.items():
+            setattr(self,key,value)
+            
+        # check for other intuitive parameter names
+        name_dict = {}
+        name_dict['ndim'] = ['dimensions']
+        name_dict['ndim'] = ['dimension']
         
-        if 'tEnd' in kwargs and 'tSteps' in kwargs:
-            self.tEnd = kwargs['tEnd']
-            self.tSteps = kwargs['tSteps']
-            self.dt = (self.tEnd-self.t0)/self.tSteps
-            
-        elif 'tEnd' in kwargs and 'dt' in kwargs:
-            self.tEnd = kwargs['tEnd']
-            self.dt = kwargs['dt']
-            self.tSteps = floor((self.tEnd-self.t0)/self.dt)
-            
-        elif 'dt' in kwargs and 'tSteps' in kwargs:
-            self.dt = kwargs['dt']
-            self.tSteps = kwargs['tSteps']
-            self.tEnd = self.t0 + self.dt * self.tSteps
-            
-        else:
-            print("No valid combination of inputs end-time tEnd, time-steps "+
-                  "tSteps and time-step-length dt specified, resorting to "+
-                  "default simulation parameters: tEnd=1, tSteps=100, dt=0.01")
+        for key, value in name_dict.items():
+            for name in value:
+                try:
+                    getattr(self,name)
+                    setattr(self,key,self.params[name])
+                except AttributeError:
+                    pass
         
-        if 'id' in kwargs:
-            self.simID = kwargs['id']
-        else:
-            self.simID = ' '
+        ## Try to determine correct end-time, time-step -size and -number combo 
+        try:
+            self.dt = (self.params['tEnd']-self.t0)/self.params['tSteps']
+        except KeyError:
+            pass
+        
+        try:
+            self.tSteps = floor((self.params['tEnd']-self.t0)/self.params['dt'])
+        except KeyError:
+            pass
+        
+        try:
+            self.tEnd = self.t0 + self.params['dt'] * self.params['tSteps']
+        except KeyError:
+            pass
+
         
         self.hookFunctions = []
         if 'percentBar' in kwargs and kwargs['percentBar'] == True:
             self.hookFunctions.append(self.displayProgress)
-        
-        self.inputPrint()
         
         self.ts = 0
         self.t = self.t0

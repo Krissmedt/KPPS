@@ -4,22 +4,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
+
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
 
 M = 3
-iterations = [3]
-
+iterations = [1,2,4,8,16]
+          
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
-#dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
-#dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])              
-dt = np.array([0.01])
+dt = np.linspace(10**-1,10,10)
+dt = dt/omegaB
+dt = np.flip(dt,axis=0)
 
 log = False
 
+omegaB = 25.0
+omegaE = 4.9
+epsilon = -1
 
 sim_params = {}
 species_params = {}
@@ -37,14 +41,8 @@ species_params['a'] = 1
 
 case_params['dimensions'] = 3
 case_params['particle_init'] = 'direct'
-case_params['dx'] = 0.01
-case_params['dv'] = 5
 case_params['pos'] = np.array([[10,0,0]])
 case_params['vel'] = np.array([[100,0,100]])
-
-case_params['mesh_init'] = 'box'
-case_params['resolution'] = [1,2,3]
-case_params['store_node_pos'] = True
 
 H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
@@ -63,10 +61,9 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 
 data_params['sampleInterval'] = 1
 data_params['record'] = True
-data_params['write'] = False
-data_params['component_plots'] = False
+data_params['component_plots'] = True
 data_params['components'] = 'xyz'
-data_params['trajectory_plots'] = False
+data_params['trajectory_plots'] = True
 data_params['trajectories'] = [1]
 data_params['domain_limits'] = [20,20,15]
 
@@ -178,7 +175,7 @@ for key, value in schemes.items():
             dataArray[:,1] = rhs_evals
             dataArray[:,2] = xRel
             
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_order"
+            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + "winkel"
             np.savetxt(filename,dataArray)
             
             
@@ -189,6 +186,19 @@ for key, value in schemes.items():
         for i in range(0,len(energyConvergence)-1):
             energyConvergence[i] = energyConvergence[i+1]-energyConvergence[i]
             
+        
+        #Second-order line
+        a = xRel[0]
+        orderFour = np.zeros(len(dt),dtype=np.float)
+        orderTwo = np.zeros(len(dt),dtype=np.float)
+        orderM = np.zeros(len(dt),dtype=np.float)
+        order2M = np.zeros(len(dt),dtype=np.float)
+        
+        for i in range(0,len(dt)):
+            orderFour[i] = a*(dt[i]/dt[-1])**4
+            orderTwo[i] = a*(dt[i]/dt[-1])**2
+            orderM[i] = a*(dt[i]/dt[-1])**(2*M-2)
+            order2M[i] = a*(dt[i]/dt[-1])**(2*M)
         
         label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
         label_traj = label_order + ", dt=" + str(dt[-1])
@@ -203,7 +213,7 @@ for key, value in schemes.items():
         ##Order Plot w/ dt
         fig_dt = plt.figure(51)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dt,xRel,label=label_order)
+        ax_dt.plot(dt*omegaB,xRel,label=label_order)
         
         
         ##Energy Plot
@@ -238,7 +248,7 @@ ax_rhs.legend()
 ## Order plot finish
 ax_dt.set_xscale('log')
 #ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel('\Delta t$')
+ax_dt.set_xlabel('$\Omega_B \Delta t$')
 ax_dt.set_yscale('log')
 #ax_dt.set_ylim(10**(-7),10**1)
 ax_dt.set_ylabel('$\Delta x^{(rel)}$')
