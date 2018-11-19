@@ -50,6 +50,8 @@ class kpps_analysis:
         self.imposeFields = False
         self.simulationManager = None
         
+        self.units = 'cgs'
+        
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
         for key, value in self.params.items():
@@ -140,19 +142,20 @@ class kpps_analysis:
             self.hooks.append(self.display_residuals)
         
         ## Physical constants
-        if 'units' in kwargs:
-            if self.params['units'] == 'si':
-                self.makeSI()
-                self.coulomb = self.coulomb_si
-                self.unit_scale_poisson = 1/self.ep0
-            elif self.params['units'] == 'cgs':
-                self.unit_scale_poisson = 4*pi
-            elif self.params['units'] == 'custom':
-                pass
+        if self.units == 'si':
+            self.makeSI()
+            self.coulomb = self.coulomb_si
+            self.unit_scale_poisson = 1/self.ep0
+        elif self.units == 'cgs':
+            self.unit_scale_poisson = 4*pi
+        elif self.units == 'custom':
+            pass
 
                 
     ## Analysis modules
     def fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
+        fields.q = np.zeros((fields.res+1),dtype=np.float)
+        
         for method in self.fieldIntegration:
             method(species,fields,simulationManager)
         return species
@@ -218,7 +221,7 @@ class kpps_analysis:
               
             for pjj in range(pii+1,species.nq):
                 self.coulomb_pair(species,pii,pjj)
-                
+
         return species
     
     
@@ -321,8 +324,8 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-        rho = self.meshtoVector(fields.q/fields.dv * self.unit_scale_poisson)
-        phi = sps.linalg.spsolve(self.FDMat,rho) #Need to figure out BC and add to rho
+        rho = self.meshtoVector(fields.q/fields.dv)
+        phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson) #Need to figure out BC and add to rho
         phi = self.vectortoMesh(phi,fields.res+1)
         fields.phi = phi
         
@@ -336,18 +339,18 @@ class kpps_analysis:
         
         #E-field y-component differentiation
         fields.E[1,:,0,:] = -2*(phi[:,0,:]-phi[:,1,:])
-        fields.E[1,:,1:n[0]-1,:] = -(phi[:,0:n[0]-2,:] - phi[:,2:n[0],:])
-        fields.E[0,:,n[0]-1,:] = -2*(phi[:,n[0]-2,:]-phi[:,n[0]-1,:])
+        fields.E[1,:,1:n[1]-1,:] = -(phi[:,0:n[1]-2,:] - phi[:,2:n[1],:])
+        fields.E[1,:,n[1]-1,:] = -2*(phi[:,n[1]-2,:]-phi[:,n[1]-1,:])
         
         #E-field z-component differentiation
         fields.E[2,:,:,0] = -2*(phi[:,:,0]-phi[:,:,1])
-        fields.E[2,:,:,1:n[0]-1] = -(phi[:,:,0:n[0]-2] - phi[:,:,2:n[0]])
-        fields.E[0,:,:,n[0]-1] = -2*(phi[:,:,n[0]-2]-phi[:,:,n[0]-1])
+        fields.E[2,:,:,1:n[2]-1] = -(phi[:,:,0:n[2]-2] - phi[:,:,2:n[2]])
+        fields.E[2,:,:,n[2]-1] = -2*(phi[:,:,n[2]-2]-phi[:,:,n[2]-1])
         
         fields.E[0,:,:,:]/(2*fields.dx)
         fields.E[1,:,:,:]/(2*fields.dy)
         fields.E[2,:,:,:]/(2*fields.dz)
-        
+    
         return fields
         
     def trilinear_gather(self,species,mesh):
@@ -356,7 +359,6 @@ class kpps_analysis:
             li = self.cell_index(species.pos[pii],O,mesh.dh)
             rpos = species.pos[pii] - O - li*mesh.dh
             w = self.trilinear_weights(rpos,mesh.dh)
-            
             i,j,k = li
             species.E[pii] = (w[0]*mesh.E[:,i,j,k] +
                               w[1]*mesh.E[:,i,j,k+1] +
@@ -376,7 +378,7 @@ class kpps_analysis:
             li = self.cell_index(species.pos[pii],O,mesh.dh)
             rpos = species.pos[pii] - O - li*mesh.dh
             w = self.trilinear_weights(rpos,mesh.dh)
-            
+
             mesh.q[li[0],li[1],li[2]] += species.q * w[0]
             mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
             mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]

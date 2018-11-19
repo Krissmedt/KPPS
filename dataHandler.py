@@ -3,6 +3,7 @@ import os
 import numpy as np
 import math as math
 import matplotlib.pyplot as plt
+import copy as cp
 from mpl_toolkits.mplot3d import Axes3D
 
 ## Class ##
@@ -202,11 +203,11 @@ class dataHandler:
         ## NOTE: For small sampleInterval compared to large number of time-steps,
         ## data held in memory can quickly exceed system capabilities!
         if simulationManager.ts % self.recordEvery == 0:
-            self.mesh_q.append(fields.q)
-            self.mesh_phi.append(fields.phi)
-            self.mesh_E.append(fields.E)
-            self.mesh_B.append(fields.B)
-            self.mesh_CE.append(fields.CE)
+            self.mesh_q.append(cp.copy(fields.q))
+            self.mesh_phi.append(cp.copy(fields.phi))
+            self.mesh_E.append(cp.copy(fields.E))
+            self.mesh_B.append(cp.copy(fields.B))
+            self.mesh_CE.append(cp.copy(fields.CE))
 
     def xyzPlot(self):
         limits = self.domain_limits
