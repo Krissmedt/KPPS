@@ -145,12 +145,14 @@ class Test_fields:
         sim_params['percentBar'] = True
         
         case_params['particle_init'] = 'direct'
-        case_params['pos'] =  [[51,50,50]]
+        self.potpos = [5.1,5.0,5.0]
+        case_params['pos'] =  [self.potpos]
         #,[52.1,0.5,0.5]]
-        case_params['resolution'] = [20,20,20]
-        case_params['xlimits'] = [0,100]
-        case_params['ylimits'] = [0,100]
-        case_params['zlimits'] = [0,100]
+        case_params['resolution'] = [10,10,10]
+        case_params['xlimits'] = [0,10]
+        case_params['ylimits'] = [0,10]
+        case_params['zlimits'] = [0,10]
+        case_params['BC_function'] = self.pot
         
         analysis_params['fieldAnalysis'] = 'pic'
         analysis_params['particleIntegration'] = 'boris_synced'
@@ -180,6 +182,13 @@ class Test_fields:
         
         return pic_data, colmb_data
     
+    def pot(self,pos):
+        ppos = self.potpos
+        r = np.sqrt((pos[0]-ppos[0])**2+(pos[1]-ppos[1])**2+(pos[2]-ppos[2])**2)
+        phi = -1/r
+        
+        return phi
+    
 tf = Test_fields()
 tf.setup()
 #tf.test_laplacian_3d()
@@ -188,7 +197,7 @@ pic_data, colmb_data = tf.test_2particles()
 
 pos = pic_data.mesh_pos
 tslice = 1
-zplane = 1
+zplane = 5
 
 Q = pic_data.mesh_q[tslice][:,:,zplane]
 rho = pic_data.mesh_q[tslice][:,:,zplane]/(pos[0,1,0,0]-pos[0,0,0,0])

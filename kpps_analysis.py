@@ -289,13 +289,14 @@ class kpps_analysis:
             fields.CE[1,:,:,:] += rpos_array[1,:,:,:] / rmag_array**3
             fields.CE[2,:,:,:] += rpos_array[2,:,:,:] / rmag_array**3
         return fields
-    
+
+
     def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
         self.FDMat = None
         
-        nz = fields.res[2]+1
-        ny = fields.res[1]+1
-        nx = fields.res[0]+1
+        nz = fields.res[2]-1
+        ny = fields.res[1]-1
+        nx = fields.res[0]-1
         
         k = np.zeros(3,dtype=np.float)
         k[0] = -2*(1/fields.dz**2)
@@ -324,33 +325,34 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-        rho = self.meshtoVector(fields.q/fields.dv)
-        phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson) #Need to figure out BC and add to rho
-        phi = self.vectortoMesh(phi,fields.res+1)
-        fields.phi = phi
+        fields.rho = fields.q/fields.dv
+        rho = self.meshtoVector(fields.rho[1:-1,1:-1,1:-1])
+        phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
+        phi = self.vectortoMesh(phi,fields.res-1)
+        fields.phi[1:-1,1:-1,1:-1] = phi
         
         ## Differentiate over electric potential for electric field
-        n = np.shape(phi)
+        n = np.shape(fields.phi)
 
         #E-field x-component differentiation
-        fields.E[0,0,:,:] = -2*(phi[0,:,:]-phi[1,:,:])
-        fields.E[0,1:n[0]-1,:,:] = -(phi[0:n[0]-2,:,:] - phi[2:n[0],:,:])
-        fields.E[0,n[0]-1,:,:] = -2*(phi[n[0]-2,:,:]-phi[n[0]-1,:,:])
+        fields.E[0,0,:,:] = -2*(fields.phi[0,:,:]-fields.phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = -(fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
+        fields.E[0,n[0]-1,:,:] = -2*(fields.phi[n[0]-2,:,:]-fields.phi[n[0]-1,:,:])
         
         #E-field y-component differentiation
-        fields.E[1,:,0,:] = -2*(phi[:,0,:]-phi[:,1,:])
-        fields.E[1,:,1:n[1]-1,:] = -(phi[:,0:n[1]-2,:] - phi[:,2:n[1],:])
-        fields.E[1,:,n[1]-1,:] = -2*(phi[:,n[1]-2,:]-phi[:,n[1]-1,:])
+        fields.E[1,:,0,:] = -2*(fields.phi[:,0,:]-fields.phi[:,1,:])
+        fields.E[1,:,1:n[1]-1,:] = -(fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
+        fields.E[1,:,n[1]-1,:] = -2*(fields.phi[:,n[1]-2,:]-fields.phi[:,n[1]-1,:])
         
         #E-field z-component differentiation
-        fields.E[2,:,:,0] = -2*(phi[:,:,0]-phi[:,:,1])
-        fields.E[2,:,:,1:n[2]-1] = -(phi[:,:,0:n[2]-2] - phi[:,:,2:n[2]])
-        fields.E[2,:,:,n[2]-1] = -2*(phi[:,:,n[2]-2]-phi[:,:,n[2]-1])
+        fields.E[2,:,:,0] = -2*(fields.phi[:,:,0]-fields.phi[:,:,1])
+        fields.E[2,:,:,1:n[2]-1] = -(fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
+        fields.E[2,:,:,n[2]-1] = -2*(fields.phi[:,:,n[2]-2]-fields.phi[:,:,n[2]-1])
         
         fields.E[0,:,:,:]/(2*fields.dx)
         fields.E[1,:,:,:]/(2*fields.dy)
         fields.E[2,:,:,:]/(2*fields.dz)
-    
+        
         return fields
         
     def trilinear_gather(self,species,mesh):
