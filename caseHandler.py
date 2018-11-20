@@ -30,6 +30,11 @@ class caseHandler:
         self.mesh_res = np.array([1,1,1],dtype=np.int)
         self.store_node_pos = False
         
+        self.BC_scaling = 1
+        self.BC_box = self.node_set
+        self.BC_function = self.BC_node_template
+        
+        
         ## Dummy values - Need to be set in params for class to work!
         self.pos = np.zeros((1,3),dtype=np.float)
         self.vel = np.zeros((1,3),dtype=np.float)
@@ -195,7 +200,11 @@ class caseHandler:
         mesh.q = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
         mesh.E = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
         mesh.B = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-
+        
+        mesh.phi = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.BC_vector = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh = self.BC_box(mesh)
+        
         if self.store_node_pos == True:
             mesh.pos = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
             for xi in range(0,mesh.xres+1):
@@ -204,9 +213,74 @@ class caseHandler:
                 mesh.pos[1,:,yi,:] = mesh.ylimits[0] + mesh.dy * yi
             for zi in range(0,mesh.zres+1):
                 mesh.pos[2,:,:,zi] = mesh.zlimits[0] + mesh.dz * zi
+                
+        return mesh
 
+
+    def node_set(self,mesh):
+        for zi in range(0,mesh.zres+1):
+            for yi in range(0,mesh.yres+1):
+                y = mesh.ylimits[0] + mesh.dy * yi
+                z = mesh.zlimits[0] + mesh.dz * zi
+                
+                x0 = mesh.xlimits[0]
+                xn = mesh.xlimits[1]
+                mesh.phi[0,yi,zi] = self.BC_function(np.array([x0,y,z]))
+                mesh.phi[-1,yi,zi] = self.BC_function(np.array([xn,y,z]))
+                
+        for zi in range(0,mesh.zres+1):
+            for xi in range(0,mesh.yres+1):
+                x = mesh.ylimits[0] + mesh.dx * xi
+                z = mesh.zlimits[0] + mesh.dz * zi
+                
+                y0 = mesh.ylimits[0]
+                yn = mesh.ylimits[1]
+                mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
+                mesh.phi[xi,-1,zi] = self.BC_function(np.array([x,yn,z]))
+                
+        for yi in range(0,mesh.zres+1):
+            for xi in range(0,mesh.yres+1):
+                y = mesh.ylimits[0] + mesh.dy * yi
+                x = mesh.xlimits[0] + mesh.dx * xi
+                
+                z0 = mesh.zlimits[0]
+                zn = mesh.zlimits[1]
+                mesh.phi[xi,yi,0] = self.BC_function(np.array([x,y,z0]))
+                mesh.phi[xi,yi,-1] = self.BC_function(np.array([x,y,zn]))
     
+        mesh.phi = mesh.phi * self.BC_scaling 
+        
+        mesh.BC_vector[1,:,:] += -mesh.phi[0,:,:]
+        mesh.BC_vector[-2,:,:] += -mesh.phi[-1,:,:]
+        
+        mesh.BC_vector[:,1,:] += -mesh.phi[:,0,:]
+        mesh.BC_vector[:,-2,:] += -mesh.phi[:,-1,:]
+        
+        mesh.BC_vector[:,:,1] += -mesh.phi[:,:,0]
+        mesh.BC_vector[:,:,-2] += -mesh.phi[:,:,-1]
+        
+        mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-1,1:-1,1:-1])
+        
+        return mesh
+
+        
+    def BC_node_template(self,pos):
+        node_value = 0
+        
+        return node_value
+        
     ## Additional methods
+    def meshtoVector(self,mesh):
+        shape = np.shape(mesh)
+        x = np.zeros(shape[0]*shape[1]*shape[2],dtype=np.float)
+        xi = 0
+        for i in range(0,shape[0]):
+            for j in range(0,shape[1]):
+                for k in range(0,shape[2]):
+                    x[xi] = mesh[i,j,k]
+                    xi += 1
+        return x
+    
     def random(self,rows,deviance):
         output = np.zeros((rows,self.ndim),dtype=np.float)
         for nd in range(0,self.ndim):
