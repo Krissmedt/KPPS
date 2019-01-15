@@ -125,6 +125,7 @@ class caseHandler:
     ## Species methods
     def direct(self,species,**kwargs):
         nPos = self.pos.shape[0]
+
         if nPos <= species.nq:
             species.pos[:nPos,:] = self.pos
         elif nPos > species.nq:
@@ -213,7 +214,6 @@ class caseHandler:
                 mesh.pos[1,:,yi,:] = mesh.ylimits[0] + mesh.dy * yi
             for zi in range(0,mesh.zres+1):
                 mesh.pos[2,:,:,zi] = mesh.zlimits[0] + mesh.dz * zi
-                
         return mesh
 
 
@@ -229,7 +229,7 @@ class caseHandler:
                 mesh.phi[-1,yi,zi] = self.BC_function(np.array([xn,y,z]))
                 
         for zi in range(0,mesh.zres+1):
-            for xi in range(0,mesh.yres+1):
+            for xi in range(0,mesh.xres+1):
                 x = mesh.ylimits[0] + mesh.dx * xi
                 z = mesh.zlimits[0] + mesh.dz * zi
                 
@@ -238,8 +238,8 @@ class caseHandler:
                 mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
                 mesh.phi[xi,-1,zi] = self.BC_function(np.array([x,yn,z]))
                 
-        for yi in range(0,mesh.zres+1):
-            for xi in range(0,mesh.yres+1):
+        for yi in range(0,mesh.yres+1):
+            for xi in range(0,mesh.xres+1):
                 y = mesh.ylimits[0] + mesh.dy * yi
                 x = mesh.xlimits[0] + mesh.dx * xi
                 
@@ -250,14 +250,14 @@ class caseHandler:
     
         mesh.phi = mesh.phi * self.BC_scaling 
         
-        mesh.BC_vector[1,:,:] += -mesh.phi[0,:,:]
-        mesh.BC_vector[-2,:,:] += -mesh.phi[-1,:,:]
+        mesh.BC_vector[1,:,:] += mesh.phi[0,:,:]/mesh.dx**2
+        mesh.BC_vector[-2,:,:] += mesh.phi[-1,:,:]/mesh.dx**2
         
-        mesh.BC_vector[:,1,:] += -mesh.phi[:,0,:]
-        mesh.BC_vector[:,-2,:] += -mesh.phi[:,-1,:]
+        mesh.BC_vector[:,1,:] += mesh.phi[:,0,:]/mesh.dy**2
+        mesh.BC_vector[:,-2,:] += mesh.phi[:,-1,:]/mesh.dy**2
         
-        mesh.BC_vector[:,:,1] += -mesh.phi[:,:,0]
-        mesh.BC_vector[:,:,-2] += -mesh.phi[:,:,-1]
+        mesh.BC_vector[:,:,1] += mesh.phi[:,:,0]/mesh.dz**2
+        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-1]/mesh.dz**2
         
         mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-1,1:-1,1:-1])
         
