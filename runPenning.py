@@ -78,7 +78,7 @@ plot_params['axes.titlesize'] = 20
 plot_params['xtick.labelsize'] = 16
 plot_params['ytick.labelsize'] = 16
 plot_params['lines.linewidth'] = 3
-
+plot_params['axes.titlepad'] = 10
 data_params['plot_params'] = plot_params
 
 
