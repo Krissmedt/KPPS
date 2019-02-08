@@ -48,10 +48,10 @@ class Test_units:
         case = caseHandler(species=p,mesh=m,**self.case_params)
         assert m.q[0,0,0] == 0
         self.kpa.trilinear_qScatter(p,m,self.sim)
-        assert m.q[0,0,0] == 1/m.dv
-        assert m.q[1,0,0] == 2/m.dv
-        assert m.q[1,1,0] == 4/m.dv
-        assert m.q[1,1,1] == 8/m.dv
+        assert m.q[0,0,0] == 1.
+        assert m.q[1,0,0] == 2.
+        assert m.q[1,1,0] == 4.
+        assert m.q[1,1,1] == 8.
 
 
         
@@ -68,7 +68,7 @@ class Test_units:
         self.kpa.trilinear_qScatter(p,m,self.sim)
         charge_sum = np.sum(m.q)
 
-        assert 19.99/m.dv <= charge_sum <= 20.01/m.dv
+        assert 19.99 <= charge_sum <= 20.01
         
         # 2D test - does the function work just in the plane?
         p.nq = 4
@@ -85,8 +85,8 @@ class Test_units:
 
         assert m.q[:,:,2].all() == np.zeros((3,3)).all() 
         assert m.q[:,:,0].all() == np.zeros((3,3)).all() 
-        assert m.q[1:,1:,1].all() == np.array([[1,1],[1,1]]/m.dv).all()
-        assert np.sum(m.q[:,:,1]) == p.nq*p.q/m.dv
+        assert m.q[1:,1:,1].all() == np.array([[1,1],[1,1]]).all()
+        assert np.sum(m.q[:,:,1]) == p.nq*p.q
         
     def test_trilinearGather(self):
         p = species(**self.spec_params)
@@ -120,22 +120,27 @@ class Test_units:
         m = mesh()
         
         case_params = cp.copy(self.case_params)
-        case_params['res'] = [2,3,4]
+        case_params['res'] = [4,6,8]
         case_params['limits'] = [-1,1]
         case = caseHandler(species=p,mesh=m,**case_params)
 
         kpa = kpps_analysis()
         self.sim.ndim = 1
         Dk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        Dk = Dk.toarray()
+        
         self.sim.ndim = 2
         Ek= kpa.poisson_cube2nd_setup(p,m,self.sim)
+        Ek = Ek.toarray()
+        
         self.sim.ndim = 3
         Fk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        Fk = Fk.toarray()
 
         #Test all FDM matrices are the correct size
-        assert np.all(Dk.shape == m.zres+1)
-        assert np.all(Ek.shape == (m.yres+1)*(m.zres+1))
-        assert np.all(Fk.shape == (m.yres+1)*(m.zres+1)*(m.xres+1))
+        assert np.all(Dk.shape == m.zres-1)
+        assert np.all(Ek.shape == (m.yres-1)*(m.zres-1))
+        assert np.all(Fk.shape == (m.yres-1)*(m.zres-1)*(m.xres-1))
         
         #Test 1D matrix values
         assert Dk[1,0] == 1/m.dz**2
@@ -146,14 +151,14 @@ class Test_units:
         assert Ek[1,0] == 1/m.dz**2
         assert Ek[1,1] == -2*(1/m.dy**2+1/m.dz**2)
         assert Ek[1,2] == 1/m.dz**2
-        assert Ek[1,1+np.int(m.zres+1)] == 1/m.dy**2
+        assert Ek[1,1+np.int(m.zres-1)] == 1/m.dy**2
         
         #Test 3D matrix values
         assert Fk[1,0] == 1/m.dz**2
         assert Fk[1,1] == -2*(1/m.dx**2+1/m.dy**2+1/m.dz**2)
         assert Fk[1,2] == 1/m.dz**2
-        assert Fk[1,1+np.int(m.zres+1)] == 1/m.dy**2
-        assert Fk[1,1+np.int((m.zres+1)*(m.yres+1))] == 1/m.dx**2
+        assert Fk[1,1+np.int(m.zres-1)] == 1/m.dy**2
+        assert Fk[1,1+np.int((m.zres-1)*(m.yres-1))] == 1/m.dx**2
         
         return Dk,Ek,Fk
         

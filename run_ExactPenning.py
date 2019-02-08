@@ -2,14 +2,15 @@ from kpps import kpps
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 import matplotlib.pyplot as plt
 import numpy as np
+from dataHandler2 import dataHandler2 as DH
 from mpl_toolkits.mplot3d import Axes3D
 import time
 
 
-data2match = np.loadtxt('lobatto_boris_SDC_3_1')
-tArray = data2match[:,0]
-
-log = True
+sim2match = 'simple_penning(1)'
+DHO = DH()
+sim, sim_name = DHO.load_sim(sim_name=sim2match) 
+tsteps = sim.tSteps+1
 
 nq = 1
 mq = 1
@@ -41,10 +42,7 @@ Rplus = x0[0,0] - Rminus
 Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
 Iplus = x0[0,1] - Iminus
 
-
-
-tsteps = len(tArray)
-
+tArray = np.zeros(tsteps,dtype=np.float)
 xAnalyt = np.zeros(tsteps,dtype=np.float)
 yAnalyt = np.zeros(tsteps,dtype=np.float)
 zAnalyt = np.zeros(tsteps,dtype=np.float)
@@ -55,7 +53,9 @@ vzAnalyt = np.zeros(tsteps,dtype=np.float)
 exactEnergy = np.zeros(tsteps,dtype=np.float)
 
 for ts in range(0,tsteps):
-    t = tArray[ts]
+    t = sim.t0 + sim.dt * ts
+    
+    tArray[ts] = t
     xAnalyt[ts] = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
     yAnalyt[ts] = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
     zAnalyt[ts] = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
@@ -68,34 +68,28 @@ for ts in range(0,tsteps):
     exactEnergy[ts] = u.transpose() @ H @ u
 
     
-            
-    
-if log == True:
-    dataArray = np.zeros((tsteps,8),dtype=np.float)
+dataArray = np.zeros((tsteps,8),dtype=np.float)
 
-    dataArray[:,0] = tArray
-    dataArray[:,1] = xAnalyt
-    dataArray[:,2] = yAnalyt
-    dataArray[:,3] = zAnalyt
-    dataArray[:,4] = vxAnalyt
-    dataArray[:,5] = vyAnalyt
-    dataArray[:,6] = vzAnalyt
-    dataArray[:,7] = exactEnergy
+dataArray[:,0] = tArray
+dataArray[:,1] = xAnalyt
+dataArray[:,2] = yAnalyt
+dataArray[:,3] = zAnalyt
+dataArray[:,4] = vxAnalyt
+dataArray[:,5] = vyAnalyt
+dataArray[:,6] = vzAnalyt
+dataArray[:,7] = exactEnergy
 
-    filename = "exactPenning" + "_" + str(floor(tArray[-1])) + ".txt"
-    np.savetxt(filename,dataArray)
+filename = './' + sim2match +"/exactPenning"
+np.savetxt(filename,dataArray)
 
-
-        
 
 ##Energy Plot
 fig2 = plt.figure(51)
 ax2 = fig2.add_subplot(1, 1, 1)
 ax2.scatter(tArray[1:],exactEnergy[1:])
 
-
 ## Energy plot finish
-ax2.set_xlim(0,tEnd)
+ax2.set_xlim(0,sim.tEnd)
 ax2.set_xlabel('$t$')
 ax2.set_ylim(0,10**4)
 ax2.set_ylabel('$\Delta E$')

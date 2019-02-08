@@ -5,6 +5,10 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 
+simulate = True
+sim_no = 0
+
+
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
 
@@ -19,7 +23,6 @@ dt = np.linspace(10**-1,10,10)
 dt = dt/omegaB
 dt = np.flip(dt,axis=0)
 
-log = False
 
 omegaB = 25.0
 omegaE = 4.9
@@ -34,6 +37,7 @@ data_params = {}
 sim_params['t0'] = 0
 sim_params['tEnd'] = 1
 sim_params['percentBar'] = False
+sim_params['simID'] = 'winkel_order'
 
 species_params['mq'] = 1
 species_params['q'] = 1
@@ -51,6 +55,7 @@ H = species_params['mq']/2 * np.diag(H[0])
 analysis_params['M'] = M
 analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
+analysis_params['rhs_check'] = True
 analysis_params['fieldAnalysis'] = 'coulomb'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
@@ -59,13 +64,14 @@ analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/species_params['a']
 
-data_params['sampleInterval'] = 1
-data_params['record'] = True
-data_params['component_plots'] = False
-data_params['components'] = 'xyz'
-data_params['trajectory_plots'] = True
+data_params['samplePeriod'] = 1
+data_params['write'] = True
+data_params['write_vtk'] = False
+data_params['time_plotting'] = True
+data_params['time_plot_vars'] = ['pos']
+data_params['trajectory_plotting'] = False
 data_params['trajectories'] = [1]
-data_params['domain_limits'] = [[-20,20],[-20,20],[-15,15]]
+data_params['domain_limits'] = [20,20,15]
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -116,7 +122,7 @@ for ts in range(0,tsteps):
     vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
     vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
     
-    if ts%data_params['sampleInterval'] == 0:
+    if ts%data_params['samplePeriod'] == 0:
         u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
         exactEnergy.append(u.transpose() @ H @ u)
 
@@ -160,46 +166,42 @@ for key, value in schemes.items():
             
 
             kppsObject = kpps(**model)
-            data = kppsObject.run()
             
             
-            rhs_evals[i] = data.rhs_eval
+            if simulate == True:
+                dHandler = kppsObject.run()
+                s_name = dHandler.controller_obj.simID
+            elif simulate == False:
+                s_name = sim_params['simID'] + '(' + str(sim_no) + ')'
+                if sim_no == 0:
+                    s_name = sim_params['simID']
             
-            xRel[i] = abs(data.xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
-            yRel[i] = abs(data.yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
-            zRel[i] = abs(data.zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            sim, garbage = dHandler.load_sim(sim_name=s_name)
+            rhs_evals[i] = sim.rhs_eval
             
+            var_list = ['pos','energy']
+            data_dict = dHandler.load_p(var_list,sim_name=s_name)
             
-        if log == True:
-            dataArray[:,0] = dt
-            dataArray[:,1] = rhs_evals
-            dataArray[:,2] = xRel
+            tArray = data_dict['t']
+            xArray = data_dict['pos'][:,0,0]
+            yArray = data_dict['pos'][:,0,1]
+            zArray = data_dict['pos'][:,0,2]
             
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_" + "winkel"
-            np.savetxt(filename,dataArray)
+            hArray = data_dict['energy']
             
-            
+            xRel[i] = abs(xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
+            yRel[i] = abs(yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
+            zRel[i] = abs(zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            sim_no += 1
+  
         exactEnergy = np.array(exactEnergy)
-        energyError = abs(data.hArray[1:]-exactEnergy[1:])
+        energyError = abs(hArray[1:]-exactEnergy[1:])
         energyConvergence = energyError - energyError[0]
         
         for i in range(0,len(energyConvergence)-1):
             energyConvergence[i] = energyConvergence[i+1]-energyConvergence[i]
             
-        
-        #Second-order line
-        a = xRel[0]
-        orderFour = np.zeros(len(dt),dtype=np.float)
-        orderTwo = np.zeros(len(dt),dtype=np.float)
-        orderM = np.zeros(len(dt),dtype=np.float)
-        order2M = np.zeros(len(dt),dtype=np.float)
-        
-        for i in range(0,len(dt)):
-            orderFour[i] = a*(dt[i]/dt[-1])**4
-            orderTwo[i] = a*(dt[i]/dt[-1])**2
-            orderM[i] = a*(dt[i]/dt[-1])**(2*M-2)
-            order2M[i] = a*(dt[i]/dt[-1])**(2*M)
-        
+
         label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
         label_traj = label_order + ", dt=" + str(dt[-1])
         
@@ -219,7 +221,7 @@ for key, value in schemes.items():
         ##Energy Plot
         fig2 = plt.figure(52)
         ax2 = fig2.add_subplot(1, 1, 1)
-        ax2.scatter(data.tArray[1:],data.hArray[1:],label=label_order)
+        ax2.scatter(tArray[1:],hArray[1:],label=label_order)
         
         if key == 'boris':
             break
@@ -236,11 +238,11 @@ ax_rhs.set_ylabel('$\Delta x^{(rel)}$')
 xRange = ax_rhs.get_xlim()
 yRange = ax_rhs.get_ylim()
 
-ax_rhs.plot(xRange,data.orderLines(-2,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-2,xRange,yRange),
             ls='dotted',c='0.25',label='2nd Order')
-ax_rhs.plot(xRange,data.orderLines(-4,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-4,xRange,yRange),
             ls='dashed',c='0.75',label='4th Order')
-ax_rhs.plot(xRange,data.orderLines(-8,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-8,xRange,yRange),
             ls='dashdot',c='0.1',label='8th Order')
 ax_rhs.legend()
 
@@ -248,7 +250,7 @@ ax_rhs.legend()
 ## Order plot finish
 ax_dt.set_xscale('log')
 #ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel('$\Omega_B \Delta t$')
+ax_dt.set_xlabel('\Delta t$')
 ax_dt.set_yscale('log')
 #ax_dt.set_ylim(10**(-7),10**1)
 ax_dt.set_ylabel('$\Delta x^{(rel)}$')
@@ -256,11 +258,11 @@ ax_dt.set_ylabel('$\Delta x^{(rel)}$')
 xRange = ax_dt.get_xlim()
 yRange = ax_dt.get_ylim()
 
-ax_dt.plot(xRange,data.orderLines(2,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
             ls='dotted',c='0.25',label='2nd Order')
-ax_dt.plot(xRange,data.orderLines(4,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
             ls='dashed',c='0.75',label='4th Order')
-ax_dt.plot(xRange,data.orderLines(8,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
             ls='dashdot',c='0.1',label='8th Order')
 ax_dt.legend()
 

@@ -1,51 +1,52 @@
 ################### Kris' Plasma Particle Simulator (KPPS) ####################
 
 ## Dependencies
-import numpy as np
-import matplotlib.pyplot as plt
+import copy as cp
 from species import species
 from mesh import mesh
 from simulationManager import simulationManager
-from dataHandler import dataHandler
+from dataHandler2 import dataHandler2 as dataHandler
 from caseHandler import caseHandler
 from kpps_analysis import kpps_analysis
 
 class kpps:
-    simSettings = {}
-    speciesSettings = {}
-    fieldSettings = {}
-    caseSettings = {}
-    
-    eFieldSettings = {}
-    bFieldSettings = {}
-    analysisSettings = {}
-    
-    dataSettings = {}
-    
-    def __init__(self,**kwargs):
+    def __init__(self,**kwargs):          
+        self.simSettings = {}
+        self.speciesSettings = {}
+        self.meshSettings = {}
+        self.caseSettings = {}
+        self.analysisSettings = {}
+        self.dataSettings = {}
+        
         if 'simSettings' in kwargs:
             self.simSettings = kwargs['simSettings']
+        self.simSettings['simSettings'] = cp.copy(self.simSettings)
             
         if 'speciesSettings' in kwargs:
             self.speciesSettings = kwargs['speciesSettings']
+        self.simSettings['speciesSettings'] = self.speciesSettings
             
-        if 'fieldSettings' in kwargs:
-            self.fieldSettings = kwargs['fieldSettings']
+        if 'meshSettings' in kwargs:
+            self.meshSettings = kwargs['meshSettings']
+        self.simSettings['meshSettings'] = self.meshSettings
             
         if 'caseSettings' in kwargs:
             self.caseSettings = kwargs['caseSettings']
+        self.simSettings['caseSettings'] = self.caseSettings
             
         if 'analysisSettings' in kwargs:
             self.analysisSettings = kwargs['analysisSettings']
-
+        self.simSettings['analysisSettings'] = self.analysisSettings
+            
         if 'dataSettings' in kwargs:
             self.dataSettings = kwargs['dataSettings']
+        self.simSettings['dataSettings'] = self.dataSettings
             
-
+            
     def run(self):
         ## Load required modules
         particles = species(**self.speciesSettings)
-        fields = mesh(**self.fieldSettings)
+        fields = mesh(**self.meshSettings)
         sim = simulationManager(**self.simSettings)
         
         case = caseHandler(species=particles,
@@ -55,15 +56,13 @@ class kpps:
         analyser = kpps_analysis(simulationManager=sim,
                                  **self.analysisSettings)
         
-        dHandler = dataHandler(species=particles,
-                               mesh=fields,
-                               caseHandler=case,
-                               simulationManager=sim,
+        dHandler = dataHandler(controller_obj=sim,
                                **self.dataSettings)
         
         
         ## Main time loop
         analyser.preAnalyser(particles,fields,sim)
+        dHandler.run_setup()
         dHandler.run(particles,fields,sim)
         sim.inputPrint()
         

@@ -1,19 +1,22 @@
 from kpps import kpps
-from dataHandler import dataHandler
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 
-#schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
-schemes = {'lobatto':'boris_SDC'}
+simulate = True
+sim_no = 0
+
+
+schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC'}
 
 M = 3
-iterations = [3]
-samples = 800
-
-log = True
+iterations = [1,2,4,8,16]
+          
+omegaB = 25.0
+omegaE = 4.9
+epsilon = -1
 
 omegaB = 25.0
 omegaE = 4.9
@@ -25,14 +28,15 @@ case_params = {}
 analysis_params = {}
 data_params = {}
 
-sim_params['tEnd'] = 8
-sim_params['tSteps'] = 800
-dt = sim_params['tEnd']/sim_params['tSteps']
-sim_params['percentBar'] = False
+sim_params['t0'] = 0
+sim_params['tEnd'] = 26000
+sim_params['tSteps'] = 160000
+sim_params['percentBar'] = True
+sim_name = 'energy_exp_'
 
-species_params['a'] = 1
-species_params['q'] = 1
 species_params['mq'] = 1
+species_params['q'] = 1
+species_params['a'] = 1
 
 case_params['dimensions'] = 3
 case_params['particle_init'] = 'direct'
@@ -41,11 +45,12 @@ case_params['vel'] = np.array([[100,0,100]])
 
 H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
-H = species_params['mq'] /2 * np.diag(H[0])
+H = species_params['mq']/2 * np.diag(H[0])
 
-analysis_params['M'] = 3
+analysis_params['M'] = M
 analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
+analysis_params['rhs_check'] = False
 analysis_params['fieldAnalysis'] = 'coulomb'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
@@ -54,8 +59,14 @@ analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/species_params['a']
 
-data_params['sampleInterval'] = 1
-data_params['record'] = True
+data_params['samplePeriod'] = 100
+data_params['write'] = True
+data_params['write_vtk'] = False
+data_params['time_plotting'] = True
+data_params['time_plot_vars'] = ['pos']
+data_params['trajectory_plotting'] = False
+data_params['trajectories'] = [1]
+data_params['domain_limits'] = [20,20,15]
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -70,107 +81,60 @@ data_params['plot_params'] = plot_params
 
 
 ## Analytical solution ##
-x0 = np.array([[10,0,0]])
-v0 = np.array([[100,0,100]])
-omegaTilde = sqrt(-2 * epsilon) * omegaE
-omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
-omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
-Rminus = (omegaPlus*x0[0,0] + v0[0,1])/(omegaPlus - omegaMinus)
-Rplus = x0[0,0] - Rminus
-Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
-Iplus = x0[0,1] - Iminus
-
-
-xAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-yAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-zAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-
-vxAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-vyAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-vzAnalyt = np.zeros(sim_params['tSteps']+1,dtype=np.float)
-exactEnergy = []
-
-
-t = 0
-for ts in range(0,sim_params['tSteps']+1):
-    xAnalyt[ts] = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
-    yAnalyt[ts] = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
-    zAnalyt[ts] = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
-    
-    vxAnalyt[ts] = Rplus*-omegaPlus*sin(omegaPlus*t) + Rminus*-omegaMinus*sin(omegaMinus*t) + Iplus*omegaPlus*cos(omegaPlus*t) + Iminus*omegaMinus*cos(omegaMinus*t)
-    vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
-    vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
-    
-    if ts%data_params['sampleInterval'] == 0:
-        u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
-        exactEnergy.append(u.transpose() @ H @ u)
-
-    t += dt
-
+exactEnergy = 8799.5
 
 ## Numerical solution ##
 for key, value in schemes.items():
     analysis_params['particleIntegration'] = value
     analysis_params['nodeType'] = key
+    
     for K in iterations:
         analysis_params['K'] = K
+        sim_params['simID'] = sim_name + str(key) + "_k=" + str(K)
         
-        tNum = []
-        xNum = []
-        yNum = []
-        zNum = []
-        dNum = []
-        
-
         model = dict(simSettings=sim_params,
                      speciesSettings=species_params,
                      analysisSettings=analysis_params,
                      caseSettings=case_params,
                      dataSettings=data_params)
-
+        
 
         kppsObject = kpps(**model)
-        data = kppsObject.run()
-
-
-        if log == True:
-            filename = 't_' + key + "_" + value + "_"  + str(M) + "_" + str(K)
-            filename = 'h_' + key + "_" + value + "_"  + str(M) + "_" + str(K)
-            filename2 = 'h_exact_' + key + "_" + value + "_"  + str(M) + "_" + str(K)
-            np.savetxt(filename,data.tArray) 
-            np.savetxt(filename,data.hArray)   
-            np.savetxt(filename2,exactEnergy)
         
-
-        exactEnergy = np.array(exactEnergy)
-        energyError = abs(data.hArray-exactEnergy)
-        energyConvergence = energyError - energyError
+        
+        if simulate == True:
+            dHandler = kppsObject.run()
+            s_name = dHandler.controller_obj.simID
+        elif simulate == False:
+            s_name = sim_params['simID']
+        
+        sim, garbage = dHandler.load_sim(sim_name=s_name)
+        
+        var_list = ['energy']
+        data_dict = dHandler.load_p(var_list,sim_name=s_name)
+        
+        tArray = data_dict['t']
+        hArray = data_dict['energy']
+  
+        energyError = abs(hArray[1:]-exactEnergy)
+        energyConvergence = energyError - energyError[0]
         
         for i in range(0,len(energyConvergence)-1):
-            energyConvergence = energyConvergence-energyConvergence
-            
-        
-        label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
-
+            energyConvergence[i] = energyConvergence[i+1]-energyConvergence[i]
         
         ##Energy Plot
-        h_fig = plt.figure(52)
-        h_ax = h_fig.add_subplot(1, 1, 1)
-        h_ax.scatter(data.tArray[1:],energyError[1:],label=label_order)
+        fig2 = plt.figure(52)
+        ax2 = fig2.add_subplot(1, 1, 1)
+        ax2.scatter(tArray[1:],hArray[1:],label=s_name)
         
         if key == 'boris':
-            break
+            break 
 
 
-## energy plot finish
-h_ax.set_xscale('log')
-h_ax.set_xlim(10**-1,10**5)
-h_ax.set_xlabel('$t$')
+## Energy plot finish
+ax2.set_xlim(0,sim_params['tEnd'])
+ax2.set_xlabel('$t$')
+ax2.set_ylim(0,10**4)
+ax2.set_ylabel('$\Delta E$')
+ax2.legend()
 
-h_ax.set_yscale('log')
-h_ax.set_ylim(10**-12,10**6)
-h_ax.set_ylabel('$\Delta E$')
-h_ax.legend()
-
-#runtime = t1-t0
-#print(runtime)

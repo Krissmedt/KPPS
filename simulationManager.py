@@ -6,13 +6,24 @@ class simulationManager:
     ## Main Methods
     def __init__(self,**kwargs):
         ## Default values
-        self.simID = 'none'
-        self.simType = 'pic'
+        self.simID = 'no_name'
         self.ndim = 3
         self.t0 = 0
         self.tEnd = 1
         self.dt = 1
         self.tSteps = 1
+        
+        self.speciesSettings = {}
+        self.meshSettings = {}
+        self.caseSettings = {}
+        self.analysisSettings = {}
+        self.dataSettings = {}
+        
+        ## Dummy values, must be set in parameters or elsewhere!
+        self.rhs_dt = None
+        self.rhs_eval = None
+        
+        self.simType = None
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
@@ -31,7 +42,7 @@ class simulationManager:
                     setattr(self,key,self.params[name])
                 except AttributeError:
                     pass
-        
+
         ## Try to determine correct end-time, time-step -size and -number combo 
         try:
             self.dt = (self.params['tEnd']-self.t0)/self.params['tSteps']
@@ -47,11 +58,19 @@ class simulationManager:
             self.tEnd = self.t0 + self.params['dt'] * self.params['tSteps']
         except KeyError:
             pass
+        
+        try:
+            self.simType = self.analysisSettings['fieldAnalysis']
+        except KeyError:
+            pass
 
         
         self.hookFunctions = []
-        if 'percentBar' in kwargs and kwargs['percentBar'] == True:
-            self.hookFunctions.append(self.displayProgress)
+        try: 
+            if self.params['percentBar'] == True:
+                self.hookFunctions.append(self.displayProgress)
+        except AttributeError:
+            pass
         
         self.ts = 0
         self.t = self.t0
@@ -62,7 +81,7 @@ class simulationManager:
         self.percentTime = self.tEnd/100
         self.percentCounter = self.percentTime
         
-
+    
         
     def updateTime(self):
         self.ts = self.ts + 1

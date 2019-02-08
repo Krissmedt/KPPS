@@ -39,18 +39,26 @@ class kpps_analysis:
         self.B_magnitude = 1
         self.B_transform = np.zeros((1,3),dtype=np.float)
         
-        self.hooks = []
+         # Hook inputs
+        self.pre_hook_list = []
+        self.hook_list = []
+        
+         # Quick hook selection flags
         self.centreMass_check = False
         self.coulomb_field_check = False
+        self.residual_check = False
+        self.rhs_check = False
+        
         self.fieldAnalysis = 'none'
         self.scatter = self.trilinear_qScatter
         self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
         self.gather = self.trilinear_gather
         self.imposeFields = False
-        self.simulationManager = None
-        
         self.units = 'cgs'
+        
+        ## Dummy values
+        self.rhs_dt = None
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
@@ -58,26 +66,25 @@ class kpps_analysis:
             setattr(self,key,value)
         
         
-        # Initialise pre- and post-analysis lists
+        # Initialise operation lists
         self.preAnalysis = []
+        self.fieldIntegration = []
+        self.fieldGathering = []
+        self.particleIntegration = []
+        self.hooks = []
         self.postAnalysis = []
         
-        # Set critical simulation parameters in the simulation manager
-        try:
-            self.simulationManager.simType = self.fieldAnalysis
-        except AttributeError:
-            pass
+        
         
         # Load required particle integration methods
-        self.particleIntegration = []
         if 'particleIntegration' in self.params:
             if self.params['particleIntegration'] == 'boris_staggered':
                 self.particleIntegration.append(self.boris_staggered)
-                self.simulationManager.rhs_dt = 1
+                self.rhs_dt = 1
                 
             if self.params['particleIntegration'] == 'boris_synced':
                 self.particleIntegration.append(self.boris_synced)
-                self.simulationManager.rhs_dt = 1
+                self.rhs_dt = 1
                 
             if self.params['particleIntegration'] == 'boris_SDC':
                 self.preAnalysis.append(self.collSetup)
@@ -89,24 +96,22 @@ class kpps_analysis:
                 self.ssi = 1    #Set sweep-start-index 'ssi'
                 self.collocationClass = CollGaussLobatto
                 self.updateStep = self.lobatto_update
-                self.simulationManager.rhs_dt = (self.M - 1)*self.K
+                self.rhs_dt = (self.M - 1)*self.K
                 
             elif self.params['nodeType'] == 'legendre':
                 self.ssi = 0 
                 self.collocationClass = CollGaussLegendre
                 self.updateStep = self.legendre_update
-                self.simulationManager.rhs_dt = (self.M + 1)*self.K
+                self.rhs_dt = (self.M + 1)*self.K
                     
             else:
                 self.ssi = 1
                 self.collocationClass = CollGaussLobatto
                 self.updateStep = self.lobatto_update
-                self.simulationManager.rhs_dt = (self.M - 1)*self.K
+                self.rhs_dt = (self.M - 1)*self.K
                
             
         # Load required field analysis/integration methods
-        self.fieldIntegration = []
-        self.fieldGathering = []
         if self.fieldAnalysis == 'single' or 'coulomb' or 'pic':
             self.fieldGathering.append(self.eFieldImposed)
             self.fieldGathering.append(self.bFieldImposed)
@@ -124,7 +129,16 @@ class kpps_analysis:
                 self.preAnalysis.append(self.imposed_field_mesh)
         
         
-        # Load post-integration hook methods
+        # Load hook methods
+        if self.rhs_check == True:
+            self.preAnalysis.append(self.rhs_tally)
+        
+        for hook in self.pre_hook_list:
+            try:
+                self.preAnalysis.append(getattr(self,hook))
+            except TypeError:
+                self.preAnalysis.append(hook)
+        
         if 'penningEnergy' in self.params:
             self.preAnalysis.append(self.energy_calc_penning)
             self.hooks.append(self.energy_calc_penning)
@@ -138,8 +152,15 @@ class kpps_analysis:
             self.preAnalysis.append(self.centreMass)
             self.hooks.append(self.centreMass)
             
-        if 'residual_check' in self.params and self.params['residual_check'] == True:
+        if self.residual_check == True:
             self.hooks.append(self.display_residuals)
+
+        
+        for hook in self.hook_list:
+            try:
+                self.hooks.append(getattr(self,hook))
+            except TypeError:
+                self.hooks.append(hook)
         
         ## Physical constants
         if self.units == 'si':
@@ -626,7 +647,7 @@ class kpps_analysis:
         return species
     
     
-    ## Additional analysis
+################################ Hook methods #################################
     def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
         self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
         self.x_res[k-1,m] = np.average(np.linalg.norm(xn[:,m+1]-xQuad))
@@ -679,8 +700,14 @@ class kpps_analysis:
         species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
         species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
         
+
+    def rhs_tally(self,species,fields,simulationManager):
+        rhs_eval = self.rhs_dt * simulationManager.tSteps
+        simulationManager.rhs_eval = rhs_eval
         
-    ## Additional methods
+        return rhs_eval
+
+############################ Misc. functionality ##############################
     def lorentzf(self,species,fields,xm,vm):
         species.pos = species.toMatrix(xm)
         species.vel = species.toMatrix(vm)
@@ -773,8 +800,6 @@ class kpps_analysis:
     
         return lower, middle, upper
     
-    def nope(self,species):
-        return species
     
     def makeSI(self):
         self.mu0 = 4*pi*10**(-7) #Vacuum permeability (H/m) 

@@ -3,6 +3,11 @@ from math import sqrt, fsum, pi, exp, cos, sin, floor
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
+from dataHandler2 import dataHandler2 as DH
+
+
+simulate = False
+sim_no = 0
 
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
@@ -16,9 +21,7 @@ epsilon = -1
 
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])              
-dt = np.array([0.01,0.005,0.0025])
-
-log = False
+dt = np.array([0.01])
 
 
 sim_params = {}
@@ -30,6 +33,7 @@ data_params = {}
 sim_params['t0'] = 0
 sim_params['tEnd'] = 1
 sim_params['percentBar'] = False
+sim_params['simID'] = 'simple_penning'
 
 species_params['mq'] = 1
 species_params['q'] = 1
@@ -51,8 +55,9 @@ H = np.array([[H1,1,H1,1,-2*H1,1]])
 H = species_params['mq']/2 * np.diag(H[0])
 
 analysis_params['M'] = M
-analysis_params['centreMass_check'] = False
+analysis_params['centreMass_check'] = True
 analysis_params['residual_check'] = False
+analysis_params['rhs_check'] = True
 analysis_params['fieldAnalysis'] = 'coulomb'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
@@ -61,14 +66,16 @@ analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/species_params['a']
 
-data_params['sampleInterval'] = 1
-data_params['record'] = True
-data_params['write'] = False
-data_params['component_plots'] = False
-data_params['components'] = 'xyz'
-data_params['trajectory_plots'] = False
+data_params['samplePeriod'] = 2
+data_params['write'] = True
+data_params['write_vtk'] = False
+data_params['time_plotting'] = True
+data_params['tagged_particles'] = 'all'
+data_params['time_plot_vars'] = ['pos']
+data_params['trajectory_plotting'] = True
 data_params['trajectories'] = [1]
 data_params['domain_limits'] = [20,20,15]
+
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -119,7 +126,7 @@ for ts in range(0,tsteps):
     vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
     vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
     
-    if ts%data_params['sampleInterval'] == 0:
+    if ts%data_params['samplePeriod'] == 0:
         u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
         exactEnergy.append(u.transpose() @ H @ u)
 
@@ -134,12 +141,6 @@ for key, value in schemes.items():
     
     for K in iterations:
         analysis_params['K'] = K
-        
-        tNum = []
-        xNum = []
-        yNum = []
-        zNum = []
-        dNum = []
         for i in range(0,len(dt)):
             sim_params['dt'] = dt[i]
             
@@ -163,53 +164,63 @@ for key, value in schemes.items():
             
 
             kppsObject = kpps(**model)
-            data = kppsObject.run()
             
             
-            rhs_evals[i] = data.rhs_eval
+            if simulate == True:
+                dHandler = kppsObject.run()
+                s_name = dHandler.controller_obj.simID
+            elif simulate == False:
+                dHandler = DH()
+                s_name = sim_params['simID'] + '(' + str(sim_no) + ')'
+                if sim_no == 0:
+                    s_name = sim_params['simID']
+
+            sim, garbage = dHandler.load_sim(sim_name=s_name,overwrite=True)
+            rhs_evals[i] = sim.rhs_eval
             
-            xRel[i] = abs(data.xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
-            yRel[i] = abs(data.yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
-            zRel[i] = abs(data.zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            var_list = ['pos','energy']
+            data_dict = dHandler.load_p(var_list,sim_name=s_name)
             
+            tArray = data_dict['t']
+            xArray = data_dict['pos'][:,0,0]
+            yArray = data_dict['pos'][:,0,1]
+            zArray = data_dict['pos'][:,0,2]
             
-        if log == True:
-            dataArray[:,0] = dt
-            dataArray[:,1] = rhs_evals
-            dataArray[:,2] = xRel
+            hArray = data_dict['energy']
             
-            filename = key + "_" + value + "_"  + str(M) + "_" + str(K) + "_order"
-            np.savetxt(filename,dataArray)
-            
-            
+            xRel[i] = abs(xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
+            yRel[i] = abs(yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
+            zRel[i] = abs(zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            sim_no += 1
+  
         exactEnergy = np.array(exactEnergy)
-        energyError = abs(data.hArray[1:]-exactEnergy[1:])
+        energyError = abs(hArray[1:]-exactEnergy[1:])
         energyConvergence = energyError - energyError[0]
         
         for i in range(0,len(energyConvergence)-1):
             energyConvergence[i] = energyConvergence[i+1]-energyConvergence[i]
             
-        
+
         label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
         label_traj = label_order + ", dt=" + str(dt[-1])
         
         
         ##Order Plot w/ rhs
-        fig_rhs = plt.figure(50)
+        fig_rhs = plt.figure(dHandler.figureNo+1)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
         ax_rhs.plot(rhs_evals,xRel,label=label_order)
 
         
         ##Order Plot w/ dt
-        fig_dt = plt.figure(51)
+        fig_dt = plt.figure(dHandler.figureNo+2)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
         ax_dt.plot(dt,xRel,label=label_order)
         
         
         ##Energy Plot
-        fig2 = plt.figure(52)
+        fig2 = plt.figure(dHandler.figureNo+3)
         ax2 = fig2.add_subplot(1, 1, 1)
-        ax2.scatter(data.tArray[1:],data.hArray[1:],label=label_order)
+        ax2.scatter(tArray[1:],hArray[1:],label=label_order)
         
         if key == 'boris':
             break
@@ -226,11 +237,11 @@ ax_rhs.set_ylabel('$\Delta x^{(rel)}$')
 xRange = ax_rhs.get_xlim()
 yRange = ax_rhs.get_ylim()
 
-ax_rhs.plot(xRange,data.orderLines(-2,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-2,xRange,yRange),
             ls='dotted',c='0.25',label='2nd Order')
-ax_rhs.plot(xRange,data.orderLines(-4,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-4,xRange,yRange),
             ls='dashed',c='0.75',label='4th Order')
-ax_rhs.plot(xRange,data.orderLines(-8,xRange,yRange),
+ax_rhs.plot(xRange,dHandler.orderLines(-8,xRange,yRange),
             ls='dashdot',c='0.1',label='8th Order')
 ax_rhs.legend()
 
@@ -246,11 +257,11 @@ ax_dt.set_ylabel('$\Delta x^{(rel)}$')
 xRange = ax_dt.get_xlim()
 yRange = ax_dt.get_ylim()
 
-ax_dt.plot(xRange,data.orderLines(2,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
             ls='dotted',c='0.25',label='2nd Order')
-ax_dt.plot(xRange,data.orderLines(4,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
             ls='dashed',c='0.75',label='4th Order')
-ax_dt.plot(xRange,data.orderLines(8,xRange,yRange),
+ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
             ls='dashdot',c='0.1',label='8th Order')
 ax_dt.legend()
 
