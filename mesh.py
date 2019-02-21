@@ -28,10 +28,15 @@ class mesh:
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
-    
+            
+        self.setup()
+        
+        
+    def setup(self):
         self.nn = (self.xres+1)*(self.yres+1)*(self.zres+1) #calculate no. of cell nodes
         self.pos = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.q = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.rho = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.phi = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.E = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.CE = 0

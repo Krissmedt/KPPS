@@ -26,7 +26,6 @@ class caseHandler:
         self.ylimits = np.array([0,1],dtype=np.float)
         self.zlimits = np.array([0,1],dtype=np.float)
         
-        self.mesh_dh = '[1,1,1]' # will raise ValueError and ignore if not set
         self.mesh_res = np.array([1,1,1],dtype=np.int)
         self.store_node_pos = False
         
@@ -41,6 +40,8 @@ class caseHandler:
         self.sim = None
         self.species = None
         self.mesh = None
+        
+        self.mesh_dh = None
         
 
         ## Iterate through keyword arguments and store all in object
@@ -67,27 +68,14 @@ class caseHandler:
         self.pos = np.array(self.pos)
         self.vel = np.array(self.vel)
         
-        #
+        ## Case dimensionality setup
         try:
             self.ndim = self.sim.ndim
         except AttributeError:
-            pass
+            print('No controller referenced, defaulting to 3D')
+            self.ndim = 3
         
         ## Main functionality - setup mesh and species for specific case
-        ## Species setup      
-        if self.particle_init == 'none':
-            pass
-        elif self.particle_init == 'direct':
-            self.direct(self.species)
-        elif self.particle_init == 'clouds':
-            self.clouds(self.species)
-        elif self.particle_init == 'random':
-            self.randDis(self.species)
-        elif self.particle_init == 'even':
-            self.evenPos(self.species)
-        elif self.particle_init == 'custom' and self.mesh_init != 'custom':
-            self.custom_case(self.species)
-            
         ## Mesh setup
         # Take single digit inputs and assign to each axis
         try:
@@ -106,7 +94,7 @@ class caseHandler:
             res[:] = self.mesh_res
             self.mesh_res = res
 
-        
+        self.set_mesh_inputs()
         
         if self.mesh_init == 'none':
             pass
@@ -115,17 +103,31 @@ class caseHandler:
             self.box(self.mesh)     
         elif self.mesh_init == 'custom' and self.particle_init != 'custom':
             self.custom_case(self.mesh)
-            
-            
-        ## Other setup
         elif self.mesh_init == 'custom' and self.particle_init == 'custom':
             self.custom_case(self.species,self.mesh)
+
+        ## Species setup              
+        if self.particle_init == 'none':
+            pass
+        elif self.particle_init == 'direct':
+            self.direct(self.species)
+        elif self.particle_init == 'clouds':
+            self.clouds(self.species)
+        elif self.particle_init == 'random':
+            self.randDis(self.species)
+        elif self.particle_init == 'even':
+            self.evenPos(self.species)
+        elif self.particle_init == 'custom' and self.mesh_init != 'custom':
+            self.custom_case(self.species)
+            
+        self.set_particle_inputs()
+
+        
             
             
     ## Species methods
     def direct(self,species,**kwargs):
         nPos = self.pos.shape[0]
-
         if nPos <= species.nq:
             species.pos[:nPos,:] = self.pos
         elif nPos > species.nq:
@@ -139,7 +141,6 @@ class caseHandler:
             print("More velocities than particles specified, ignoring excess entries.")
             species.vel = self.vel[:species.nq,:]
                 
-        
     def clouds(self,species,**kwargs):
         ppc = math.floor(species.nq/self.pos.shape[0])
         for xi in range(0,len(self.pos)):
@@ -153,34 +154,28 @@ class caseHandler:
         species.pos = self.pos[0] + self.random(species.nq,self.dx)
         species.vel = self.vel[0] + self.random(species.nq,self.dv)
         
-        
+    def set_particle_inputs(self):
+        if self.ndim == 2:
+            try:
+                self.species.pos[0] = self.xlimits[0] + (self.xlimits[1]-self.xlimits[0])/2.
+                self.species.vel[0] = 0
+   
+            except AttributeError:
+                pass
+ 
+        elif self.ndim == 1:
+            try:
+                self.species.pos[:,0] = self.xlimits[0] + (self.xlimits[1]-self.xlimits[0])/2.
+                self.species.pos[:,1] = self.ylimits[0] + (self.ylimits[1]-self.ylimits[0])/2.
+                self.species.vel[:,0] = 0
+                self.species.vel[:,1] = 0
+   
+            except AttributeError:
+                pass    
+           
+       
     ## Mesh methods
     def box(self,mesh):
-        
-        try:
-            assert self.xlimits[1] - self.xlimits[0] > 0
-            assert self.ylimits[1] - self.ylimits[0] > 0
-            assert self.zlimits[1] - self.zlimits[0] > 0
-        except AssertionError:
-            print("One of the input box-edge limits is not positive " +
-                  "in length. Reverting to default 1x1x1 cube.")
-            self.xlimits = np.array([0,1])
-            self.ylimits = np.array([0,1])
-            self.zlimits = np.array([0,1])
-        
-
-        try:
-            xres = (self.xlimits[1] - self.xlimits[0])/self.mesh_dh[0]
-            yres = (self.ylimits[1] - self.ylimits[0])/self.mesh_dh[1]
-            zres = (self.zlimits[1] - self.zlimits[0])/self.mesh_dh[2]
-            self.mesh_res = np.array([xres,yres,zres],dtype=np.int)
-        except TypeError:
-            dx = (self.xlimits[1] - self.xlimits[0])/self.mesh_res[0]
-            dy = (self.ylimits[1] - self.ylimits[0])/self.mesh_res[1]
-            dz = (self.zlimits[1] - self.zlimits[0])/self.mesh_res[2]
-            self.mesh_dh = np.array([dx,dy,dz])   
-
-
         mesh.xlimits = self.xlimits 
         mesh.ylimits = self.ylimits
         mesh.zlimits = self.zlimits
@@ -189,8 +184,9 @@ class caseHandler:
         mesh.dx = self.mesh_dh[0]
         mesh.dy = self.mesh_dh[1]
         mesh.dz = self.mesh_dh[2]
-        mesh.dv = mesh.dx*mesh.dy*mesh.dz        
-        mesh.res = self.mesh_res
+        mesh.dv = self.cell_volume
+
+        mesh.res = np.array(self.mesh_res)
         mesh.xres = self.mesh_res[0]
         mesh.yres = self.mesh_res[1]
         mesh.zres = self.mesh_res[2]
@@ -199,6 +195,7 @@ class caseHandler:
         mesh.nn = np.prod(mesh.res+1)
         
         mesh.q = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.rho = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
         mesh.E = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
         mesh.B = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
         
@@ -218,26 +215,6 @@ class caseHandler:
 
 
     def node_set(self,mesh):
-        for zi in range(0,mesh.zres+1):
-            for yi in range(0,mesh.yres+1):
-                y = mesh.ylimits[0] + mesh.dy * yi
-                z = mesh.zlimits[0] + mesh.dz * zi
-                
-                x0 = mesh.xlimits[0]
-                xn = mesh.xlimits[1]
-                mesh.phi[0,yi,zi] = self.BC_function(np.array([x0,y,z]))
-                mesh.phi[-1,yi,zi] = self.BC_function(np.array([xn,y,z]))
-                
-        for zi in range(0,mesh.zres+1):
-            for xi in range(0,mesh.xres+1):
-                x = mesh.ylimits[0] + mesh.dx * xi
-                z = mesh.zlimits[0] + mesh.dz * zi
-                
-                y0 = mesh.ylimits[0]
-                yn = mesh.ylimits[1]
-                mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
-                mesh.phi[xi,-1,zi] = self.BC_function(np.array([x,yn,z]))
-                
         for yi in range(0,mesh.yres+1):
             for xi in range(0,mesh.xres+1):
                 y = mesh.ylimits[0] + mesh.dy * yi
@@ -247,23 +224,93 @@ class caseHandler:
                 zn = mesh.zlimits[1]
                 mesh.phi[xi,yi,0] = self.BC_function(np.array([x,y,z0]))
                 mesh.phi[xi,yi,-1] = self.BC_function(np.array([x,y,zn]))
-    
-        mesh.phi = mesh.phi * self.BC_scaling 
-        
-        mesh.BC_vector[1,:,:] += mesh.phi[0,:,:]/mesh.dx**2
-        mesh.BC_vector[-2,:,:] += mesh.phi[-1,:,:]/mesh.dx**2
-        
-        mesh.BC_vector[:,1,:] += mesh.phi[:,0,:]/mesh.dy**2
-        mesh.BC_vector[:,-2,:] += mesh.phi[:,-1,:]/mesh.dy**2
-        
+                
         mesh.BC_vector[:,:,1] += mesh.phi[:,:,0]/mesh.dz**2
-        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-1]/mesh.dz**2
+        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-1]/mesh.dz**2    
         
+        if self.ndim >= 2:
+            for zi in range(0,mesh.zres+1):
+                for xi in range(0,mesh.xres+1):
+                    x = mesh.ylimits[0] + mesh.dx * xi
+                    z = mesh.zlimits[0] + mesh.dz * zi
+                    
+                    y0 = mesh.ylimits[0]
+                    yn = mesh.ylimits[1]
+                    mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
+                    mesh.phi[xi,-1,zi] = self.BC_function(np.array([x,yn,z]))
+                    
+            mesh.BC_vector[:,1,:] += mesh.phi[:,0,:]/mesh.dy**2
+            mesh.BC_vector[:,-2,:] += mesh.phi[:,-1,:]/mesh.dy**2
+        
+        if self.ndim == 3:
+            for zi in range(0,mesh.zres+1):
+                for yi in range(0,mesh.yres+1):
+                    y = mesh.ylimits[0] + mesh.dy * yi
+                    z = mesh.zlimits[0] + mesh.dz * zi
+                    
+                    x0 = mesh.xlimits[0]
+                    xn = mesh.xlimits[1]
+                    mesh.phi[0,yi,zi] = self.BC_function(np.array([x0,y,z]))
+                    mesh.phi[-1,yi,zi] = self.BC_function(np.array([xn,y,z]))
+                    
+            mesh.BC_vector[1,:,:] += mesh.phi[0,:,:]/mesh.dx**2
+            mesh.BC_vector[-2,:,:] += mesh.phi[-1,:,:]/mesh.dx**2
+                
+        mesh.BC_vector = mesh.BC_vector * self.BC_scaling                
         mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-1,1:-1,1:-1])
         
         return mesh
 
+    
+    def set_mesh_inputs(self):
+    # Set dependent mesh parameters and enforce input dimensionality.
+        try:
+            assert self.xlimits[1] - self.xlimits[0] > 0
+            assert self.ylimits[1] - self.ylimits[0] > 0
+            assert self.zlimits[1] - self.zlimits[0] > 0
+        except AssertionError:
+            print("One of the input box-edge limits is not positive " +
+                  "in length. Reverting to default 1x1x1 cube.")
+            self.xlimits = np.array([0,1])
+            self.ylimits = np.array([0,1])
+            self.zlimits = np.array([0,1])
+    
+        try:
+            xres = (self.xlimits[1] - self.xlimits[0])/self.mesh_dh[0]
+            yres = (self.ylimits[1] - self.ylimits[0])/self.mesh_dh[1]
+            zres = (self.zlimits[1] - self.zlimits[0])/self.mesh_dh[2]
+            self.mesh_res = np.array([xres,yres,zres],dtype=np.int)
+        except ValueError:
+            dx = (self.xlimits[1] - self.xlimits[0])/self.mesh_res[0]
+            dy = (self.ylimits[1] - self.ylimits[0])/self.mesh_res[1]
+            dz = (self.zlimits[1] - self.zlimits[0])/self.mesh_res[2]
+            self.mesh_dh = np.array([dx,dy,dz])   
+            
+        self.cell_volume = np.prod(self.mesh_dh[0:])
         
+        if self.ndim == 2:
+            try:
+                assert self.mesh_res[0] == 2
+
+            except AssertionError:
+                self.mesh_res[0] = 2
+                self.mesh_dh[0] = (self.xlimits[1] - self.xlimits[0])/self.mesh_res[0]
+            
+            self.cell_volume = np.prod(self.mesh_dh[1:])
+            
+        elif self.ndim == 1:
+            try:
+                assert self.mesh_res[0] == 2
+                assert self.mesh_res[1] == 2
+                
+            except AssertionError:
+                self.mesh_res[0] = 2
+                self.mesh_res[1] = 2
+                self.mesh_dh[0] = (self.xlimits[1] - self.xlimits[0])/self.mesh_res[0]
+                self.mesh_dh[1] = (self.ylimits[1] - self.ylimits[0])/self.mesh_res[1]
+                
+            self.cell_volume = np.prod(self.mesh_dh[2:])
+    
     def BC_node_template(self,pos):
         node_value = 0
         

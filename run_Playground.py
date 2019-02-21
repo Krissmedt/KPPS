@@ -25,34 +25,38 @@ sim_params['t0'] = 0
 sim_params['tEnd'] = 1
 sim_params['percentBar'] = True
 
+species_params['nq'] = 5
 species_params['mq'] = 1
-species_params['q'] = 1
-species_params['a'] = 1
+species_params['q'] = 10
+species_params['a'] = species_params['q']/species_params['mq']
 
 case_params['dimensions'] = 3
-case_params['particle_init'] = 'direct'
-case_params['dx'] = 0.01
-case_params['dv'] = 5
-case_params['pos'] = np.array([[10,0,0]])
-case_params['vel'] = np.array([[100,0,100]])
+case_params['particle_init'] = 'clouds'
+case_params['dx'] = 10
+case_params['dv'] = 0
+case_params['pos'] = np.array([[0,0,0]])
+case_params['vel'] = np.array([[0,0,0]])
 case_params['xlimits'] = [-20,20]
 case_params['ylimits'] = [-20,20]
 case_params['zlimits'] = [-15,15]
 
 case_params['mesh_init'] = 'box'
-case_params['resolution'] = [1,2,3]
-case_params['store_node_pos'] = True
+case_params['resolution'] = [1,1,1]
+case_params['store_node_pos'] = False
 
 H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
 H = species_params['mq']/2 * np.diag(H[0])
 
-analysis_params['particleIntegration'] = 'boris_SDC'
+analysis_params['particleIntegration'] = True
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
+analysis_params['periodic_axes'] = ['x','y','z']
+analysis_params['external_fields'] = False
 analysis_params['centreMass_check'] = False
-analysis_params['hook_list'] = ['display_residuals',myhook]
+analysis_params['hook_list'] = ['display_residuals']
 analysis_params['fieldAnalysis'] = 'coulomb'
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
@@ -64,11 +68,12 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['write_vtk'] = False
-data_params['time_plotting'] = True
+data_params['time_plotting'] = False
+data_params['tagged_particles'] = 'all'
 data_params['time_plot_vars'] = ['pos']
 data_params['trajectory_plotting'] = True
 data_params['trajectories'] = [1]
-#data_params['domain_limits'] = [[-20,20],[-20,20],[-15,15]]
+data_params['domain_limits'] = [[-20,20],[-20,20],[-15,15]]
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -95,22 +100,6 @@ data = kppsObject.run()
 
 
 ## Analysis and Visualisation
-#data.trajectory_plot()
-#data.particle_time_plot(variables=['pos'])
+data.trajectory_plot()
+data.particle_time_plot(variables=['pos'])
 
-data.load_parameters()
-
-
-
-"""
-xData = data.load('p',['pos'])
-    
-fig = plt.figure(2)
-ax = fig.add_subplot(1, 1, 1)
-ax.plot(xData['t'],xData['pos'][:,0,0])
-ax.set_xscale('linear')
-ax.set_xlabel('$t$')
-ax.set_yscale('linear')
-ax.set_ylabel('$x$')
-#ax.set_ylim([limits[0,0], limits[0,1]])
-"""
