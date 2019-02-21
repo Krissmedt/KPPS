@@ -61,21 +61,21 @@ class kpps:
         
         
         ## Main time loop
-        analyser.preAnalyser(particles,fields,sim)
+        analyser.run_preAnalyser(particles,fields,sim)
         dHandler.run_setup()
         dHandler.run(particles,fields,sim)
         sim.inputPrint()
         
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
-            analyser.fieldIntegrator(particles,fields,sim)
-            analyser.particleIntegrator(particles,fields,sim) 
+            analyser.run_fieldIntegrator(particles,fields,sim)
+            analyser.run_particleIntegrator(particles,fields,sim) 
             analyser.runHooks(particles,fields,sim)
             dHandler.run(particles,fields,sim)
 
         
         ## Post-analysis and data plotting
-        analyser.postAnalyser(particles,fields,sim)
+        analyser.run_postAnalyser(particles,fields,sim)
         dHandler.post(particles,fields,sim)
         dHandler.plot()
 
