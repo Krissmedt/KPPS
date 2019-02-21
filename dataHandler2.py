@@ -231,7 +231,7 @@ class dataHandler2:
             variables.remove('pos')
         else:
             data = self.load('p',variables,sim_name=sim_name)
-            
+        
         particles = self.set_taggedList(data,particles)
             
         for var in variables:
@@ -245,6 +245,7 @@ class dataHandler2:
             fig = plt.figure(self.figureNo)
             ax = fig.add_subplot(1, 1, 1)
             for pii in range(0,particles.shape[0]):
+                print(particles)
                 try:
                     ax.plot(data['t'],data[var][:,particles[pii],0],label=vlabel+"_x") 
                     ax.plot(data['t'],data[var][:,particles[pii],1],label=vlabel+"_y") 
@@ -299,6 +300,7 @@ class dataHandler2:
         self.params = input_dict
         for key, value in self.params.items():
             setattr(self,key,value)
+            
         
         
     def input_translator(self, param_dict):
@@ -360,6 +362,9 @@ class dataHandler2:
             self.samples = math.floor(self.controller_obj.tSteps
                                            /self.samplePeriod)
             
+        self.samplePeriod = int(self.samplePeriod)
+        self.int = int(self.samples)
+            
     
 ######################### Other Functionality #################################    
     def orderLines(self,order,xRange,yRange):
@@ -387,9 +392,9 @@ class dataHandler2:
         try:
             tagged_list = np.array(tagged_list,dtype=np.int) - 1
         except (TypeError,ValueError):
-            if tagged_list == 'all':
-                tagged_list = np.linspace(0,nq,nq,dtype=np.int)
+            if self.tagged_particles == 'all':
+                tagged_list = np.linspace(0,nq-1,nq,dtype=np.int)
             else:
-                tagged_list = np.array(tagged_list,dtype=np.int) - 1
+                tagged_list = np.array(self.tagged_particles,dtype=np.int) - 1
                 
         return tagged_list

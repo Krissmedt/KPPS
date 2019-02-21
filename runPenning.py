@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2 as DH
 
 
-simulate = False
+simulate = True
 sim_no = 0
 
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
@@ -32,7 +32,7 @@ data_params = {}
 
 sim_params['t0'] = 0
 sim_params['tEnd'] = 1
-sim_params['percentBar'] = False
+sim_params['percentBar'] = True
 sim_params['simID'] = 'simple_penning'
 
 species_params['mq'] = 1
@@ -54,17 +54,23 @@ H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
 H = species_params['mq']/2 * np.diag(H[0])
 
+analysis_params['particleIntegration'] = True
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = M
-analysis_params['centreMass_check'] = True
-analysis_params['residual_check'] = False
-analysis_params['rhs_check'] = True
-analysis_params['fieldAnalysis'] = 'coulomb'
+
+analysis_params['fieldIntegration'] = True
+analysis_params['field_type'] = 'coulomb'
+analysis_params['external_fields'] = True
 analysis_params['E_type'] = 'custom'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
 analysis_params['E_magnitude'] = -epsilon*omegaE**2/species_params['a']
 analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/species_params['a']
+
+analysis_params['centreMass_check'] = True
+analysis_params['residual_check'] = False
+analysis_params['rhs_check'] = True
 
 data_params['samplePeriod'] = 2
 data_params['write'] = True
@@ -136,7 +142,7 @@ for ts in range(0,tsteps):
 
 ## Numerical solution ##
 for key, value in schemes.items():
-    analysis_params['particleIntegration'] = value
+    analysis_params['particleIntegrator'] = value
     analysis_params['nodeType'] = key
     
     for K in iterations:

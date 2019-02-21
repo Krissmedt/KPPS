@@ -32,7 +32,6 @@ class kpps_analysis:
         self.E_transform = np.zeros((3,3),dtype=np.float)
         
         self.coulomb = self.coulomb_cgs
-        self.unit_scale_poisson = 4*pi
         self.lambd = 0 
         
         self.B_type = 'none'
@@ -49,16 +48,43 @@ class kpps_analysis:
         self.residual_check = False
         self.rhs_check = False
         
-        self.fieldAnalysis = 'none'
-        self.scatter = self.trilinear_qScatter
+        
+        self.particleIntegration = False
+        self.particleIntegrator = 'boris_SDC'
+        self.nodeType = 'lobatto'
+        self.rhs_dt = 1
+        self.gather = self.none
+        self.bound_cross_methods = []
+        self.periodic_axes = []
+        
+        
+        self.fieldIntegration = False
+        self.field_type = 'custom' #Can be pic, coulomb or custom
+        self.FDMat = None
+        self.periodic_mesh = False
+        self.periodic_mesh_method = None
+        
+        self.external_fields = False
+        self.background = self.none
+        self.scatter = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
-        self.gather = self.trilinear_gather
         self.imposeFields = False
+        
+        
         self.units = 'cgs'
         
+        # Initialise operation lists
+        self.preAnalysis_methods = []
+        self.fieldIntegrator_methods = []
+        self.particleIntegrator_methods = []
+        self.fieldGather_methods = []
+        self.hooks = []
+        self.postAnalysis_methods = []
+        
         ## Dummy values
-        self.rhs_dt = None
+        self.pot_diff_list = []
+        self.unit_scale_poisson = 1
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
@@ -66,101 +92,79 @@ class kpps_analysis:
             setattr(self,key,value)
         
         
-        # Initialise operation lists
-        self.preAnalysis = []
-        self.fieldIntegration = []
-        self.fieldGathering = []
-        self.particleIntegration = []
-        self.hooks = []
-        self.postAnalysis = []
-        
-        
-        
-        # Load required particle integration methods
-        if 'particleIntegration' in self.params:
-            if self.params['particleIntegration'] == 'boris_staggered':
-                self.particleIntegration.append(self.boris_staggered)
-                self.rhs_dt = 1
-                
-            if self.params['particleIntegration'] == 'boris_synced':
-                self.particleIntegration.append(self.boris_synced)
-                self.rhs_dt = 1
-                
-            if self.params['particleIntegration'] == 'boris_SDC':
-                self.preAnalysis.append(self.collSetup)
-                self.particleIntegration.append(self.boris_SDC)
-
-
-        if 'nodeType' in self.params:
-            if self.params['nodeType'] == 'lobatto':
-                self.ssi = 1    #Set sweep-start-index 'ssi'
-                self.collocationClass = CollGaussLobatto
-                self.updateStep = self.lobatto_update
-                self.rhs_dt = (self.M - 1)*self.K
-                
-            elif self.params['nodeType'] == 'legendre':
-                self.ssi = 0 
-                self.collocationClass = CollGaussLegendre
-                self.updateStep = self.legendre_update
-                self.rhs_dt = (self.M + 1)*self.K
-                    
-            else:
-                self.ssi = 1
-                self.collocationClass = CollGaussLobatto
-                self.updateStep = self.lobatto_update
-                self.rhs_dt = (self.M - 1)*self.K
-               
+        # Setup required boundary methods
+        for ax in self.periodic_axes:
+            method_name = 'periodic_particles_' + ax
+            self.bound_cross_methods.append(method_name)
             
-        # Load required field analysis/integration methods
-        if self.fieldAnalysis == 'single' or 'coulomb' or 'pic':
-            self.fieldGathering.append(self.eFieldImposed)
-            self.fieldGathering.append(self.bFieldImposed)
+        self.fieldIntegrator_methods = (self.bound_cross_methods +
+                                         self.fieldIntegrator_methods)
+        
+        
+        
+        # Setup required particle analysis methods
+        if self.particleIntegration == True:
+            self.particleIntegrator_methods.append(self.particleIntegrator)
+            if self.particleIntegrator == 'boris_SDC':
+                self.preAnalysis_methods.append(self.collSetup)
+            
+            self.fieldIntegrator_methods.append(self.scatter)
+            self.fieldGather_methods.append(self.gather)  
+            
+            
+            
+        # Setup required field analysis methods
+        if self.fieldIntegration == True:
+            if self.field_type == 'coulomb':
+                self.gather = self.coulomb
+                  
+            if self.field_type == 'pic':
+                self.gather = self.trilinear_gather
+                self.scatter = self.trilinear_qScatter
                 
-        if self.fieldAnalysis == 'coulomb':
-              self.fieldGathering.append(self.coulomb)   
-              
-        if self.fieldAnalysis == 'pic':
-            self.preAnalysis.append(self.fIntegrator_setup)
-            self.fieldIntegration.append(self.scatter) 
-            self.fieldIntegration.append(self.fIntegrator)
-            self.fieldGathering.append(self.gather)   
-
-            if self.imposeFields  == True:
-                self.preAnalysis.append(self.imposed_field_mesh)
+                self.preAnalysis_methods.append(self.fIntegrator_setup)
+                self.fieldIntegrator_methods.append(self.background) 
+                self.fieldIntegrator_methods.append(self.fIntegrator)
+     
+                if self.imposeFields  == True:
+                    self.preAnalysis_methods.append(self.imposed_field_mesh)
+                    
+        if self.external_fields == True:
+            self.fieldGather_methods.append(self.eFieldImposed)
+            self.fieldGather_methods.append(self.bFieldImposed)
         
         
         # Load hook methods
         if self.rhs_check == True:
-            self.preAnalysis.append(self.rhs_tally)
+            self.preAnalysis_methods.append(self.rhs_tally)
         
         for hook in self.pre_hook_list:
-            try:
-                self.preAnalysis.append(getattr(self,hook))
-            except TypeError:
-                self.preAnalysis.append(hook)
+            self.preAnalysis_methods.append(hook)
+        
         
         if 'penningEnergy' in self.params:
-            self.preAnalysis.append(self.energy_calc_penning)
+            self.preAnalysis_methods.append(self.energy_calc_penning)
             self.hooks.append(self.energy_calc_penning)
             self.H = self.params['penningEnergy']
         
         if self.coulomb_field_check == True:
-            self.preAnalysis.append(self.coulomb_field)
+            self.preAnalysis_methods.append(self.coulomb_field)
             self.hooks.append(self.coulomb_field)
             
         if self.centreMass_check == True:
-            self.preAnalysis.append(self.centreMass)
+            self.preAnalysis_methods.append(self.centreMass)
             self.hooks.append(self.centreMass)
             
         if self.residual_check == True:
             self.hooks.append(self.display_residuals)
 
-        
-        for hook in self.hook_list:
-            try:
-                self.hooks.append(getattr(self,hook))
-            except TypeError:
-                self.hooks.append(hook)
+
+        self.setup_OpsList(self.preAnalysis_methods)
+        self.setup_OpsList(self.fieldIntegrator_methods)
+        self.setup_OpsList(self.fieldGather_methods)
+        self.setup_OpsList(self.particleIntegrator_methods)
+        self.setup_OpsList(self.hooks)
+        self.setup_OpsList(self.postAnalysis_methods)
         
         ## Physical constants
         if self.units == 'si':
@@ -173,11 +177,10 @@ class kpps_analysis:
             pass
 
                 
-    ## Analysis modules
-    def fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
+########################### Main Run Loops ####################################
+    def run_fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
         fields.q = np.zeros((fields.res+1),dtype=np.float)
-        
-        for method in self.fieldIntegration:
+        for method in self.fieldIntegrator_methods:
             method(species,fields,simulationManager)
         return species
 
@@ -188,14 +191,14 @@ class kpps_analysis:
         species.E = np.zeros((len(species.E),3),dtype=np.float)
         species.B = np.zeros((len(species.B),3),dtype=np.float)
         
-        for method in self.fieldGathering:
+        for method in self.fieldGather_methods:
             method(species,fields)
+            
         return species
     
 
-    def particleIntegrator(self,species,fields,simulationManager,**kwargs):
-        #print(species.E)      
-        for method in self.particleIntegration:
+    def run_particleIntegrator(self,species,fields,simulationManager,**kwargs):    
+        for method in self.particleIntegrator_methods:
             method(species,fields,simulationManager)
 
         return species
@@ -207,19 +210,20 @@ class kpps_analysis:
         return species
     
     
-    def preAnalyser(self,species,fields,simulationManager,**kwargs):
-        for method in self.preAnalysis:
+    def run_preAnalyser(self,species,fields,simulationManager,**kwargs):
+        for method in self.preAnalysis_methods:
             method(species, fields, simulationManager)
 
         return species
     
-    def postAnalyser(self,species,fields,simulationManager,**kwargs):
-        for method in self.postAnalysis:
+    def run_postAnalyser(self,species,fields,simulationManager,**kwargs):
+        for method in self.postAnalysis_methods:
             method(species,fields,simulationManager)
         
         return species
     
-    ## Electric field methods
+
+##################### Imposed E-Field Methods #################################
     def eFieldImposed(self,species,fields,**kwargs):
         if self.E_type == "custom":
             for pii in range(0,species.nq):
@@ -253,7 +257,7 @@ class kpps_analysis:
 
     
     
-    ## Magnetic field methods
+##################### Imposed B-Field Methods #################################
     def bFieldImposed(self,species,fields,**kwargs):
         if self.B_type == 'uniform':
             try:
@@ -261,10 +265,11 @@ class kpps_analysis:
             except TypeError:
                 print("TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
+
         return species
         
     
-    ## Field analysis methods
+########################## Field Analysis Methods #############################
     def imposed_field_mesh(self,species,fields,simulationManager):
         k = self.E_magnitude
                
@@ -313,8 +318,6 @@ class kpps_analysis:
 
 
     def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
-        self.FDMat = None
-        
         nz = fields.res[2]-1
         ny = fields.res[1]-1
         nx = fields.res[0]-1
@@ -327,6 +330,8 @@ class kpps_analysis:
         diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))      
         self.FDMat = Dk
+        self.periodic_mesh_method = self.periodic_mesh_1d
+        self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
             I = sps.identity(nz)
@@ -334,6 +339,7 @@ class kpps_analysis:
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
             Ek = sps.kron(diag,Dk) + sps.kron(off_diag,I/fields.dy**2)
             self.FDMat = Ek
+            self.pot_diff_list.append(self.pot_differentiate_y)
             
         if simulationManager.ndim == 3:
             J = sps.identity(nz*ny)
@@ -341,17 +347,29 @@ class kpps_analysis:
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
-
+            self.pot_diff_list.append(self.pot_differentiate_x)
+            
+        if self.periodic_mesh == True:
+            self.periodic_mesh_method(species,fields,simulationManager)
+            
         return self.FDMat
     
         
+    
+        
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-        fields.rho = fields.q/fields.dv
         rho = self.meshtoVector(fields.rho[1:-1,1:-1,1:-1])
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,fields.res-1)
         fields.phi[1:-1,1:-1,1:-1] = phi
         
+        for nd in range(0,simulationManager.ndim):
+            self.pot_diff_list[nd](fields)
+        
+        return fields
+        
+    
+    def pot_differentiate_x(self,fields):
         ## Differentiate over electric potential for electric field
         n = np.shape(fields.phi)
 
@@ -359,23 +377,36 @@ class kpps_analysis:
         fields.E[0,0,:,:] = -2*(fields.phi[0,:,:]-fields.phi[1,:,:])
         fields.E[0,1:n[0]-1,:,:] = -(fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
         fields.E[0,n[0]-1,:,:] = -2*(fields.phi[n[0]-2,:,:]-fields.phi[n[0]-1,:,:])
+        fields.E[0,:,:,:]/(2*fields.dx)
+
+        return fields
+    
+    def pot_differentiate_y(self,fields):
+        ## Differentiate over electric potential for electric field
+        n = np.shape(fields.phi)
         
         #E-field y-component differentiation
         fields.E[1,:,0,:] = -2*(fields.phi[:,0,:]-fields.phi[:,1,:])
         fields.E[1,:,1:n[1]-1,:] = -(fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
         fields.E[1,:,n[1]-1,:] = -2*(fields.phi[:,n[1]-2,:]-fields.phi[:,n[1]-1,:])
+        fields.E[1,:,:,:]/(2*fields.dy)
+        
+        return fields
+    
+    
+    def pot_differentiate_z(self,fields):
+        ## Differentiate over electric potential for electric field
+        n = np.shape(fields.phi)
         
         #E-field z-component differentiation
         fields.E[2,:,:,0] = -2*(fields.phi[:,:,0]-fields.phi[:,:,1])
         fields.E[2,:,:,1:n[2]-1] = -(fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
         fields.E[2,:,:,n[2]-1] = -2*(fields.phi[:,:,n[2]-2]-fields.phi[:,:,n[2]-1])
-        
-        fields.E[0,:,:,:]/(2*fields.dx)
-        fields.E[1,:,:,:]/(2*fields.dy)
         fields.E[2,:,:,:]/(2*fields.dz)
         
         return fields
-        
+    
+    
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
@@ -410,7 +441,9 @@ class kpps_analysis:
             mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
             mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
             mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
-            
+        
+        #mesh.dv = 1
+        mesh.rho = mesh.q/mesh.dv
         return mesh
             
             
@@ -435,7 +468,9 @@ class kpps_analysis:
         
         return li
     
-    ## Time-integration methods
+    
+    
+######################## Particle Analysis Methods ############################
     def boris(self, vel, E, B, dt, alpha, ck=0):
         """
         Applies Boris' trick for given velocity, electric and magnetic 
@@ -493,6 +528,18 @@ class kpps_analysis:
         
     
     def collSetup(self,species,fields,simulationManager,**kwargs):
+        if self.nodeType == 'lobatto':
+            self.ssi = 1    #Set sweep-start-index 'ssi'
+            self.collocationClass = CollGaussLobatto
+            self.updateStep = self.lobatto_update
+            self.rhs_dt = (self.M - 1)*self.K
+            
+        elif self.nodeType == 'legendre':
+            self.ssi = 0 
+            self.collocationClass = CollGaussLegendre
+            self.updateStep = self.legendre_update
+            self.rhs_dt = (self.M + 1)*self.K
+        
         coll = self.collocationClass(self.M,0,1) #Initialise collocation/quadrature analysis object (class is Daniels old code)
         self.nodes = coll._getNodes
         self.weights = coll._getWeights(coll.tleft,coll.tright) #Get M  nodes and weights 
@@ -647,6 +694,83 @@ class kpps_analysis:
         return species
     
     
+    def lorentzf(self,species,fields,xm,vm):
+        species.pos = species.toMatrix(xm)
+        species.vel = species.toMatrix(vm)
+
+        self.fieldGather(species,fields)
+
+        F = species.a*(species.E + np.cross(species.vel,species.B))
+        F = species.toVector(F)
+        return F
+    
+    def lorentz_std(self,species,fields):
+        self.fieldGather(species,fields)
+        F = species.a*(species.E + np.cross(species.vel,species.B))
+        return F
+    
+    
+    
+    def FXV(self,species,fields,x,v):
+        dxM = np.shape(x)
+        d = dxM[0]
+        M = dxM[1]-1
+        
+        F = np.zeros((d,M+1),dtype=np.float)
+        for m in range(0,M+1):
+            F[:,m] = self.lorentzf(species,fields,x[:,m],v[:,m])
+        
+        F = self.toVector(F.transpose())
+        return F
+    
+    
+    
+    def gatherE(self,species,fields,x):
+        species.pos = self.toMatrix(x,3)
+        
+        self.fieldGather(species,fields)
+        
+        return species.E
+    
+    def gatherB(self,species,fields,x):
+        species.pos = self.toMatrix(x,3)
+        
+        self.fieldGather(species,fields)
+        
+        return species.B
+    
+    
+####################### Boundary Analysis Methods #############################
+    def periodic_particles_x(self,species,mesh,controller):    
+        self.periodic_particles(species,0,mesh.xlimits)
+        
+    def periodic_particles_y(self,species,mesh,controller):    
+        self.periodic_particles(species,1,mesh.ylimits)
+        
+    def periodic_particles_z(self,species,mesh,controller):    
+        self.periodic_particles(species,2,mesh.zlimits)
+    
+    def periodic_particles(self,species,axis,limits):
+        for pii in range(0,species.nq):
+            if species.pos[pii,axis] < limits[0]:
+                species.pos[pii,axis] = limits[1]+(species.pos[pii,axis]-limits[0])
+            elif species.pos[pii,axis] > limits[1]:
+                species.pos[pii,axis] = limits[0]+(species.pos[pii,axis]-limits[1])
+                
+    def periodic_mesh_1d(self,species,mesh,controller):
+        FDMat = self.FDMat.toarray()
+        
+        FDMat[0,-1] = 1/mesh.dz**2
+        FDMat[-1,0] = 1/mesh.dz**2
+        
+        self.FDMat = sps.csr_matrix(FDMat)
+ 
+        mesh.BC_vector[:] = 0        
+    
+
+        
+        
+    
 ################################ Hook methods #################################
     def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
         self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
@@ -708,50 +832,6 @@ class kpps_analysis:
         return rhs_eval
 
 ############################ Misc. functionality ##############################
-    def lorentzf(self,species,fields,xm,vm):
-        species.pos = species.toMatrix(xm)
-        species.vel = species.toMatrix(vm)
-
-        self.fieldGather(species,fields)
-
-        F = species.a*(species.E + np.cross(species.vel,species.B))
-        F = species.toVector(F)
-        return F
-    
-    def lorentz_std(self,species,fields):
-        self.fieldGather(species,fields)
-        F = species.a*(species.E + np.cross(species.vel,species.B))
-        return F
-    
-    
-    
-    def FXV(self,species,fields,x,v):
-        dxM = np.shape(x)
-        d = dxM[0]
-        M = dxM[1]-1
-        
-        F = np.zeros((d,M+1),dtype=np.float)
-        for m in range(0,M+1):
-            F[:,m] = self.lorentzf(species,fields,x[:,m],v[:,m])
-        
-        F = self.toVector(F.transpose())
-        return F
-    
-    
-    
-    def gatherE(self,species,fields,x):
-        species.pos = self.toMatrix(x,3)
-        
-        self.fieldGather(species,fields)
-        
-        return species.E
-    
-    def gatherB(self,species,fields,x):
-        species.pos = self.toMatrix(x,3)
-        
-        self.fieldGather(species,fields)
-        
-        return species.B
         
     def toVector(self,storageMatrix):
         rows = storageMatrix.shape[0]
@@ -805,4 +885,24 @@ class kpps_analysis:
         self.mu0 = 4*pi*10**(-7) #Vacuum permeability (H/m) 
         self.ep0 = 8.854187817*10**(-12) #Vacuum permittivity (F/m)
         self.q0 = 1.602176620898*10**(-19) #Elementary charge (C)
+        
+        
+    def setup_OpsList(self,opsList):
+        for method in opsList:
+            i = opsList.index(method)
+            try:
+                opsList[i] = getattr(self,method)
+            except TypeError:
+                pass
+            
+        return opsList
     
+    def stringtoMethod(self,front):
+        try:
+            function = getattr(self,front)
+            front = function
+        except TypeError:
+            pass
+        
+    def none(self,*args,**kwargs):
+        pass
