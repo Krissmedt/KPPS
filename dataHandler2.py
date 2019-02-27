@@ -51,7 +51,7 @@ class dataHandler2:
         ## Dummy values - Need to be set in params or during run!
         self.samples = None
         self.controller_obj = None
-        self.domain_limits = None
+        self.plot_limits = None
         
         
         ## Iterate through keyword arguments and store all in object (self)
@@ -61,7 +61,7 @@ class dataHandler2:
         self.input_translator(self.params)
         
         ## Determine dependent inputs
-        self.set_domain_lims(self.domain_limits)
+        self.set_plot_lims(self.plot_limits)
 
 
         if self.time_plotting == True:
@@ -110,7 +110,7 @@ class dataHandler2:
             pk.dump(self.controller_obj,sim_file)
             
         except FileNotFoundError:
-            print("No simulation folder found, make sure either write or "  
+            print("DataHandler: No simulation folder found, make sure either write or "  
                   + "write_vtk is set to true, cancelling run.")
             raise SystemExit(0)       
             
@@ -149,14 +149,14 @@ class dataHandler2:
                 sim_file = io.open("./" + str(self.controller_obj.simID) + "/sim",mode='rb')
                 sim_name = str(self.controller_obj.simID)
             except AttributeError:
-                print('No valid simulation ID given and no controller object' +
+                print('DataHandler: No valid simulation ID given and no controller object' +
                       ' with associated ID found, load failed.')
         
         sim = pk.load(sim_file)
         if overwrite == True:
             self.controller_obj = sim
             self.set_params(sim.dataSettings)
-            self.set_domain_lims(sim.dataSettings['domain_limits'])
+            self.set_plot_lims(self.plot_limits)
             self.input_translator(sim.dataSettings)
             self.sampling_setup()
 
@@ -233,7 +233,7 @@ class dataHandler2:
             data = self.load('p',variables,sim_name=sim_name)
         
         particles = self.set_taggedList(data,particles)
-            
+        
         for var in variables:
             vlabel = var
             try:
@@ -244,8 +244,8 @@ class dataHandler2:
             self.figureNo += 1
             fig = plt.figure(self.figureNo)
             ax = fig.add_subplot(1, 1, 1)
+            print('particles.shape')
             for pii in range(0,particles.shape[0]):
-                print(particles)
                 try:
                     ax.plot(data['t'],data[var][:,particles[pii],0],label=vlabel+"_x") 
                     ax.plot(data['t'],data[var][:,particles[pii],1],label=vlabel+"_y") 
@@ -269,7 +269,7 @@ class dataHandler2:
         
         particles = self.set_taggedList(posData,particles)
                 
-        limits = np.array(self.domain_limits)
+        limits = np.array(self.plot_limits)
         
         self.figureNo += 1
         fig = plt.figure(self.figureNo)
@@ -315,25 +315,25 @@ class dataHandler2:
                 except AttributeError:
                     pass
     
-    def set_domain_lims(self, limit_input):
+    def set_plot_lims(self, limit_input):
         limit_input = np.array(limit_input)
         try:
             if limit_input.shape == (3,2):
                 pass
             else:
                 lims = limit_input
-                self.domain_limits = np.zeros((3,2),dtype=np.float)
-                self.domain_limits[:,0] = -lims
-                self.domain_limits[:,1] = lims
+                self.plot_limits = np.zeros((3,2),dtype=np.float)
+                self.plot_limits[:,0] = -lims
+                self.plot_limits[:,1] = lims
     
         except (AttributeError, TypeError, IndexError):
                 try: 
-                    self.domain_limits[0,:] = self.controller_obj.caseSettings['xlimits']
-                    self.domain_limits[1,:] = self.controller_obj.caseSettings['ylimits']
-                    self.domain_limits[2,:] = self.controller_obj.caseSettings['zlimits']
+                    self.plot_limits[0,:] = self.controller_obj.caseSettings['xlimits']
+                    self.plot_limits[1,:] = self.controller_obj.caseSettings['ylimits']
+                    self.plot_limits[2,:] = self.controller_obj.caseSettings['zlimits']
                 except (AttributeError, KeyError):
-                    print("Domain limit input not recognised, defaulting to 1x1x1")
-                    self.domain_limits = np.array([[0,1],[0,1],[0,1]])
+                    print("DataHandler: Plot limit input not recognised, defaulting to 1x1x1")
+                    self.plot_limits = np.array([[0,1],[0,1],[0,1]])
 
 
     def mkDataDir(self,foldername):
@@ -382,7 +382,7 @@ class dataHandler2:
             self.dt = self.controller_obj.dt
         
         except AttributeError:
-            print("No valid controller object detected in dataHandler module" 
+            print("DataHandler:  No valid controller object detected in dataHandler module" 
                   + ", cancelling run.")
             raise SystemExit(0)
             

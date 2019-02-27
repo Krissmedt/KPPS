@@ -53,7 +53,7 @@ class kpps_analysis:
         self.particleIntegrator = 'boris_SDC'
         self.nodeType = 'lobatto'
         self.rhs_dt = 1
-        self.gather = self.none
+        self.gather = self.coulomb
         self.bound_cross_methods = []
         self.periodic_axes = []
         
@@ -66,7 +66,8 @@ class kpps_analysis:
         
         self.external_fields = False
         self.background = self.none
-        self.scatter = self.none
+        self.scatter = self.trilinear_qScatter
+        self.scatter_BC = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
         self.imposeFields = False
@@ -102,26 +103,31 @@ class kpps_analysis:
         
         
         
+        # Setup required particle-field interpolation methods
+        if self.particleIntegration == True and self.fieldIntegration == True:
+            if self.field_type == 'pic':
+                self.gather = self.trilinear_gather
+                self.scatter = self.trilinear_qScatter  
+            elif self.field_type == 'coulomb':
+                self.gather = self.coulomb 
+                self.scatter = self.none
+            else:
+                pass
+        
+            self.fieldIntegrator_methods.append(self.scatter)
+        
         # Setup required particle analysis methods
         if self.particleIntegration == True:
             self.particleIntegrator_methods.append(self.particleIntegrator)
             if self.particleIntegrator == 'boris_SDC':
                 self.preAnalysis_methods.append(self.collSetup)
             
-            self.fieldIntegrator_methods.append(self.scatter)
             self.fieldGather_methods.append(self.gather)  
             
             
-            
         # Setup required field analysis methods
-        if self.fieldIntegration == True:
-            if self.field_type == 'coulomb':
-                self.gather = self.coulomb
-                  
+        if self.fieldIntegration == True:           
             if self.field_type == 'pic':
-                self.gather = self.trilinear_gather
-                self.scatter = self.trilinear_qScatter
-                
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
                 self.fieldIntegrator_methods.append(self.background) 
                 self.fieldIntegrator_methods.append(self.fIntegrator)
@@ -132,7 +138,9 @@ class kpps_analysis:
         if self.external_fields == True:
             self.fieldGather_methods.append(self.eFieldImposed)
             self.fieldGather_methods.append(self.bFieldImposed)
-        
+            
+
+                
         
         # Load hook methods
         if self.rhs_check == True:
@@ -157,8 +165,6 @@ class kpps_analysis:
             
         if self.residual_check == True:
             self.hooks.append(self.display_residuals)
-
-
         self.setup_OpsList(self.preAnalysis_methods)
         self.setup_OpsList(self.fieldIntegrator_methods)
         self.setup_OpsList(self.fieldGather_methods)
@@ -263,7 +269,7 @@ class kpps_analysis:
             try:
                 species.B[:,0:] = np.multiply(self.B_magnitude,self.B_transform)
             except TypeError:
-                print("TypeError raised, did you input a length 3 vector "
+                print("Analyser: TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
 
         return species
@@ -290,7 +296,7 @@ class kpps_analysis:
                         for zi in range(0,len(fields.pos[0,0,0,:])):
                             fields.B[:,xi,yi,zi] = np.multiply(bMag,direction)
             except TypeError:
-                print("TypeError raised, did you input a length 3 vector "
+                print("Analyser: TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
 
         return fields
@@ -331,6 +337,7 @@ class kpps_analysis:
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))      
         self.FDMat = Dk
         self.periodic_mesh_method = self.periodic_mesh_1d
+        self.scatter_BC = self.scatter_periodicBC_1d
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
@@ -358,6 +365,7 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
+        print(self.FDMat.toarray()[0,:])
         rho = self.meshtoVector(fields.rho[1:-1,1:-1,1:-1])
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,fields.res-1)
@@ -442,8 +450,8 @@ class kpps_analysis:
             mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
             mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
-        #mesh.dv = 1
         mesh.rho = mesh.q/mesh.dv
+        self.scatter_BC(species,mesh)
         return mesh
             
             
@@ -514,7 +522,6 @@ class kpps_analysis:
     def boris_synced(self, species,fields, simulationParameters):
         dt = simulationParameters.dt
         alpha = species.a
-        
         species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,fields))
         
         E_old = species.E
@@ -764,10 +771,13 @@ class kpps_analysis:
         FDMat[-1,0] = 1/mesh.dz**2
         
         self.FDMat = sps.csr_matrix(FDMat)
- 
-        mesh.BC_vector[:] = 0        
+        
+        mesh.BC_vector[-1] = 0
+       
     
-
+    def scatter_periodicBC_1d(self,species,mesh):
+        mesh.rho[1,1,0] += mesh.rho[1,1,-1] 
+        mesh.rho[1,1,-1] = mesh.rho[1,1,0] 
         
         
     

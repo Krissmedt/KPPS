@@ -59,8 +59,7 @@ class caseHandler:
         for key, value in name_dict.items():
             for name in value:
                 try:
-                    getattr(self,name)
-                    setattr(self,key,self.params[name])
+                    setattr(self,key,getattr(self,name))
                 except AttributeError:
                     pass
 
@@ -72,7 +71,7 @@ class caseHandler:
         try:
             self.ndim = self.sim.ndim
         except AttributeError:
-            print('No controller referenced, defaulting to 3D')
+            print('CaseHandler: No controller referenced, defaulting to 3D')
             self.ndim = 3
         
         ## Main functionality - setup mesh and species for specific case
@@ -119,9 +118,8 @@ class caseHandler:
             self.evenPos(self.species)
         elif self.particle_init == 'custom' and self.mesh_init != 'custom':
             self.custom_case(self.species)
-            
-        self.set_particle_inputs()
 
+        self.set_particle_inputs()
         
             
             
@@ -131,14 +129,14 @@ class caseHandler:
         if nPos <= species.nq:
             species.pos[:nPos,:] = self.pos
         elif nPos > species.nq:
-            print("More positions than particles specified, ignoring excess entries.")
+            print("CaseHandler: More positions than particles specified, ignoring excess entries.")
             species.pos = self.pos[:species.nq,:]
             
         nVel = self.vel.shape[0]
         if nVel <= species.nq:
             species.vel[:nVel,:] = self.vel
         elif nVel > species.nq:
-            print("More velocities than particles specified, ignoring excess entries.")
+            print("CaseHandler: More velocities than particles specified, ignoring excess entries.")
             species.vel = self.vel[:species.nq,:]
                 
     def clouds(self,species,**kwargs):
@@ -157,8 +155,8 @@ class caseHandler:
     def set_particle_inputs(self):
         if self.ndim == 2:
             try:
-                self.species.pos[0] = self.xlimits[0] + (self.xlimits[1]-self.xlimits[0])/2.
-                self.species.vel[0] = 0
+                self.species.pos[:,0] = self.xlimits[0] + (self.xlimits[1]-self.xlimits[0])/2.
+                self.species.vel[:,0] = 0
    
             except AttributeError:
                 pass
@@ -269,7 +267,7 @@ class caseHandler:
             assert self.ylimits[1] - self.ylimits[0] > 0
             assert self.zlimits[1] - self.zlimits[0] > 0
         except AssertionError:
-            print("One of the input box-edge limits is not positive " +
+            print("CaseHandler: One of the input box-edge limits is not positive " +
                   "in length. Reverting to default 1x1x1 cube.")
             self.xlimits = np.array([0,1])
             self.ylimits = np.array([0,1])

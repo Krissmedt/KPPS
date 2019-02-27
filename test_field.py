@@ -393,6 +393,7 @@ class Test_fields:
         analysis_params['fieldIntegrator_methods'] = ['scatter']
         analysis_params['field_type'] = 'pic'
         analysis_params['units'] = 'custom'
+        analysis_params['periodic_mesh'] = False
         analysis_params['periodic_axes'] = ['x','y','z']
         
         data_params['samplePeriod'] = 1
