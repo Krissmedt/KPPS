@@ -8,9 +8,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from caseFile_twoStream1D import *
 
 ppc = 20
-L = 4*pi
+L = 10
 res = 10
-T = 0.1
+dt = 0.01
 Nt = 1
 
 v = 1
@@ -23,6 +23,7 @@ sim_name = 'two_stream_1d'
 ############################ Setup and Run ####################################
 sim_params = {}
 species_params = {}
+mesh_params = {}
 case_params = {}
 analysis_params = {}
 data_params = {}
@@ -30,7 +31,7 @@ data_params = {}
 sim_params['tSteps'] = Nt
 sim_params['simID'] = sim_name
 sim_params['t0'] = 0
-sim_params['tEnd'] = T
+sim_params['dt'] = dt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 
@@ -38,29 +39,29 @@ species_params['nq'] = ppc*res
 species_params['mq'] = 1
 species_params['q'] = 1
 
+mesh_params['node_charge'] = ppc*species_params['q']
+
 case_params['particle_init'] = 'direct'
 case_params['pos'] = particle_pos_init(ppc,res,L)
-#print(particle_pos_init(ppc,res,L))
 case_params['vel'] = particle_vel_init(case_params['pos'],v,vmod,a)
-case_params['zlimits'] = [-L/2,L/2]
+case_params['zlimits'] = [0,L]
 
 case_params['mesh_init'] = 'box'
 case_params['resolution'] = [2,2,res]
-case_params['BC_function'] = bc_pot
+#case_params['BC_function'] = bc_pot
 case_params['store_node_pos'] = False
 
-analysis_params['particleIntegration'] = False
+analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
 analysis_params['periodic_axes'] = ['z']
 analysis_params['centreMass_check'] = False
-analysis_params['hook_list'] = ['display_residuals']
 
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'pic'
-analysis_params['fieldIntegrator_methods'] = ['scatter'] 
+analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['periodic_mesh'] = True
 
@@ -86,6 +87,7 @@ data_params['plot_params'] = plot_params
 ## Numerical solution ##
 model = dict(simSettings=sim_params,
              speciesSettings=species_params,
+             meshSettings=mesh_params,
              analysisSettings=analysis_params,
              caseSettings=case_params,
              dataSettings=data_params)
@@ -99,39 +101,48 @@ DH = kppsObject.run()
 pData_dict = DH.load_p(['pos','vel','E'])
 mData_dict = DH.load_m(['phi','E','rho'])
 
-tsPlot = 1
-Z = np.linspace(-L/2,L/2,res+1)
+#tsPlots = [ts for ts in range(Nt)]
+tsPlots = [0,floor(Nt/2),-1]
+Z = np.linspace(0,L,res+1)
 
-print(mData_dict['phi'][tsPlot,1,1,:])
+#print(mData_dict['phi'][tsPlot,1,1,:])
 
 fig = plt.figure(DH.figureNo+1)
 ax = fig.add_subplot(1, 1, 1)
-ax.scatter(pData_dict['pos'][tsPlot,:,2],pData_dict['vel'][tsPlot,:,2])
+for ts in tsPlots:
+    ax.scatter(pData_dict['pos'][ts,:,2],pData_dict['vel'][ts,:,2],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
 ax.set_ylabel('vz')
+ax.legend()
 
 fig = plt.figure(DH.figureNo+2)
 ax = fig.add_subplot(1, 1, 1)
-ax.scatter(Z,mData_dict['rho'][tsPlot,1,1,:])
+for ts in tsPlots:
+    ax.scatter(Z,mData_dict['rho'][ts,1,1,:-1],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
 ax.set_ylabel(r'$\rho $')
+ax.legend()
 
 fig = plt.figure(DH.figureNo+3)
 ax = fig.add_subplot(1, 1, 1)
-ax.scatter(Z,mData_dict['phi'][tsPlot,1,1,:])
+for ts in tsPlots:
+    ax.scatter(Z,mData_dict['phi'][ts,1,1,:-1],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
 ax.set_ylabel(r'$\phi $')
+ax.legend()
 
 fig = plt.figure(DH.figureNo+4)
 ax = fig.add_subplot(1, 1, 1)
-ax.scatter(Z,mData_dict['E'][tsPlot,2,1,1,:])
+for ts in tsPlots:
+    ax.scatter(Z,mData_dict['E'][ts,2,1,1,:-1],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
 ax.set_ylabel(r'$E_z $')
+ax.legend()

@@ -32,14 +32,12 @@ class simulationManager:
             
         # check for other intuitive parameter names
         name_dict = {}
-        name_dict['ndim'] = ['dimensions']
-        name_dict['ndim'] = ['dimension']
+        name_dict['ndim'] = ['dimensions','dimension']
         
         for key, value in name_dict.items():
             for name in value:
                 try:
-                    getattr(self,name)
-                    setattr(self,key,self.params[name])
+                    setattr(self,key,getattr(self,name))
                 except AttributeError:
                     pass
 

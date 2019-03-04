@@ -53,20 +53,20 @@ class kpps:
                            mesh=fields,
                            sim=sim,
                            **self.caseSettings)
-        
+
         analyser = kpps_analysis(simulationManager=sim,
                                  **self.analysisSettings)
         
         dHandler = dataHandler(controller_obj=sim,
                                **self.dataSettings)
         
-        
+
         ## Main time loop
         analyser.run_preAnalyser(particles,fields,sim)
         dHandler.run_setup()
         dHandler.run(particles,fields,sim)
         sim.inputPrint()
-        
+
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
             analyser.run_fieldIntegrator(particles,fields,sim)

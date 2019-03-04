@@ -14,7 +14,7 @@ def particle_pos_init(ppc,res,L,dist_type='linear'):
     
     #try:
     for i in range(0,res):
-        pos_list[ppc*i:ppc*(i+1),2] = method(ppc,i,dz,L)
+        pos_list[ppc*i:ppc*(i+1),2] = method(ppc,i,dz)
     #except:
     #    print('No valid cell particle distribution specified.')
     
@@ -29,13 +29,19 @@ def particle_vel_init(pos_list,v,k,a):
         
     return vel_list
 
-def linear_dist(ppc,cell_no,dz,L):
-    cell_O = -L/2 + cell_no*dz
+def linear_dist(ppc,cell_no,dz):
+    cell_O = cell_no*dz
     pos_subList = np.linspace(cell_O,cell_O+dz,ppc+1)
     pos_subList = pos_subList[0:-1]
         
     return pos_subList
 
 def bc_pot(pos):
-    phi = pos[2]**2
+    phi = 0
+    #phi = pos[2]**2
     return phi
+
+def ion_bck(species,mesh,controller):
+    threshold = 1e-12
+    mesh.rho[1,1,:] -= mesh.node_charge
+    mesh.rho[np.abs(mesh.rho) < threshold] = 0

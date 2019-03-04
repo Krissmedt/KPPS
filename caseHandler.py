@@ -26,7 +26,7 @@ class caseHandler:
         self.ylimits = np.array([0,1],dtype=np.float)
         self.zlimits = np.array([0,1],dtype=np.float)
         
-        self.mesh_res = np.array([1,1,1],dtype=np.int)
+        self.mesh_res = np.array([2,2,2],dtype=np.int)
         self.store_node_pos = False
         
         self.BC_scaling = 1
@@ -120,7 +120,6 @@ class caseHandler:
             self.custom_case(self.species)
 
         self.set_particle_inputs()
-        
             
             
     ## Species methods
@@ -192,25 +191,26 @@ class caseHandler:
         mesh.cells = np.prod(mesh.res)
         mesh.nn = np.prod(mesh.res+1)
         
-        mesh.q = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-        mesh.rho = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-        mesh.E = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-        mesh.B = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.q = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+        mesh.rho = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+        mesh.E = np.zeros((3,mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+        mesh.B = np.zeros((3,mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
         
-        mesh.phi = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-        mesh.BC_vector = np.zeros((mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
+        mesh.phi = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+        mesh.BC_vector = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
         mesh = self.BC_box(mesh)
         
         if self.store_node_pos == True:
-            mesh.pos = np.zeros((3,mesh.xres+1,mesh.yres+1,mesh.zres+1),dtype=np.float)
-            for xi in range(0,mesh.xres+1):
+            mesh.pos = np.zeros((3,mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+            for xi in range(0,mesh.xres+2):
                 mesh.pos[0,xi,:,:] = mesh.xlimits[0] + mesh.dx * xi
-            for yi in range(0,mesh.yres+1):
+            for yi in range(0,mesh.yres+2):
                 mesh.pos[1,:,yi,:] = mesh.ylimits[0] + mesh.dy * yi
-            for zi in range(0,mesh.zres+1):
+            for zi in range(0,mesh.zres+2):
                 mesh.pos[2,:,:,zi] = mesh.zlimits[0] + mesh.dz * zi
-        return mesh
 
+        return mesh
+        
 
     def node_set(self,mesh):
         for yi in range(0,mesh.yres+1):
@@ -221,10 +221,10 @@ class caseHandler:
                 z0 = mesh.zlimits[0]
                 zn = mesh.zlimits[1]
                 mesh.phi[xi,yi,0] = self.BC_function(np.array([x,y,z0]))
-                mesh.phi[xi,yi,-1] = self.BC_function(np.array([x,y,zn]))
+                mesh.phi[xi,yi,-2] = self.BC_function(np.array([x,y,zn]))
                 
-        mesh.BC_vector[:,:,1] += mesh.phi[:,:,0]/mesh.dz**2
-        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-1]/mesh.dz**2    
+        mesh.BC_vector[:,:,1] += mesh.phi[:,:,1]/mesh.dz**2
+        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-2]/mesh.dz**2    
         
         if self.ndim >= 2:
             for zi in range(0,mesh.zres+1):
@@ -235,10 +235,10 @@ class caseHandler:
                     y0 = mesh.ylimits[0]
                     yn = mesh.ylimits[1]
                     mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
-                    mesh.phi[xi,-1,zi] = self.BC_function(np.array([x,yn,z]))
+                    mesh.phi[xi,-2,zi] = self.BC_function(np.array([x,yn,z]))
                     
-            mesh.BC_vector[:,1,:] += mesh.phi[:,0,:]/mesh.dy**2
-            mesh.BC_vector[:,-2,:] += mesh.phi[:,-1,:]/mesh.dy**2
+            mesh.BC_vector[:,1,:] += mesh.phi[:,1,:]/mesh.dy**2
+            mesh.BC_vector[:,-2,:] += mesh.phi[:,-2,:]/mesh.dy**2
         
         if self.ndim == 3:
             for zi in range(0,mesh.zres+1):
@@ -249,13 +249,13 @@ class caseHandler:
                     x0 = mesh.xlimits[0]
                     xn = mesh.xlimits[1]
                     mesh.phi[0,yi,zi] = self.BC_function(np.array([x0,y,z]))
-                    mesh.phi[-1,yi,zi] = self.BC_function(np.array([xn,y,z]))
+                    mesh.phi[-2,yi,zi] = self.BC_function(np.array([xn,y,z]))
                     
-            mesh.BC_vector[1,:,:] += mesh.phi[0,:,:]/mesh.dx**2
-            mesh.BC_vector[-2,:,:] += mesh.phi[-1,:,:]/mesh.dx**2
+            mesh.BC_vector[1,:,:] += mesh.phi[1,:,:]/mesh.dx**2
+            mesh.BC_vector[-2,:,:] += mesh.phi[-2,:,:]/mesh.dx**2
                 
         mesh.BC_vector = mesh.BC_vector * self.BC_scaling                
-        mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-1,1:-1,1:-1])
+        mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-2,1:-2,1:-2])
         
         return mesh
 
