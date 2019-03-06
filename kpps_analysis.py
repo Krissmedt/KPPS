@@ -61,8 +61,14 @@ class kpps_analysis:
         self.fieldIntegration = False
         self.field_type = 'custom' #Can be pic, coulomb or custom
         self.FDMat = None
-        self.periodic_mesh = False
-        self.periodic_mesh_method = None
+        self.periodic_mesh_z = False
+        self.periodic_mesh_y = False
+        self.periodic_mesh_x = False
+        self.zN = -2
+        self.yN = -2
+        self.xN = -2
+        self.FDMatrix_adjust = self.none
+        self.solver_post = self.none
         
         self.external_fields = False
         self.background = self.none
@@ -322,10 +328,18 @@ class kpps_analysis:
 
 
     def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
-        nz = fields.res[2]-1
-        ny = fields.res[1]-1
-        nx = fields.res[0]-1
-
+        self.interior_shape = fields.res-1
+        
+        if self.periodic_mesh_z == True:
+            nz = fields.res[2]-1
+            #self.zN = -2
+            #self.interior_shape[2] -= 1
+            self.FDMatrix_adjust = self.periodic_matrix_1d
+            self.scatter_BC = self.scatter_periodicBC_1d
+            self.solver_post = self.periodic_copy_1d
+        else:
+            nz = fields.res[2]-1
+            
         k = np.zeros(3,dtype=np.float)
         k[0] = -2*(1/fields.dz**2)
         k[1] = -2*(1/fields.dy**2 + 1/fields.dz**2)
@@ -334,11 +348,17 @@ class kpps_analysis:
         diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))      
         self.FDMat = Dk
-        self.periodic_mesh_method = self.periodic_mesh_1d
-        self.scatter_BC = self.scatter_periodicBC_1d
+
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
+            if self.periodic_mesh_y == True:
+                ny = fields.res[1]-1
+                #self.yN = -2
+                #self.interior_shape[1] -= 1
+            else:
+                ny = fields.res[1]-1
+                
             I = sps.identity(nz)
             diag = sps.diags([1],shape=(ny,ny))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
@@ -347,6 +367,13 @@ class kpps_analysis:
             self.pot_diff_list.append(self.pot_differentiate_y)
             
         if simulationManager.ndim == 3:
+            if self.periodic_mesh_z == True:
+                nx = fields.res[0]-1
+                #self.xN = -2
+                #self.interior_shape[0] -= 1
+            else:
+                nx = fields.res[0]-1
+            
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
@@ -354,8 +381,7 @@ class kpps_analysis:
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
             
-        if self.periodic_mesh == True:
-            self.periodic_mesh_method(species,fields,simulationManager)
+        self.FDMatrix_adjust(species,fields,simulationManager)
 
         return self.FDMat
     
@@ -363,10 +389,14 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
+        print(fields.rho[1,1,:])
         rho = self.meshtoVector(fields.rho[1:-2,1:-2,1:-2])
+        print(rho)
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
-        phi = self.vectortoMesh(phi,fields.res-1)
+        phi = self.vectortoMesh(phi,self.interior_shape)
         fields.phi[1:-2,1:-2,1:-2] = phi
+        
+        self.solver_post(species,fields,simulationManager)
         
         for nd in range(0,simulationManager.ndim):
             self.pot_diff_list[nd](fields)
@@ -781,21 +811,25 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
-    def periodic_mesh_1d(self,species,mesh,controller):
+    def periodic_matrix_1d(self,species,mesh,controller):
         FDMat = self.FDMat.toarray()
         
         FDMat[0,-1] = 1/mesh.dz**2
         FDMat[-1,0] = 1/mesh.dz**2
         
         self.FDMat = sps.csr_matrix(FDMat)
-        
-        ## Fix this method so x0 = xN node only appears once, charge is interpolated accordingly and x0=xN is fixed
        
     
     def scatter_periodicBC_1d(self,species,mesh):
-        mesh.rho[1,1,0] += mesh.rho[1,1,-1] 
-        mesh.rho[1,1,-1] = mesh.rho[1,1,0] 
+        mesh.q[1,1,0] += mesh.q[1,1,-2] 
+        mesh.rho[1,1,0] += mesh.rho[1,1,-2] 
         
+        mesh.q[1,1,-2] += mesh.q[1,1,0] 
+        mesh.rho[1,1,-2] += mesh.rho[1,1,0] 
+        
+    def periodic_copy_1d(self,species,mesh,controller):
+        mesh.rho[:,:,-2] = mesh.rho[:,:,0]
+        mesh.phi[:,:,-2] = mesh.rho[:,:,0]
         
     
 ################################ Hook methods #################################
