@@ -8,10 +8,10 @@ from mpl_toolkits.mplot3d import Axes3D
 from caseFile_twoStream1D import *
 
 ppc = 20
-L = 10
-res = 10
+L = 2*pi
+res = 63
 dt = 0.01
-Nt = 10
+Nt = 500
 
 v = 1
 vmod = 0.01
@@ -56,14 +56,15 @@ analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
-analysis_params['periodic_axes'] = ['z']
+analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'pic'
 analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
-analysis_params['periodic_mesh_z'] = True
+analysis_params['mesh_boundary_z'] = 'open'
+analysis_params['poisson_M_adjust_1d'] = 'periodic_matrix_1d'
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -103,7 +104,7 @@ mData_dict = DH.load_m(['phi','E','rho'])
 
 #tsPlots = [ts for ts in range(Nt)]
 tsPlots = [0,floor(Nt/2),-1]
-Z = np.linspace(0,L,res)
+Z = np.linspace(0,L,res+1)
 
 #print(mData_dict['phi'][tsPlot,1,1,:])
 
@@ -120,7 +121,7 @@ ax.legend()
 fig = plt.figure(DH.figureNo+2)
 ax = fig.add_subplot(1, 1, 1)
 for ts in tsPlots:
-    ax.scatter(Z,mData_dict['rho'][ts,1,1,:-2],label=str(ts))
+    ax.plot(Z,mData_dict['rho'][ts,1,1,:-1],label=str(ts)) # WTF FIX
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
@@ -130,7 +131,7 @@ ax.legend()
 fig = plt.figure(DH.figureNo+3)
 ax = fig.add_subplot(1, 1, 1)
 for ts in tsPlots:
-    ax.scatter(Z,mData_dict['phi'][ts,1,1,:-2],label=str(ts))
+    ax.plot(Z,mData_dict['phi'][ts,1,1,:-1],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
@@ -140,7 +141,7 @@ ax.legend()
 fig = plt.figure(DH.figureNo+4)
 ax = fig.add_subplot(1, 1, 1)
 for ts in tsPlots:
-    ax.scatter(Z,mData_dict['E'][ts,2,1,1,:-2],label=str(ts))
+    ax.plot(Z,mData_dict['E'][ts,2,1,1,:-1],label=str(ts))
 ax.set_xscale('linear')
 ax.set_xlabel('$z$')
 ax.set_yscale('linear')
