@@ -897,7 +897,7 @@ class kpps_analysis:
         mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
-        
+
         
     def constant_phi_1d(self,species,mesh,controller):
         FDMat = self.FDMat.toarray()
