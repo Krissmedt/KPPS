@@ -9,25 +9,23 @@ from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
-def update_line(num, xdata,ydata, line1,line2):
-        pps= np.int(xdata.shape[1]/2)
-        line1.set_data(xdata[num,0:pps],ydata[num,0:pps])
-        line2.set_data(xdata[num,pps:pps*2],ydata[num,pps:pps*2])
+def update_line(num, xdata,ydata, line):
+        line.set_data(xdata[num,:],ydata[num,:])
+        return line
 
 
-
-ppc = 40
+ppc = 20
 L = 2*pi
 res = 63
 dt = 0.01
-Nt = 1000
+Nt = 100
 
 v = 1
-vmod = 0.001
+vmod = 0.01
 a = 1
 
 simulate = False
-sim_name = 'two_stream_1d'
+sim_name = 'two_stream_1d(1)'
 
 
 ############################ Setup and Run ####################################
@@ -52,8 +50,8 @@ species_params['q'] = 1
 mesh_params['node_charge'] = ppc*species_params['q']
 
 case_params['particle_init'] = 'direct'
-case_params['pos'] = particle_pos_init(ppc,res,L,dist_type='linear_2sp')
-case_params['vel'] = particle_vel_init_2sp(case_params['pos'],v,vmod,a)
+case_params['pos'] = particle_pos_init(ppc,res,L)
+case_params['vel'] = particle_vel_init(case_params['pos'],v,vmod,a)
 case_params['zlimits'] = [0,L]
 
 case_params['mesh_init'] = 'box'
@@ -109,10 +107,11 @@ if simulate == True:
 else:
     DH = dataHandler2()
     DH.load_sim(sim_name=sim_name,overwrite=True)
+    ow = False
 
 ####################### Analysis and Visualisation ############################
-pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
-mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name,overwrite=ow)
+mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name,overwrite=ow)
 
 #tsPlots = [ts for ts in range(Nt)]
 tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
@@ -128,8 +127,7 @@ ax = fig.add_subplot(1,1,1)
 
 # Creating fifty line objects.
 # NOTE: Can't pass empty arrays into 3d version of plot()
-line1 = ax.plot(pData_dict['pos'][0,0:ppc,2],pData_dict['vel'][0,0:ppc,2],'bo')[0]
-line2 = ax.plot(pData_dict['pos'][0,0:ppc,2],pData_dict['vel'][0,0:ppc,2],'ro')[0]
+line = ax.plot(pData_dict['pos'][0,:,2],pData_dict['vel'][0,:,2],'bo')[0]
 
 # Setting the axes properties
 ax.set_xlim([0.0, L])
@@ -141,7 +139,7 @@ ax.set_title('Two-stream instability')
 
 # Creating the Animation object
 line_ani = animation.FuncAnimation(fig, update_line, DH.samples, 
-                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],line1,line2),
+                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],line),
                                    interval=1000/fps)
 
 plt.show()
