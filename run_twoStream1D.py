@@ -9,24 +9,29 @@ from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
-def update_line(num, xdata,ydata, line1,line2):
-        pps= np.int(xdata.shape[1]/2)
-        line1.set_data(xdata[num,0:pps],ydata[num,0:pps])
-        line2.set_data(xdata[num,pps:pps*2],ydata[num,pps:pps*2])
-
+def update_lines(num, xdata,ydata, lines):
+    for xdat,ydat,line in zip(xdata,ydata,lines):
+        line.set_data(xdat[num,:],ydat[num,:])
+        
+    return lines
 
 
 ppc = 40
 L = 2*pi
 res = 63
 dt = 0.01
-Nt = 1000
+Nt = 100
 
 v = 1
 vmod = 0.001
-a = 1
+a = 100
 
-simulate = False
+omega = 1
+
+nq = ppc*res
+q = omega**2 *(1/1) * 1 * L/(nq/2)
+
+simulate = True
 sim_name = 'two_stream_1d'
 
 
@@ -45,14 +50,14 @@ sim_params['dt'] = dt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 
-species_params['nq'] = ppc*res
-species_params['mq'] = 1
+species_params['nq'] = nq
 species_params['q'] = 1
+species_params['mq'] = species_params['q']
 
 mesh_params['node_charge'] = ppc*species_params['q']
 
 case_params['particle_init'] = 'direct'
-case_params['pos'] = particle_pos_init(ppc,res,L,dist_type='linear_2sp')
+case_params['pos'] = particle_pos_init_2sp(ppc,res,L,dist_type='linear')
 case_params['vel'] = particle_vel_init_2sp(case_params['pos'],v,vmod,a)
 case_params['zlimits'] = [0,L]
 
@@ -106,6 +111,7 @@ model = dict(simSettings=sim_params,
 if simulate == True:
     kppsObject = kpps(**model)
     DH = kppsObject.run()
+    sim_name = DH.controller_obj.simID
 else:
     DH = dataHandler2()
     DH.load_sim(sim_name=sim_name,overwrite=True)
@@ -114,11 +120,21 @@ else:
 pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
 mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
 
-#tsPlots = [ts for ts in range(Nt)]
-tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
 Z = np.linspace(0,L,res+1)
 
-#print(mData_dict['phi'][tsPlot,1,1,:])
+pps = np.int(ppc*res/2)
+p1_data = pData_dict['pos'][:,0:pps,2]
+p2_data = pData_dict['pos'][:,pps:pps*2,2]
+
+v_data = pData_dict['vel'][:,:,2] 
+v_max = np.abs(np.max(v_data))
+v_min = np.abs(np.min(v_data))
+v_h = v_max+v_min
+v_data = v_data/v_h
+
+v1_data = v_data[:,0:pps]
+v2_data = v_data[:,pps:pps*2]
+
 fps = 10
 
 # Attaching 3D axis to the figure
@@ -128,21 +144,29 @@ ax = fig.add_subplot(1,1,1)
 
 # Creating fifty line objects.
 # NOTE: Can't pass empty arrays into 3d version of plot()
-line1 = ax.plot(pData_dict['pos'][0,0:ppc,2],pData_dict['vel'][0,0:ppc,2],'bo')[0]
-line2 = ax.plot(pData_dict['pos'][0,0:ppc,2],pData_dict['vel'][0,0:ppc,2],'ro')[0]
+line_p1 = ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo')[0]
+line_p2 = ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro')[0]
 
 # Setting the axes properties
 ax.set_xlim([0.0, L])
-ax.set_xlabel('z')
+ax.set_xlabel('$z$')
 
-ax.set_ylabel('vz')
-ax.set_ylim([-15, 15])
-ax.set_title('Two-stream instability')
+ax.set_ylabel('$v_z$')
+ax.set_ylim([-0.75, 0.75])
+ax.set_title('Phase space')
+
+# Setup data/line lists
+pps = np.int(ppc*res/2)
+xdata = [p1_data,p2_data]
+ydata = [v1_data,v2_data]
+lines = [line_p1,line_p2]
 
 # Creating the Animation object
-line_ani = animation.FuncAnimation(fig, update_line, DH.samples, 
-                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],line1,line2),
+phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples, 
+                                   fargs=(xdata,ydata,lines),
                                    interval=1000/fps)
+
+phase_ani.save(sim_name+'_phase.mp4')
 
 plt.show()
 

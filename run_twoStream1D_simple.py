@@ -10,9 +10,15 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
 def update_line(num, xdata,ydata, line):
-        line.set_data(xdata[num,:],ydata[num,:])
-        return line
+    line.set_data(xdata[num,:],ydata[num,:])
+        
+    return line
 
+def update_lines(num, xdata,ydata, lines):
+    for xdat,ydat,line in zip(xdata,ydata,lines):
+        line.set_data(xdat[num,:],ydat[num,:])
+        
+    return lines
 
 ppc = 20
 L = 2*pi
@@ -21,11 +27,11 @@ dt = 0.01
 Nt = 100
 
 v = 1
-vmod = 0.01
+vmod = 0.1
 a = 1
 
 simulate = False
-sim_name = 'two_stream_1d(1)'
+sim_name = 'two_stream_1d_simple'
 
 
 ############################ Setup and Run ####################################
@@ -104,43 +110,89 @@ model = dict(simSettings=sim_params,
 if simulate == True:
     kppsObject = kpps(**model)
     DH = kppsObject.run()
+    sim_name = DH.controller_obj.simID
 else:
     DH = dataHandler2()
     DH.load_sim(sim_name=sim_name,overwrite=True)
-    ow = False
 
 ####################### Analysis and Visualisation ############################
-pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name,overwrite=ow)
-mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name,overwrite=ow)
+pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
+mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
 
 #tsPlots = [ts for ts in range(Nt)]
 tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
-Z = np.linspace(0,L,res+1)
+
+Z = np.zeros((DH.samples,res+1),dtype=np.float)
+Z[:] = np.linspace(0,L,res+1)
+
+rho_data = mData_dict['rho'][:,1,1,:-1]
+rho_max = np.max(rho_data)
+rho_data = rho_data/rho_max
+
+phi_data = mData_dict['phi'][:,1,1,:-1]
+phi_min = np.abs(np.min(phi_data))
+phi_max = np.abs(np.max(phi_data))
+phi_h = phi_min+phi_max
+phi_data = (phi_data+phi_min)/phi_h
 
 #print(mData_dict['phi'][tsPlot,1,1,:])
 fps = 10
 
-# Attaching 3D axis to the figure
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
+fig = plt.figure(DH.figureNo+1)
+
+p_ax = fig.add_subplot(1,1,1)
+p_ax.set_xlim([0.0, L])
+p_ax.set_xlabel('$z$')
+p_ax.set_ylabel('$v_z$')
+p_ax.set_ylim([-15, 15])
+
+fig2 = plt.figure(DH.figureNo+2)
+dist_ax = fig2.add_subplot(1,1,1)
+dist_ax.set_xlim([0.0, L])
+dist_ax.set_xlabel('$z$')
+dist_ax.set_ylabel('$rho_z$/$\phi_z$')
+dist_ax.set_ylim([0, 1])
+
+fig3 = plt.figure(DH.figureNo+2)
+phi_ax = fig2.add_subplot(1,1,1)
+phi_ax.set_xlim([0.0, L])
+phi_ax.set_xlabel('$z$')
+phi_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
+phi_ax.set_ylim([0, 1])
 
 
 # Creating fifty line objects.
 # NOTE: Can't pass empty arrays into 3d version of plot()
-line = ax.plot(pData_dict['pos'][0,:,2],pData_dict['vel'][0,:,2],'bo')[0]
-
-# Setting the axes properties
-ax.set_xlim([0.0, L])
-ax.set_xlabel('z')
-
-ax.set_ylabel('vz')
-ax.set_ylim([-15, 15])
-ax.set_title('Two-stream instability')
+p_line = p_ax.plot(pData_dict['pos'][0,:,2],pData_dict['vel'][0,:,2],'bo')[0]
+dist_line = dist_ax.plot(Z[0,:],rho_data[0,:])[0]
+phi_line = phi_ax.plot(Z[0,:],phi_data[0,:])[0]
+# Setting data/line lists:
+xdata = [Z,Z]
+ydata = [rho_data,phi_data]
+lines = [dist_line,phi_line]
 
 # Creating the Animation object
-line_ani = animation.FuncAnimation(fig, update_line, DH.samples, 
-                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],line),
+phase_ani = animation.FuncAnimation(fig, update_line, DH.samples, 
+                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],p_line),
                                    interval=1000/fps)
+
+rho_ani = animation.FuncAnimation(fig2, update_line, DH.samples, 
+                                   fargs=(Z,rho_data[:,:],dist_line),
+                                   interval=1000/fps)
+
+dist_ani = animation.FuncAnimation(fig3, update_lines, DH.samples, 
+                                   fargs=(xdata,ydata,lines),
+                                   interval=1000/fps)
+"""
+phi_ani = animation.FuncAnimation(fig3, update_line, DH.samples, 
+                                   fargs=(Z,phi_data[:,:],phi_line),
+                                   interval=1000/fps)
+"""
+
+phase_ani.save(sim_name+'_phase.mp4')
+rho_ani.save(sim_name+'_rho.mp4')
+phi_ani.save(sim_name+'_phi.mp4')
+dist_ani.save(sim_name+'_dist.mp4')
 
 plt.show()
 
