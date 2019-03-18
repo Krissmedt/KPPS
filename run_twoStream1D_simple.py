@@ -9,30 +9,29 @@ from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
+def update_line(num, xdata,ydata, line):
+    line.set_data(xdata[num,:],ydata[num,:])
+        
+    return line
+
 def update_lines(num, xdata,ydata, lines):
     for xdat,ydat,line in zip(xdata,ydata,lines):
         line.set_data(xdat[num,:],ydat[num,:])
         
     return lines
 
-
-ppc = 40
+ppc = 20
 L = 2*pi
 res = 63
 dt = 0.01
 Nt = 100
 
 v = 1
-vmod = 0.001
-a = 100
+vmod = 0.1
+a = 1
 
-omega = 1
-
-nq = ppc*res
-q = omega**2 *(1/1) * 1 * L/(nq/2)
-
-simulate = True
-sim_name = 'two_stream_1d'
+simulate = False
+sim_name = 'two_stream_1d_simple'
 
 
 ############################ Setup and Run ####################################
@@ -50,15 +49,15 @@ sim_params['dt'] = dt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 
-species_params['nq'] = nq
+species_params['nq'] = ppc*res
+species_params['mq'] = 1
 species_params['q'] = 1
-species_params['mq'] = species_params['q']
 
 mesh_params['node_charge'] = ppc*species_params['q']
 
 case_params['particle_init'] = 'direct'
-case_params['pos'] = particle_pos_init_2sp(ppc,res,L,dist_type='linear')
-case_params['vel'] = particle_vel_init_2sp(case_params['pos'],v,vmod,a)
+case_params['pos'] = particle_pos_init(ppc,res,L)
+case_params['vel'] = particle_vel_init(case_params['pos'],v,vmod,a)
 case_params['zlimits'] = [0,L]
 
 case_params['mesh_init'] = 'box'
@@ -120,53 +119,80 @@ else:
 pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
 mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
 
-Z = np.linspace(0,L,res+1)
+#tsPlots = [ts for ts in range(Nt)]
+tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
 
-pps = np.int(ppc*res/2)
-p1_data = pData_dict['pos'][:,0:pps,2]
-p2_data = pData_dict['pos'][:,pps:pps*2,2]
+Z = np.zeros((DH.samples,res+1),dtype=np.float)
+Z[:] = np.linspace(0,L,res+1)
 
-v_data = pData_dict['vel'][:,:,2] 
-v_max = np.abs(np.max(v_data))
-v_min = np.abs(np.min(v_data))
-v_h = v_max+v_min
-v_data = v_data/v_h
+rho_data = mData_dict['rho'][:,1,1,:-1]
+rho_max = np.max(rho_data)
+rho_data = rho_data/rho_max
 
-v1_data = v_data[:,0:pps]
-v2_data = v_data[:,pps:pps*2]
+phi_data = mData_dict['phi'][:,1,1,:-1]
+phi_min = np.abs(np.min(phi_data))
+phi_max = np.abs(np.max(phi_data))
+phi_h = phi_min+phi_max
+phi_data = (phi_data+phi_min)/phi_h
 
+#print(mData_dict['phi'][tsPlot,1,1,:])
 fps = 10
 
-# Attaching 3D axis to the figure
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
+fig = plt.figure(DH.figureNo+1)
+
+p_ax = fig.add_subplot(1,1,1)
+p_ax.set_xlim([0.0, L])
+p_ax.set_xlabel('$z$')
+p_ax.set_ylabel('$v_z$')
+p_ax.set_ylim([-15, 15])
+
+fig2 = plt.figure(DH.figureNo+2)
+dist_ax = fig2.add_subplot(1,1,1)
+dist_ax.set_xlim([0.0, L])
+dist_ax.set_xlabel('$z$')
+dist_ax.set_ylabel('$rho_z$/$\phi_z$')
+dist_ax.set_ylim([0, 1])
+
+fig3 = plt.figure(DH.figureNo+2)
+phi_ax = fig2.add_subplot(1,1,1)
+phi_ax.set_xlim([0.0, L])
+phi_ax.set_xlabel('$z$')
+phi_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
+phi_ax.set_ylim([0, 1])
 
 
 # Creating fifty line objects.
 # NOTE: Can't pass empty arrays into 3d version of plot()
-line_p1 = ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo')[0]
-line_p2 = ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro')[0]
-
-# Setting the axes properties
-ax.set_xlim([0.0, L])
-ax.set_xlabel('$z$')
-
-ax.set_ylabel('$v_z$')
-ax.set_ylim([-0.75, 0.75])
-ax.set_title('Phase space')
-
-# Setup data/line lists
-pps = np.int(ppc*res/2)
-xdata = [p1_data,p2_data]
-ydata = [v1_data,v2_data]
-lines = [line_p1,line_p2]
+p_line = p_ax.plot(pData_dict['pos'][0,:,2],pData_dict['vel'][0,:,2],'bo')[0]
+dist_line = dist_ax.plot(Z[0,:],rho_data[0,:])[0]
+phi_line = phi_ax.plot(Z[0,:],phi_data[0,:])[0]
+# Setting data/line lists:
+xdata = [Z,Z]
+ydata = [rho_data,phi_data]
+lines = [dist_line,phi_line]
 
 # Creating the Animation object
-phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples, 
-                                   fargs=(xdata,ydata,lines),
+phase_ani = animation.FuncAnimation(fig, update_line, DH.samples, 
+                                   fargs=(pData_dict['pos'][:,:,2],pData_dict['vel'][:,:,2],p_line),
                                    interval=1000/fps)
 
+rho_ani = animation.FuncAnimation(fig2, update_line, DH.samples, 
+                                   fargs=(Z,rho_data[:,:],dist_line),
+                                   interval=1000/fps)
+
+dist_ani = animation.FuncAnimation(fig3, update_lines, DH.samples, 
+                                   fargs=(xdata,ydata,lines),
+                                   interval=1000/fps)
+"""
+phi_ani = animation.FuncAnimation(fig3, update_line, DH.samples, 
+                                   fargs=(Z,phi_data[:,:],phi_line),
+                                   interval=1000/fps)
+"""
+
 phase_ani.save(sim_name+'_phase.mp4')
+rho_ani.save(sim_name+'_rho.mp4')
+phi_ani.save(sim_name+'_phi.mp4')
+dist_ani.save(sim_name+'_dist.mp4')
 
 plt.show()
 

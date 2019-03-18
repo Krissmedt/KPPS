@@ -46,8 +46,8 @@ class kpps:
     def run(self):
         ## Load required modules
         species_list = []
-        for settings in self.speciesSettings:
-            species = species_class(**settings)
+        for setting in self.speciesSettings:
+            species = species_class(**setting)
             species_list.append(species)
             
         fields = mesh(**self.meshSettings)
@@ -63,8 +63,7 @@ class kpps:
         
         dHandler = dataHandler(controller_obj=sim,
                                **self.dataSettings)
-        
-        
+
         ## Main time loop
         analyser.run_preAnalyser(species_list,fields,sim)
         dHandler.run_setup()

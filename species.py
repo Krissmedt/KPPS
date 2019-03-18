@@ -9,6 +9,7 @@ class species:
     ## Main Methods
     def __init__(self,**kwargs):
         ## Default values
+        self.name = 'none'
         self.nq = 1
         self.q = 1
         self.mq = 1

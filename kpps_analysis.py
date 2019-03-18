@@ -55,14 +55,25 @@ class kpps_analysis:
         self.rhs_dt = 1
         self.gather = self.coulomb
         self.bound_cross_methods = []
-        self.periodic_axes = []
+        self.looped_axes = []
         
         
         self.fieldIntegration = False
         self.field_type = 'custom' #Can be pic, coulomb or custom
         self.FDMat = None
-        self.periodic_mesh = False
-        self.periodic_mesh_method = None
+        self.mesh_boundary_z = 'fixed'
+        self.mesh_boundary_y = 'fixed'
+        self.mesh_boundary_x = 'fixed'
+        self.poisson_M_adjust_1d = self.none
+        self.poisson_M_adjust_2d = self.none
+        self.poisson_M_adjust_3d = self.none
+        self.pot_differentiate_z = self.pot_diff_fixed_z
+        self.pot_differentiate_y = self.pot_diff_fixed_y
+        self.pot_differentiate_x = self.pot_diff_fixed_x
+        self.mi_z0 = 1
+        self.mi_y0 = 1
+        self.mi_x0 = 1
+        self.solver_post = self.none
         
         self.external_fields = False
         self.background = self.none
@@ -91,16 +102,24 @@ class kpps_analysis:
         self.params = kwargs
         for key, value in self.params.items():
             setattr(self,key,value)
+            
+            
+        # check for other intuitive parameter names
+        name_dict = {}
+        name_dict['looped_axes'] = ['periodic_axes','mirrored_axes']
         
+        for key, value in name_dict.items():
+            for name in value:
+                try:
+                    setattr(self,key,getattr(self,name))
+                except AttributeError:
+                    pass
+ 
         
         # Setup required boundary methods
-        for ax in self.periodic_axes:
+        for ax in self.looped_axes:
             method_name = 'periodic_particles_' + ax
             self.bound_cross_methods.append(method_name)
-            
-        self.fieldIntegrator_methods = (self.bound_cross_methods +
-                                         self.fieldIntegrator_methods)
-        
         
         
         # Setup required particle-field interpolation methods
@@ -165,10 +184,16 @@ class kpps_analysis:
             
         if self.residual_check == True:
             self.hooks.append(self.display_residuals)
+            
+        self.poisson_M_adjust_1d = self.stringtoMethod(self.poisson_M_adjust_1d)
+        self.poisson_M_adjust_2d = self.stringtoMethod(self.poisson_M_adjust_2d)
+        self.poisson_M_adjust_3d = self.stringtoMethod(self.poisson_M_adjust_3d)
+        
         self.setup_OpsList(self.preAnalysis_methods)
         self.setup_OpsList(self.fieldIntegrator_methods)
         self.setup_OpsList(self.fieldGather_methods)
         self.setup_OpsList(self.particleIntegrator_methods)
+        self.setup_OpsList(self.bound_cross_methods)
         self.setup_OpsList(self.hooks)
         self.setup_OpsList(self.postAnalysis_methods)
         
@@ -184,11 +209,11 @@ class kpps_analysis:
 
                 
 ########################### Main Run Loops ####################################
-    def run_fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
-        fields.q = np.zeros((fields.res+1),dtype=np.float)
+    def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
+        fields.q = np.zeros((fields.q.shape),dtype=np.float)
         for method in self.fieldIntegrator_methods:
-            method(species,fields,simulationManager)
-        return species
+            method(species_list,fields,simulationManager)
+        return species_list
 
 
     def fieldGather(self,species,fields,**kwargs):
@@ -198,35 +223,36 @@ class kpps_analysis:
         species.B = np.zeros((len(species.B),3),dtype=np.float)
         
         for method in self.fieldGather_methods:
-            method(species,fields)
+                method(species,fields)
             
         return species
     
 
-    def run_particleIntegrator(self,species,fields,simulationManager,**kwargs):    
-        for method in self.particleIntegrator_methods:
-            method(species,fields,simulationManager)
-
-        return species
+    def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            for method in self.particleIntegrator_methods:
+                method(species,fields,simulationManager)
     
-    def runHooks(self,species,fields,simulationManager,**kwargs):
+        return species_list
+    
+    def runHooks(self,species_list,fields,simulationManager,**kwargs):
         for method in self.hooks:
-            method(species,fields,simulationManager)
+            method(species_list,fields,simulationManager)
             
-        return species
+        return species_list, fields
     
     
-    def run_preAnalyser(self,species,fields,simulationManager,**kwargs):
+    def run_preAnalyser(self,species_list,fields,simulationManager,**kwargs):
         for method in self.preAnalysis_methods:
-            method(species, fields, simulationManager)
+            method(species_list, fields, simulationManager)
 
-        return species
+        return species_list, fields
     
-    def run_postAnalyser(self,species,fields,simulationManager,**kwargs):
+    def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
         for method in self.postAnalysis_methods:
-            method(species,fields,simulationManager)
+            method(species_list,fields,simulationManager)
         
-        return species
+        return species_list, fields
     
 
 ##################### Imposed E-Field Methods #################################
@@ -324,62 +350,102 @@ class kpps_analysis:
 
 
     def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
-        nz = fields.res[2]-1
-        ny = fields.res[1]-1
-        nx = fields.res[0]-1
+        self.interior_shape = fields.res-1
+        nx = self.interior_shape[0]
+        ny = self.interior_shape[1]
+        nz = self.interior_shape[2]
         
+        FDMatrix_adjust_z = self.none
+        FDMatrix_adjust_y = self.none
+        FDMatrix_adjust_x = self.none
+        
+        if self.mesh_boundary_z == 'open':
+            self.interior_shape[2] += 1
+            nz +=1
+            self.mi_z0 = 0
+            FDMatrix_adjust_z = self.poisson_M_adjust_1d
+            self.scatter_BC = self.scatter_periodicBC_1d
+            self.solver_post = self.mirrored_boundary_z
+            self.pot_differentiate_z = self.pot_diff_open_z
+            
+            
         k = np.zeros(3,dtype=np.float)
         k[0] = -2*(1/fields.dz**2)
         k[1] = -2*(1/fields.dy**2 + 1/fields.dz**2)
         k[2] = -2*(1/fields.dx**2 + 1/fields.dy**2 + 1/fields.dz**2)
         
         diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
-        Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))      
+        Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))
         self.FDMat = Dk
-        self.periodic_mesh_method = self.periodic_mesh_1d
-        self.scatter_BC = self.scatter_periodicBC_1d
+        FDMatrix_adjust_z(species,fields,simulationManager)
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
+            if self.mesh_boundary_y == 'open':
+                self.interior_shape[1] += 1
+                ny += 1
+                self.mi_y0 = 0
+                
+                FDMatrix_adjust_y = self.poisson_M_adjust_2d
+                self.pot_differentiate_y = self.pot_diff_open_y
+                
             I = sps.identity(nz)
             diag = sps.diags([1],shape=(ny,ny))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
+            FDMatrix_adjust_y(species,fields,simulationManager)
+            
             Ek = sps.kron(diag,Dk) + sps.kron(off_diag,I/fields.dy**2)
             self.FDMat = Ek
             self.pot_diff_list.append(self.pot_differentiate_y)
             
         if simulationManager.ndim == 3:
+            if self.mesh_boundary_y == 'open':
+                self.interior_shape[0] += 1
+                nx += 1
+                self.mi_x0 = 0
+                
+                FDMatrix_adjust_x = self.poisson_M_adjust_3d
+                self.pot_differentiate_x = self.pot_diff_open_x
+                
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
+            FDMatrix_adjust_x(species,fields,simulationManager)
+            
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
             
-        if self.periodic_mesh == True:
-            self.periodic_mesh_method(species,fields,simulationManager)
-            
+
         return self.FDMat
     
         
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
-        print(self.FDMat.toarray()[0,:])
-        rho = self.meshtoVector(fields.rho[1:-1,1:-1,1:-1])
+        
+        rho = self.meshtoVector(fields.rho[self.mi_x0:-2,
+                                           self.mi_y0:-2,
+                                           self.mi_z0:-2])
+
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
-        phi = self.vectortoMesh(phi,fields.res-1)
-        fields.phi[1:-1,1:-1,1:-1] = phi
+        phi = self.vectortoMesh(phi,self.interior_shape)
+        
+        fields.phi[self.mi_x0:-2,
+                   self.mi_y0:-2,
+                   self.mi_z0:-2] = phi
+
+        self.solver_post(species,fields,simulationManager)
         
         for nd in range(0,simulationManager.ndim):
             self.pot_diff_list[nd](fields)
-        
+            
         return fields
         
     
-    def pot_differentiate_x(self,fields):
+    def pot_diff_fixed_x(self,fields):
         ## Differentiate over electric potential for electric field
-        n = np.shape(fields.phi)
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
 
         #E-field x-component differentiation
         fields.E[0,0,:,:] = -2*(fields.phi[0,:,:]-fields.phi[1,:,:])
@@ -389,9 +455,9 @@ class kpps_analysis:
 
         return fields
     
-    def pot_differentiate_y(self,fields):
+    def pot_diff_fixed_y(self,fields):
         ## Differentiate over electric potential for electric field
-        n = np.shape(fields.phi)
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
         
         #E-field y-component differentiation
         fields.E[1,:,0,:] = -2*(fields.phi[:,0,:]-fields.phi[:,1,:])
@@ -402,9 +468,9 @@ class kpps_analysis:
         return fields
     
     
-    def pot_differentiate_z(self,fields):
+    def pot_diff_fixed_z(self,fields):
         ## Differentiate over electric potential for electric field
-        n = np.shape(fields.phi)
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
         
         #E-field z-component differentiation
         fields.E[2,:,:,0] = -2*(fields.phi[:,:,0]-fields.phi[:,:,1])
@@ -415,7 +481,46 @@ class kpps_analysis:
         return fields
     
     
+    def pot_diff_open_x(self,fields):
+        ## Differentiate over electric potential for electric field
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
+
+        #E-field x-component differentiation
+        fields.E[0,0,:,:] = -(fields.phi[-3,:,:]-fields.phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = -(fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
+        fields.E[0,-2,:,:] = fields.E[0,0,:,:]
+        fields.E[0,:,:,:]/(2*fields.dx)
+
+        return fields
+    
+    def pot_diff_open_y(self,fields):
+        ## Differentiate over electric potential for electric field
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
+        
+        #E-field y-component differentiation
+        fields.E[1,:,0,:] = -(fields.phi[:,-3,:]-fields.phi[:,1,:])
+        fields.E[1,:,1:n[1]-1,:] = -(fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
+        fields.E[1,:,-2,:] = fields.E[1,:,0,:]
+        fields.E[1,:,:,:]/(2*fields.dy)
+        
+        return fields
+    
+    
+    def pot_diff_open_z(self,fields):
+        ## Differentiate over electric potential for electric field
+        n = np.shape(fields.phi[0:-1,0:-1,0:-1])
+
+        #E-field z-component differentiation
+        fields.E[2,:,:,0] = -(fields.phi[:,:,-3]-fields.phi[:,:,1])
+        fields.E[2,:,:,1:n[2]-1] = -(fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
+        fields.E[2,:,:,-2] = fields.E[2,:,:,0]
+        fields.E[2,:,:,:]/(2*fields.dz)
+        
+        return fields
+    
+    
     def trilinear_gather(self,species,mesh):
+        #print(mesh.rho.sum())
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
             li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -434,24 +539,26 @@ class kpps_analysis:
         return species
             
     
-    def trilinear_qScatter(self,species,mesh,simulationManager):
+    def trilinear_qScatter(self,species_list,mesh,simulationManager):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
-        for pii in range(0,species.nq):
-            li = self.cell_index(species.pos[pii],O,mesh.dh)
-            rpos = species.pos[pii] - O - li*mesh.dh
-            w = self.trilinear_weights(rpos,mesh.dh)
-
-            mesh.q[li[0],li[1],li[2]] += species.q * w[0]
-            mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
-            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
-            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
-            mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
-            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
-            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
-            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
-        mesh.rho = mesh.q/mesh.dv
+        for species in species_list:
+            for pii in range(0,species.nq):
+                li = self.cell_index(species.pos[pii],O,mesh.dh)
+                rpos = species.pos[pii] - O - li*mesh.dh
+                w = self.trilinear_weights(rpos,mesh.dh)
+    
+                mesh.q[li[0],li[1],li[2]] += species.q * w[0]
+                mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
+                mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
+                mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
+                mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
+                mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
+                mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
+                mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
+            
         self.scatter_BC(species,mesh)
+        mesh.rho = mesh.q/mesh.dv
         return mesh
             
             
@@ -508,7 +615,7 @@ class kpps_analysis:
         return vel_new
     
     
-    def boris_staggered(self, species,fields, simulationParameters):
+    def boris_staggered(self,species,mesh,simulationParameters,**kwargs):
         dt = simulationParameters.dt
         alpha = species.nq/species.mq
 
@@ -516,16 +623,18 @@ class kpps_analysis:
         
         species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
         species.pos = species.pos + simulationParameters.dt * species.vel
+        self.check_boundCross(species,mesh,**kwargs)
         return species
     
     
-    def boris_synced(self, species,fields, simulationParameters):
+    def boris_synced(self,species,mesh,simulationParameters,**kwargs):
         dt = simulationParameters.dt
         alpha = species.a
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,fields))
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
+        self.check_boundCross(species,mesh,**kwargs)
         
         E_old = species.E
-        self.fieldGather(species,fields)
+        self.fieldGather(species,mesh)
         E_new = species.E
         
         E_half = (E_old+E_new)/2
@@ -670,17 +779,18 @@ class kpps_analysis:
         return species
     
     
-    def lobatto_update(self,species,fields,x,v,*args):
+    def lobatto_update(self,species,mesh,x,v,*args,**kwargs):
         pos = x[:,-1]
         vel = v[:,-1]
 
         species.pos = species.toMatrix(pos)
         species.vel = species.toMatrix(vel)
+        self.check_boundCross(species,mesh,**kwargs)
 
         return species
     
     
-    def legendre_update(self,species,fields,x,v,x0,v0,weights,Qmat):
+    def legendre_update(self,species,mesh,x,v,x0,v0,weights,Qmat,**kwargs):
         M = self.M
         d = 3*species.nq
         
@@ -691,21 +801,23 @@ class kpps_analysis:
         qQ = q @ np.kron(Qmat,Id)
         
         V0 = self.toVector(v0.transpose())
-        F = self.FXV(species,fields,x,v)
+        F = self.FXV(species,mesh,x,v)
         
         vel = v0[:,0] + q @ F
         pos = x0[:,0] + q @ V0 + qQ @ F
         
         species.pos = species.toMatrix(pos)
         species.vel = species.toMatrix(vel)
+        self.check_boundCross(species,mesh,**kwargs)
         return species
     
     
-    def lorentzf(self,species,fields,xm,vm):
+    def lorentzf(self,species,mesh,xm,vm,**kwargs):
         species.pos = species.toMatrix(xm)
         species.vel = species.toMatrix(vm)
+        self.check_boundCross(species,mesh,**kwargs)
 
-        self.fieldGather(species,fields)
+        self.fieldGather(species,mesh)
 
         F = species.a*(species.E + np.cross(species.vel,species.B))
         F = species.toVector(F)
@@ -732,53 +844,84 @@ class kpps_analysis:
     
     
     
-    def gatherE(self,species,fields,x):
+    def gatherE(self,species,mesh,x,**kwargs):
         species.pos = self.toMatrix(x,3)
+        self.check_boundCross(species,mesh,**kwargs)
         
-        self.fieldGather(species,fields)
+        self.fieldGather(species,mesh)
         
         return species.E
     
-    def gatherB(self,species,fields,x):
+    def gatherB(self,species,mesh,x,**kwargs):
         species.pos = self.toMatrix(x,3)
+        self.check_boundCross(species,mesh,**kwargs)
         
-        self.fieldGather(species,fields)
+        self.fieldGather(species,mesh)
         
         return species.B
     
     
 ####################### Boundary Analysis Methods #############################
-    def periodic_particles_x(self,species,mesh,controller):    
+    def check_boundCross(self,species,mesh,**kwargs):
+        for method in self.bound_cross_methods:
+                method(species,mesh,**kwargs)
+        return species
+    
+    def periodic_particles_x(self,species,mesh):    
         self.periodic_particles(species,0,mesh.xlimits)
         
-    def periodic_particles_y(self,species,mesh,controller):    
+    def periodic_particles_y(self,species,mesh):    
         self.periodic_particles(species,1,mesh.ylimits)
         
-    def periodic_particles_z(self,species,mesh,controller):    
+    def periodic_particles_z(self,species,mesh):    
         self.periodic_particles(species,2,mesh.zlimits)
     
     def periodic_particles(self,species,axis,limits):
         for pii in range(0,species.nq):
             if species.pos[pii,axis] < limits[0]:
-                species.pos[pii,axis] = limits[1]+(species.pos[pii,axis]-limits[0])
-            elif species.pos[pii,axis] > limits[1]:
-                species.pos[pii,axis] = limits[0]+(species.pos[pii,axis]-limits[1])
-                
-    def periodic_mesh_1d(self,species,mesh,controller):
+                overshoot = limits[0]-species.pos[pii,axis]
+                species.pos[pii,axis] = limits[1] - overshoot % (limits[1]-limits[0])
+
+            elif species.pos[pii,axis] >= limits[1]:
+                overshoot = species.pos[pii,axis] - limits[1]
+                species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
+        
+        
+    def periodic_matrix_1d(self,species,mesh,controller):
         FDMat = self.FDMat.toarray()
         
+        FDMat[0,:-1] = 0.
         FDMat[0,-1] = 1/mesh.dz**2
         FDMat[-1,0] = 1/mesh.dz**2
+
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
+
+        BC_vector[0] = mesh.BC_vector[0]
+        mesh.BC_vector = BC_vector
+        
+        self.FDMat = sps.csr_matrix(FDMat)
+
+        
+    def constant_phi_1d(self,species,mesh,controller):
+        FDMat = self.FDMat.toarray()
+        
+        FDMat[0,:] = 1/mesh.dz**2
+        FDMat[-1,0] = 1/mesh.dz**2
+
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
+
+        BC_vector[0] = mesh.BC_vector[0]
+        mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
         
-        mesh.BC_vector[-1] = 0
-       
     
     def scatter_periodicBC_1d(self,species,mesh):
-        mesh.rho[1,1,0] += mesh.rho[1,1,-1] 
-        mesh.rho[1,1,-1] = mesh.rho[1,1,0] 
+        mesh.q[1,1,0] += mesh.q[1,1,-2]       
+        mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
+    def mirrored_boundary_z(self,species,mesh,controller):
+        mesh.phi[:,:,-2] = mesh.phi[:,:,0]
         
     
 ################################ Hook methods #################################
@@ -913,6 +1056,8 @@ class kpps_analysis:
             front = function
         except TypeError:
             pass
+        
+        return front
         
     def none(self,*args,**kwargs):
         pass
