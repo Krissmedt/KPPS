@@ -4,23 +4,25 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 def particle_pos_init(ppc,res,L,dist_type='linear'):
-    nq = ppc*res
-    method = None
-    pos_list = np.zeros((nq,3),dtype=np.float)
+    nq = np.int(ppc*res)
     dz = L/res
-    
-    if dist_type == 'linear':
-        method = linear_dist
-    
-    if dist_type == 'linear_2sp':
-        method = linear_dist_2sp
-    
-    #try:
-    for i in range(0,res):
-        pos_list[ppc*i:ppc*(i+1),2] = method(ppc,i,dz)
-    #except:
-    #    print('No valid cell particle distribution specified.')
-    
+    spacing = dz/ppc
+    pos_list = np.zeros((nq,3),dtype=np.float)
+
+    pos_list[:,2] = np.linspace(0,L-spacing,nq)
+
+    return pos_list
+
+def particle_pos_init_2sp(ppc,res,L,dist_type='linear'):
+    nq = np.int(ppc*res)
+    dz = L/res
+    spacing = dz/ppc
+    offset = 0.0001
+    pos_list = np.zeros((nq,3),dtype=np.float)
+
+    pos_list[0:np.int(nq/2),2] = np.linspace(0,L-spacing,np.int(nq/2))
+    pos_list[np.int(nq/2):nq,2] = np.linspace(0,L-spacing+offset,np.int(nq/2))
+ 
     return pos_list
 
 
@@ -41,22 +43,9 @@ def particle_vel_init_2sp(pos_list,v,k,a):
     for pii in range(np.int(pos_list.shape[0]/2),pos_list.shape[0]):
         z = pos_list[pii,2]
         vel_list[pii,2] =  -v + k*sin(a*z)
-        
+
     return vel_list
 
-def linear_dist(ppc,cell_no,dz):
-    cell_O = cell_no*dz
-    pos_subList = np.linspace(cell_O,cell_O+dz,ppc+1)
-    pos_subList = pos_subList[0:-1]
-        
-    return pos_subList
-
-def linear_dist_2sp(ppc,cell_no,dz):
-    cell_O = cell_no*dz
-    pos_subList = np.zeros(ppc,dtype=np.float)
-    pos_subList[0:np.int(ppc/2)] = np.linspace(cell_O,cell_O+dz,(ppc/2)+1)[0:-1]
-    pos_subList[np.int(ppc/2):ppc] = np.linspace(cell_O,cell_O+dz,(ppc/2)+1)[0:-1]
-    return pos_subList
 
 def bc_pot(pos):
     phi = 0
@@ -64,6 +53,6 @@ def bc_pot(pos):
     return phi
 
 def ion_bck(species,mesh,controller):
-    threshold = 1e-12
+    threshold = 1e-10
     mesh.rho[1,1,:-1] -= mesh.node_charge
     mesh.rho[np.abs(mesh.rho) < threshold] = 0

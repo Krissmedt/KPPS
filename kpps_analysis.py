@@ -349,7 +349,7 @@ class kpps_analysis:
         return fields
 
 
-    def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
+    def poisson_cube2nd_setup(self,species_list,fields,simulationManager,**kwargs):
         self.interior_shape = fields.res-1
         nx = self.interior_shape[0]
         ny = self.interior_shape[1]
@@ -377,7 +377,7 @@ class kpps_analysis:
         diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))
         self.FDMat = Dk
-        FDMatrix_adjust_z(species,fields,simulationManager)
+        FDMatrix_adjust_z(species_list,fields,simulationManager)
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
@@ -410,7 +410,7 @@ class kpps_analysis:
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
-            FDMatrix_adjust_x(species,fields,simulationManager)
+            FDMatrix_adjust_x(species_list,fields,simulationManager)
             
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
@@ -422,7 +422,7 @@ class kpps_analysis:
         
     
         
-    def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
+    def poisson_cube2nd(self,species_list,fields,simulationManager,**kwargs):
         
         rho = self.meshtoVector(fields.rho[self.mi_x0:-2,
                                            self.mi_y0:-2,
@@ -435,7 +435,7 @@ class kpps_analysis:
                    self.mi_y0:-2,
                    self.mi_z0:-2] = phi
 
-        self.solver_post(species,fields,simulationManager)
+        self.solver_post(species_list,fields,simulationManager)
         
         for nd in range(0,simulationManager.ndim):
             self.pot_diff_list[nd](fields)
@@ -547,7 +547,7 @@ class kpps_analysis:
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
                 rpos = species.pos[pii] - O - li*mesh.dh
                 w = self.trilinear_weights(rpos,mesh.dh)
-    
+                
                 mesh.q[li[0],li[1],li[2]] += species.q * w[0]
                 mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
                 mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
@@ -556,8 +556,10 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
-            
+        
+        print(mesh.q[1,1,:])
         self.scatter_BC(species,mesh)
+        print(mesh.q[1,1,:])
         mesh.rho = mesh.q/mesh.dv
         return mesh
             
@@ -887,7 +889,7 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
-    def periodic_matrix_1d(self,species,mesh,controller):
+    def periodic_matrix_1d(self,species_list,mesh,controller):
         FDMat = self.FDMat.toarray()
         
         FDMat[0,:-1] = 0.
@@ -902,7 +904,7 @@ class kpps_analysis:
         self.FDMat = sps.csr_matrix(FDMat)
 
         
-    def constant_phi_1d(self,species,mesh,controller):
+    def constant_phi_1d(self,species_list,mesh,controller):
         FDMat = self.FDMat.toarray()
         
         FDMat[0,:] = 1/mesh.dz**2
@@ -916,11 +918,11 @@ class kpps_analysis:
         self.FDMat = sps.csr_matrix(FDMat)
         
     
-    def scatter_periodicBC_1d(self,species,mesh):
+    def scatter_periodicBC_1d(self,species_list,mesh):
         mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
-    def mirrored_boundary_z(self,species,mesh,controller):
+    def mirrored_boundary_z(self,species_list,mesh,controller):
         mesh.phi[:,:,-2] = mesh.phi[:,:,0]
         
     
@@ -959,26 +961,30 @@ class kpps_analysis:
         return u
     
     
-    def energy_calc_penning(self,species,fields,simulationManager,**kwargs):
-        x = self.toVector(species.pos)
-        v = self.toVector(species.vel)
-        u = self.get_u(x,v)
+    def energy_calc_penning(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            x = self.toVector(species.pos)
+            v = self.toVector(species.vel)
+            u = self.get_u(x,v)
+            
+            species.energy = u.transpose() @ self.H @ u
         
-        species.energy = u.transpose() @ self.H @ u
-        
-        return species
+        return species_list
     
     
-    def centreMass(self,species,fields,simulationManager,**kwargs):
-        nq = np.float(species.nq)
-        mq = np.float(species.mq)
-
-        species.cm[0] = np.sum(species.pos[:,0]*mq)/(nq*mq)
-        species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
-        species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
+    def centreMass(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            nq = np.float(species.nq)
+            mq = np.float(species.mq)
+    
+            species.cm[0] = np.sum(species.pos[:,0]*mq)/(nq*mq)
+            species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
+            species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
+            
+        return species_list
         
 
-    def rhs_tally(self,species,fields,simulationManager):
+    def rhs_tally(self,species_list,fields,simulationManager):
         rhs_eval = self.rhs_dt * simulationManager.tSteps
         simulationManager.rhs_eval = rhs_eval
         

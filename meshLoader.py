@@ -6,7 +6,7 @@ import numpy as np
 import math as math
 
 ## Class
-class caseHandler:
+class meshLoader:
     def __init__(self,**kwargs):
         
         ## Default values

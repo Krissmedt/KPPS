@@ -17,10 +17,6 @@ class species:
         self.energy = 0.
         self.cm = np.array([0,0,0])
         
-         # physical constants
-        self.mu0 = 1
-        self.ep0 = 1
-        self.q0 = 1
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
@@ -82,11 +78,3 @@ class species:
 
         return self.matrix
     
-    def makeSI(self):
-        mElectron = 1/1822.8884845
-        
-        self.mu0 = 4*pi*10**(-7) #Vacuum permeability (H/m) 
-        self.ep0 = 8.854187817*10**(-12) #Vacuum permittivity (F/m)
-        self.q0 = 1.602176620898*10**(-19) #Elementary charge (C)
-        self.mq = self.mq * mElectron
-        

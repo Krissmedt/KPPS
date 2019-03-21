@@ -30,13 +30,16 @@ v = 1
 vmod = 0.1
 a = 1
 
-simulate = False
+simulate = True
 sim_name = 'two_stream_1d_simple'
 
 
 ############################ Setup and Run ####################################
 sim_params = {}
-species_params = {}
+beam1_params = {}
+loader1_params = {}
+species_params = []
+loader_params = []
 mesh_params = {}
 case_params = {}
 analysis_params = {}
@@ -48,16 +51,24 @@ sim_params['t0'] = 0
 sim_params['dt'] = dt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
+sim_params['zlimits'] = [0,L]
 
-species_params['nq'] = ppc*res
-species_params['mq'] = 1
-species_params['q'] = 1
+beam1_params['nq'] = ppc*res
+beam1_params['mq'] = 1
+beam1_params['q'] = 1
 
-mesh_params['node_charge'] = ppc*species_params['q']
 
-case_params['particle_init'] = 'direct'
-case_params['pos'] = particle_pos_init(ppc,res,L)
-case_params['vel'] = particle_vel_init(case_params['pos'],v,vmod,a)
+loader1_params['load_type'] = 'direct'
+loader1_params['speciestoLoad'] = [0]
+loader1_params['pos'] = particle_pos_init(ppc,res,L)
+loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,vmod,a)
+
+species_params = [beam1_params]
+loader_params = [loader1_params]
+
+mesh_params['node_charge'] = ppc*beam1_params['q']
+
+
 case_params['zlimits'] = [0,L]
 
 case_params['mesh_init'] = 'box'
@@ -102,6 +113,7 @@ data_params['plot_params'] = plot_params
 ## Numerical solution ##
 model = dict(simSettings=sim_params,
              speciesSettings=species_params,
+             pLoaderSettings=loader_params,
              meshSettings=mesh_params,
              analysisSettings=analysis_params,
              caseSettings=case_params,
@@ -116,7 +128,8 @@ else:
     DH.load_sim(sim_name=sim_name,overwrite=True)
 
 ####################### Analysis and Visualisation ############################
-pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
+pData_list = DH.load_p(['pos','vel','E'],sim_name=sim_name)
+pData_dict = pData_list[0]
 mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
 
 #tsPlots = [ts for ts in range(Nt)]
@@ -127,6 +140,7 @@ Z[:] = np.linspace(0,L,res+1)
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
 rho_max = np.max(rho_data)
+print(rho_data)
 rho_data = rho_data/rho_max
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
@@ -191,7 +205,7 @@ phi_ani = animation.FuncAnimation(fig3, update_line, DH.samples,
 
 phase_ani.save(sim_name+'_phase.mp4')
 rho_ani.save(sim_name+'_rho.mp4')
-phi_ani.save(sim_name+'_phi.mp4')
+#phi_ani.save(sim_name+'_phi.mp4')
 dist_ani.save(sim_name+'_dist.mp4')
 
 plt.show()
