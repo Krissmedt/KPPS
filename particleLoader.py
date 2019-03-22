@@ -54,9 +54,7 @@ class particleLoader:
         self.pos = np.array(self.pos)
         self.vel = np.array(self.vel)
         
-        ## Main functionality - setup mesh and species for specific case
-
-        ## Input translation
+        ## Translate input to load method
         self.load_type = self.stringtoMethod(self.load_type)
 
             
