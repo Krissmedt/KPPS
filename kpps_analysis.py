@@ -73,6 +73,7 @@ class kpps_analysis:
         self.mi_z0 = 1
         self.mi_y0 = 1
         self.mi_x0 = 1
+        self.solver_pre = self.none
         self.solver_post = self.none
         
         self.external_fields = False
@@ -364,7 +365,6 @@ class kpps_analysis:
             self.mi_z0 = 0
             FDMatrix_adjust_z = self.poisson_M_adjust_1d
             self.scatter_BC = self.scatter_periodicBC_1d
-            self.solver_post = self.mirrored_boundary_z
             self.pot_differentiate_z = self.pot_diff_open_z
             
             
@@ -427,6 +427,8 @@ class kpps_analysis:
                                            self.mi_y0:-2,
                                            self.mi_z0:-2])
 
+        self.solver_pre(species,fields,simulationManager)
+        
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
         
@@ -884,38 +886,43 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
-    def periodic_matrix_1d(self,species,mesh,controller):
+    def periodic_fixed_1d(self,species,mesh,controller):
         FDMat = self.FDMat.toarray()
         
-        FDMat[0,:-1] = 0.
-        FDMat[0,-1] = 1/mesh.dz**2
+        FDMat[0,0] = 1
         FDMat[-1,0] = 1/mesh.dz**2
 
         BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
-
-        BC_vector[0] = mesh.BC_vector[0]
+        BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
+        self.solver_pre = self.rho_fixed
+        self.solver_post = self.mirrored_boundary_z
+        
 
         
     def constant_phi_1d(self,species,mesh,controller):
         FDMat = self.FDMat.toarray()
         
-        FDMat[0,:] = 1/mesh.dz**2
+        FDMat[0,:] = 1
         FDMat[-1,0] = 1/mesh.dz**2
-
+        
         BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
-
-        BC_vector[0] = mesh.BC_vector[0]
+        BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
-        
-    
+        self.solver_pre = self.rho_fixed
+        self.solver_post = self.mirrored_boundary_z
+
     def scatter_periodicBC_1d(self,species,mesh):
         mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
+        
+    def rho_fixed(self,species,mesh,controller):
+        mesh.rho[1,1,0] = 0
+        mesh.rho[1,1,-2] = 0
         
     def mirrored_boundary_z(self,species,mesh,controller):
         mesh.phi[:,:,-2] = mesh.phi[:,:,0]
