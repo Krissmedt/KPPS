@@ -73,6 +73,9 @@ class kpps_analysis:
         self.mi_z0 = 1
         self.mi_y0 = 1
         self.mi_x0 = 1
+        self.mi_zN = -2
+        self.mi_yN = -2
+        self.mi_xN = -2
         self.solver_pre = self.none
         self.solver_post = self.none
         
@@ -361,13 +364,11 @@ class kpps_analysis:
         
         if self.mesh_boundary_z == 'open':
             self.interior_shape[2] += 1
-            nz +=1
-            self.mi_z0 = 0
             FDMatrix_adjust_z = self.poisson_M_adjust_1d
             self.scatter_BC = self.scatter_periodicBC_1d
             self.pot_differentiate_z = self.pot_diff_open_z
             
-            
+        nz = self.interior_shape[2] 
         k = np.zeros(3,dtype=np.float)
         k[0] = -2*(1/fields.dz**2)
         k[1] = -2*(1/fields.dy**2 + 1/fields.dz**2)
@@ -380,14 +381,12 @@ class kpps_analysis:
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if simulationManager.ndim >= 2:
+            self.interior_shape[1] += 1
             if self.mesh_boundary_y == 'open':
-                self.interior_shape[1] += 1
-                ny += 1
-                self.mi_y0 = 0
-                
                 FDMatrix_adjust_y = self.poisson_M_adjust_2d
                 self.pot_differentiate_y = self.pot_diff_open_y
-                
+            
+            ny = self.interior_shape[1]
             I = sps.identity(nz)
             diag = sps.diags([1],shape=(ny,ny))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
@@ -398,14 +397,12 @@ class kpps_analysis:
             self.pot_diff_list.append(self.pot_differentiate_y)
             
         if simulationManager.ndim == 3:
+            self.interior_shape[0] += 1
             if self.mesh_boundary_y == 'open':
-                self.interior_shape[0] += 1
-                nx += 1
-                self.mi_x0 = 0
-                
                 FDMatrix_adjust_x = self.poisson_M_adjust_3d
                 self.pot_differentiate_x = self.pot_diff_open_x
-                
+            
+            nx = self.interior_shape[1]
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
@@ -423,18 +420,17 @@ class kpps_analysis:
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
         
-        rho = self.meshtoVector(fields.rho[self.mi_x0:-2,
-                                           self.mi_y0:-2,
-                                           self.mi_z0:-2])
+        rho = self.meshtoVector(fields.rho[self.mi_x0:self.mi_xN,
+                                           self.mi_y0:self.mi_yN,
+                                           self.mi_z0:self.mi_zN])
 
         self.solver_pre(species,fields,simulationManager)
-        
         phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
         
-        fields.phi[self.mi_x0:-2,
-                   self.mi_y0:-2,
-                   self.mi_z0:-2] = phi
+        fields.phi[self.mi_x0::self.mi_xN,
+                   self.mi_y0:self.mi_yN,
+                   self.mi_z0:self.mi_zN] = phi
 
         self.solver_post(species,fields,simulationManager)
         
@@ -887,6 +883,7 @@ class kpps_analysis:
         
         
     def periodic_fixed_1d(self,species,mesh,controller):
+        self.mi_z0 = 0
         FDMat = self.FDMat.toarray()
         
         FDMat[0,0] = 1
@@ -897,12 +894,16 @@ class kpps_analysis:
         mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
-        self.solver_pre = self.rho_fixed
+        
+        self.rho_mod_i = [0,-2]
+        self.rho_mod_vals = [0,0]
+        self.solver_pre = self.rho_mod_1d
         self.solver_post = self.mirrored_boundary_z
         
 
         
     def constant_phi_1d(self,species,mesh,controller):
+        self.mi_z0 = 0
         FDMat = self.FDMat.toarray()
         
         FDMat[0,:] = 1
@@ -913,21 +914,59 @@ class kpps_analysis:
         mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
-        self.solver_pre = self.rho_fixed
+        
+        self.rho_mod_i = [0,-2]
+        self.rho_mod_vals = [0,0]
+        self.solver_pre = self.rho_mod_1d
+        self.solver_post = self.mirrored_boundary_z
+        
+        
+    def integral_phi_1d(self,species,mesh,controller):
+        self.mi_z0 = 0
+        self.mi_zN = -1
+        self.interior_shape[2] += 1
+        
+        FDMat = self.FDMat.toarray()
+        
+        FDMat[0,-1] = 1/mesh.dz**2
+        FDMat[-1,0] = 1/mesh.dz**2
+        
+        N = FDMat.shape[0]+1
+        FDMat_exp = np.zeros((N,N),dtype=np.float)
+        FDMat_exp[:-1,:-1] = FDMat
+        FDMat_exp[-1,:-1] = mesh.dz 
+        FDMat_exp[:-1,-1] = 1.
+        
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+2,dtype=np.float)
+        BC_vector[1:-1] = mesh.BC_vector
+        mesh.BC_vector = BC_vector
+        
+        self.rho_mod_i = [-2]
+        self.rho_mod_vals = [0]
+        self.solver_pre = self.rho_mod_1d
+        
+        self.FDMat = sps.csr_matrix(FDMat_exp)
         self.solver_post = self.mirrored_boundary_z
 
     def scatter_periodicBC_1d(self,species,mesh):
         mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
-    def rho_fixed(self,species,mesh,controller):
-        mesh.rho[1,1,0] = 0
-        mesh.rho[1,1,-2] = 0
+    def rho_mod_1d(self,species,mesh,controller):
+        j = 0
+        for index in self.rho_mod_i:
+            mesh.rho[1,1,index] = self.rho_mod_vals[j]
+            j += 1
+            
+        return mesh.rho
         
     def mirrored_boundary_z(self,species,mesh,controller):
         mesh.phi[:,:,-2] = mesh.phi[:,:,0]
+        mesh.rho[:,:,-2] = mesh.rho[:,:,0]
+        mesh.q[:,:,-2] = mesh.q[:,:,0]
+        mesh.E[:,:,:,-2] = mesh.E[:,:,:,0]
+        mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
         
-    
 ################################ Hook methods #################################
     def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
         self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))

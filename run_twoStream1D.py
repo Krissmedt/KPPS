@@ -25,10 +25,10 @@ ppc = 40
 L = 2*pi
 res = 63
 dt = 0.01
-Nt = 300
+Nt = 1000
 
 v = 1
-vmod = 0.
+vmod = 0.1
 a = 1
 
 omega = 1
@@ -37,7 +37,7 @@ nq = ppc*res
 q = omega**2 *(1/1) * 1 * L/(nq/2)
 
 simulate = True
-sim_name = 'two_stream_1d_fixed_phi'
+sim_name = 'two_stream_1d_integral_phi'
 
 
 ############################ Setup and Run ####################################
@@ -56,7 +56,7 @@ sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 
 species_params['nq'] = nq
-species_params['q'] = 1
+species_params['q'] = q
 species_params['mq'] = species_params['q']
 
 mesh_params['node_charge'] = ppc*species_params['q']
@@ -84,7 +84,7 @@ analysis_params['field_type'] = 'pic'
 analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
-analysis_params['poisson_M_adjust_1d'] = 'periodic_fixed_1d'
+analysis_params['poisson_M_adjust_1d'] = 'integral_phi_1d'
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -197,19 +197,16 @@ v2_data = v_data[:,pps:pps*2]
 
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
-rho_max = np.max(rho_data)
-rho_data = rho_data/rho_max
+#rho_max = np.max(rho_data)
+#rho_data = rho_data/rho_max
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
-phi_min = np.abs(np.min(phi_data))
-phi_max = np.abs(np.max(phi_data))
-phi_h = phi_min+phi_max
-phi_data = (phi_data+phi_min)/phi_h
+#phi_min = np.abs(np.min(phi_data))
+#phi_max = np.abs(np.max(phi_data))
+#phi_h = phi_min+phi_max
+#phi_data = (phi_data+phi_min)/phi_h
 
 fps = 10
-# Creating fifty line objects.
-# NOTE: Can't pass empty arrays into 3d version of plot()
-
 
 
 
@@ -221,6 +218,7 @@ p_ax.set_xlim([0.0, L])
 p_ax.set_xlabel('$z$')
 p_ax.set_ylabel('$v_z$')
 p_ax.set_ylim([-0.5, 0.5])
+p_ax.set_title('Two stream instability phase space, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
 p_ax.legend()
 
 fig2 = plt.figure(DH.figureNo+2)
@@ -230,8 +228,9 @@ phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
 dist_ax.set_xlim([0.0, L])
 dist_ax.set_xlabel('$z$')
 dist_ax.set_ylabel('$rho_z$/$\phi_z$')
-dist_ax.set_ylim([0, 1])
+dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
 dist_ax.legend()
+
 
 
 # Setting data/line lists:
