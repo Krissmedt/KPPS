@@ -438,7 +438,6 @@ class kpps_analysis:
         return fields
         
     
-    
     def pot_diff_fixed_x(self,fields):
         ## Differentiate over electric potential for electric field
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
@@ -538,6 +537,7 @@ class kpps_analysis:
     def trilinear_qScatter(self,species_list,mesh,simulationManager):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         
+
         for species in species_list:
             for pii in range(0,species.nq):
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -883,6 +883,7 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
+
     def fixed_phi_1d(self,species,mesh,controller):
         self.mi_z0 = 0
         FDMat = self.FDMat.toarray()
@@ -890,6 +891,10 @@ class kpps_analysis:
         FDMat[0,0] = 1
         FDMat[0,1:] = 0
         FDMat[-1,0] = 1/mesh.dz**2
+
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
+        BC_vector[1:] = mesh.BC_vector
+        mesh.BC_vector = BC_vector
         
         BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
         BC_vector[1:] = mesh.BC_vector
@@ -899,6 +904,7 @@ class kpps_analysis:
         
         self.rho_mod_i = [0]
         self.rho_mod_vals = [0]
+
         self.solver_pre = self.rho_mod_1d
         self.solver_post = self.mirrored_boundary_z
         
@@ -919,6 +925,7 @@ class kpps_analysis:
         
         self.rho_mod_i = [0]
         self.rho_mod_vals = [0]
+
         self.solver_pre = self.rho_mod_1d
         self.solver_post = self.mirrored_boundary_z
         
@@ -969,7 +976,6 @@ class kpps_analysis:
         mesh.E[:,:,:,-2] = mesh.E[:,:,:,0]
         mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
         
-    
 ################################ Hook methods #################################
     def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
         self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))

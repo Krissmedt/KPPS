@@ -34,6 +34,7 @@ simulate = True
 sim_name = 'two_stream_1d_integral_phi'
 
 
+
 ############################ Setup and Run ####################################
 sim_params = {}
 beam1_params = {}
@@ -51,6 +52,7 @@ sim_params['t0'] = 0
 sim_params['dt'] = dt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
+
 sim_params['zlimits'] = [0,L]
 
 beam1_params['nq'] = ppc*res
@@ -136,15 +138,14 @@ Z = np.zeros((DH.samples,res+1),dtype=np.float)
 Z[:] = np.linspace(0,L,res+1)
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
-#rho_max = np.max(rho_data)
-#rho_data = rho_data/rho_max
+rho_max = np.max(rho_data)
+rho_data = rho_data/rho_max
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
 phi_min = np.abs(np.min(phi_data))
 phi_max = np.abs(np.max(phi_data))
 phi_h = phi_min+phi_max
 phi_data = (phi_data+phi_min)/phi_h
-
 
 fps = 10
 
@@ -185,4 +186,6 @@ dist_ani = animation.FuncAnimation(fig2, update_lines, DH.samples,
 
 phase_ani.save(sim_name+'_phase.mp4')
 dist_ani.save(sim_name+'_dist.mp4')
+
 plt.show()
+
