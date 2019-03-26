@@ -14,11 +14,13 @@ class meshLoader:
         self.custom = self.custom_ph
         
         self.mesh_res = np.array([2,2,2],dtype=np.int)
+        self.mesh_dh = None
         self.store_node_pos = False
         
         self.BC_scaling = 1
         self.BC_box = self.node_set
         self.BC_function = self.BC_node_template
+    
         
 
         ## Iterate through keyword arguments and store all in object
@@ -39,38 +41,16 @@ class meshLoader:
                     pass
 
         
-        
-        ## Main functionality - setup mesh and species for specific case
-        ## Mesh setup
-        # Take single digit inputs and assign to each axis
-        try:
-            self.xlimits = self.limits
-            self.ylimits = self.limits
-            self.zlimits = self.limits
-        except AttributeError:
-            pass
-        
-        try: 
-            dh = np.zeros(3,dtype=np.float)
-            dh[:] = self.mesh_dh
-            self.mesh_dh = dh
-        except ValueError:
-            res = np.zeros(3,dtype=np.int)
-            res[:] = self.mesh_res
-            self.mesh_res = res
-
-        self.set_mesh_inputs()
-        
         ## Translate input to load method
         self.load_type = self.stringtoMethod(self.load_type)
         
     def run(self,mesh,controller):
         self.set_mesh_inputs(mesh,controller)
-        self.load_type(mesh)
+        self.load_type(mesh,controller)
             
        
     ## Mesh methods
-    def box(self,mesh):
+    def box(self,mesh,controller):
         mesh.dh = self.mesh_dh
         mesh.dx = self.mesh_dh[0]
         mesh.dy = self.mesh_dh[1]
@@ -92,7 +72,7 @@ class meshLoader:
         
         mesh.phi = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
         mesh.BC_vector = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
-        mesh = self.BC_box(mesh)
+        mesh = self.BC_box(mesh,controller)
         
         if self.store_node_pos == True:
             mesh.pos = np.zeros((3,mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
@@ -106,7 +86,7 @@ class meshLoader:
         return mesh
         
 
-    def node_set(self,mesh):
+    def node_set(self,mesh,controller):
         for yi in range(0,mesh.yres+1):
             for xi in range(0,mesh.xres+1):
                 y = mesh.ylimits[0] + mesh.dy * yi
@@ -120,7 +100,7 @@ class meshLoader:
         mesh.BC_vector[:,:,1] += mesh.phi[:,:,1]/mesh.dz**2
         mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-2]/mesh.dz**2    
         
-        if self.ndim >= 2:
+        if controller.ndim >= 2:
             for zi in range(0,mesh.zres+1):
                 for xi in range(0,mesh.xres+1):
                     x = mesh.ylimits[0] + mesh.dx * xi
@@ -134,7 +114,7 @@ class meshLoader:
             mesh.BC_vector[:,1,:] += mesh.phi[:,1,:]/mesh.dy**2
             mesh.BC_vector[:,-2,:] += mesh.phi[:,-2,:]/mesh.dy**2
         
-        if self.ndim == 3:
+        if controller.ndim == 3:
             for zi in range(0,mesh.zres+1):
                 for yi in range(0,mesh.yres+1):
                     y = mesh.ylimits[0] + mesh.dy * yi
@@ -171,6 +151,15 @@ class meshLoader:
             mesh.xlimits = np.array([0,1])
             mesh.ylimits = np.array([0,1])
             mesh.zlimits = np.array([0,1])
+            
+        try: 
+            dh = np.zeros(3,dtype=np.float)
+            dh[:] = self.mesh_dh
+            self.mesh_dh = dh
+        except TypeError:
+            res = np.zeros(3,dtype=np.int)
+            res[:] = self.mesh_res
+            self.mesh_res = res
     
         try:
             xres = (mesh.xlimits[1] - mesh.xlimits[0])/self.mesh_dh[0]

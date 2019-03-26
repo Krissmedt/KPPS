@@ -77,7 +77,7 @@ class kpps:
         for loader in pLoader_list:
             loader.run(species_list,sim)
             
-        mLoader.run(mesh,sim)
+        mLoader.run(fields,sim)
 
         analyser.run_preAnalyser(species_list,fields,sim)
         dHandler.run_setup()

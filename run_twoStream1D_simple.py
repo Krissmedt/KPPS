@@ -71,7 +71,7 @@ mesh_params['node_charge'] = ppc*beam1_params['q']
 
 mLoader_params['zlimits'] = [0,L]
 
-mLoader_params['mesh_init'] = 'box'
+mLoader_params['load_type'] = 'box'
 mLoader_params['resolution'] = [2,2,res]
 #mLoader_params['BC_function'] = bc_pot
 mLoader_params['store_node_pos'] = False

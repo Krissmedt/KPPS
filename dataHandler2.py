@@ -74,10 +74,10 @@ class dataHandler2:
                     
 ###################### Simulation Run Functionality ###########################
                     
-    def run(self,species,fields,simulationManager):
+    def run(self,species_list,fields,simulationManager):
         if simulationManager.ts % self.samplePeriod == 0:
             for method in self.runOps:
-                method(species,fields,simulationManager)
+                method(species_list,fields,simulationManager)
             
 
     def run_setup(self):
@@ -115,31 +115,34 @@ class dataHandler2:
             raise SystemExit(0)       
             
         
-    def dumper(self,species,fields,simulationManager):
-        p_filename = self.dataFoldername + "/p_t" + str(simulationManager.ts)
-        p_file = io.open(p_filename,mode='wb')
-        pk.dump(species,p_file)
+    def dumper(self,species_list,fields,simulationManager):
+        for species in species_list:
+            p_filename = self.dataFoldername + "/p_" + species.name + "_t" + str(simulationManager.ts)
+            p_file = io.open(p_filename,mode='wb')
+            pk.dump(species,p_file)
     
         m_filename = self.dataFoldername + "/m_t" + str(simulationManager.ts)
         m_file = io.open(m_filename,mode='wb')
         pk.dump(fields,m_file)
     
-    def vtk_dumper(self,species,fields,simulationManager):
+    def vtk_dumper(self,species_list,fields,simulationManager):
         ts = simulationManager.ts
-        pos = species.pos
         
-        filename = self.vtkFoldername + "/" + str(ts) + ".vtu"
-        self.vtk_writer_class.snapshot(filename,pos[:,0],pos[:,1],pos[:,2])
-        
-        filename = self.vtkFoldername + "/PVD"
-        self.vtk_writer_class.writePVD(filename + ".pvd")
+        for species in species_list:
+            pos = species.pos
+            
+            filename = self.vtkFoldername + "/" + str(ts) + ".vtu"
+            self.vtk_writer_class.snapshot(filename,pos[:,0],pos[:,1],pos[:,2])
+            
+            filename = self.vtkFoldername + "/PVD"
+            self.vtk_writer_class.writePVD(filename + ".pvd")
         
         
 ######################### Post-Run Functionality ##############################
         
-    def post(self,species,fields,simulationManager):
+    def post(self,species_list,fields,simulationManager):
         for method in self.postOps:
-            method(species,fields,simulationManager)
+            method(species_list,fields,simulationManager)
             
     def load_sim(self,sim_name=None,overwrite=False):
         try:
@@ -188,9 +191,14 @@ class dataHandler2:
             
         return return_dict
         
-    def load_p(self,variables,sim_name=None,overwrite=False):
-        return_dict = self.load('p',variables,sim_name=sim_name)
-        return return_dict
+    def load_p(self,variables,species=['none'],sim_name=None,overwrite=False):
+        species_list = []
+        for spec in species:
+            dtype = 'p_' + spec
+            species_dict = self.load(dtype,variables,sim_name=sim_name)
+            species_list.append(species_dict)
+            
+        return species_list
     
     def load_m(self,variables,sim_name=None,overwrite=False):
         return_dict = self.load('m',variables,sim_name=sim_name)
@@ -219,76 +227,79 @@ class dataHandler2:
         for method in self.plotOps:
             method()
             
-    def particle_time_plot(self,variables=None,particles=None,sim_name=None):
+    def particle_time_plot(self,species=['none'],variables=None,particles=None,sim_name=None):
         try:
             check = variables[0]
         except TypeError:
             variables = self.time_plot_vars
             
-        if 'pos' not in variables:
-            variables.append('pos')
-            data = self.load('p',variables,sim_name=sim_name)
-            variables.remove('pos')
-        else:
-            data = self.load('p',variables,sim_name=sim_name)
-        
-        particles = self.set_taggedList(data,particles)
-        
-        for var in variables:
-            vlabel = var
-            try:
-                assert data[var].shape[1] >= particles.shape[0]
-            except (AssertionError,IndexError):
-                continue
+        for spec in species:
+            dtype = "p_" + spec
+            if 'pos' not in variables:
+                variables.append('pos')
+                data = self.load(dtype,variables,sim_name=sim_name)
+                variables.remove('pos')
+            else:
+                data = self.load(dtype,variables,sim_name=sim_name)
             
-            self.figureNo += 1
-            fig = plt.figure(self.figureNo)
-            ax = fig.add_subplot(1, 1, 1)
-            print('particles.shape')
-            for pii in range(0,particles.shape[0]):
+            particles = self.set_taggedList(data,particles)
+            
+            for var in variables:
+                vlabel = var
                 try:
-                    ax.plot(data['t'],data[var][:,particles[pii],0],label=vlabel+"_x") 
-                    ax.plot(data['t'],data[var][:,particles[pii],1],label=vlabel+"_y") 
-                    ax.plot(data['t'],data[var][:,particles[pii],2],label=vlabel+"_z") 
-                except IndexError:
-                    ax.plot(data['t'],data[var][:,particles[pii]],label=vlabel) 
+                    assert data[var].shape[1] >= particles.shape[0]
+                except (AssertionError,IndexError):
+                    continue
                 
-            ax.set_xscale('linear')
-            ax.set_xlabel('$t$')
-            ax.set_yscale('linear')
-            ax.set_ylabel(var)
-            ax.legend()
+                self.figureNo += 1
+                fig = plt.figure(self.figureNo)
+                ax = fig.add_subplot(1, 1, 1)
+                for pii in range(0,particles.shape[0]):
+                    try:
+                        ax.plot(data['t'],data[var][:,particles[pii],0],label=vlabel+"_x") 
+                        ax.plot(data['t'],data[var][:,particles[pii],1],label=vlabel+"_y") 
+                        ax.plot(data['t'],data[var][:,particles[pii],2],label=vlabel+"_z") 
+                    except IndexError:
+                        ax.plot(data['t'],data[var][:,particles[pii]],label=vlabel) 
+                    
+                ax.set_xscale('linear')
+                ax.set_xlabel('$t$')
+                ax.set_yscale('linear')
+                ax.set_ylabel(var)
+                ax.legend()
 
                 
     
-    def trajectory_plot(self,particles=None,sim_name=None):
-        posData = self.load('p',['pos'],sim_name=0)
-        xArray = posData['pos'][:,:,0]
-        yArray = posData['pos'][:,:,1]
-        zArray = posData['pos'][:,:,2]
-        
-        particles = self.set_taggedList(posData,particles)
-                
-        limits = np.array(self.plot_limits)
-        
-        self.figureNo += 1
-        fig = plt.figure(self.figureNo)
-        ax = fig.gca(projection='3d')
-        for pii in range(0,len(particles)):
-            plabel = "p = " + str(particles[pii]+1)
-            ax.plot3D(xArray[:,particles[pii]],
-                      yArray[:,particles[pii]],
-                      zs=zArray[:,particles[pii]],label=plabel)
+    def trajectory_plot(self,species=['none'],particles=None,sim_name=None):
+        for spec in species: 
+            dtype = "p_" + spec
+            posData = self.load(dtype,['pos'],sim_name=0)
+            xArray = posData['pos'][:,:,0]
+            yArray = posData['pos'][:,:,1]
+            zArray = posData['pos'][:,:,2]
             
-        ax.set_xlim([limits[0,0], limits[0,1]])
-        ax.set_ylim([limits[1,0], limits[1,1]])
-        ax.set_zlim([limits[2,0], limits[2,1]])
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-        
-        if particles.shape[0] <= 10:
-            ax.legend()
+            particles = self.set_taggedList(posData,particles)
+                    
+            limits = np.array(self.plot_limits)
+            
+            self.figureNo += 1
+            fig = plt.figure(self.figureNo)
+            ax = fig.gca(projection='3d')
+            for pii in range(0,len(particles)):
+                plabel = "p = " + str(particles[pii]+1)
+                ax.plot3D(xArray[:,particles[pii]],
+                          yArray[:,particles[pii]],
+                          zs=zArray[:,particles[pii]],label=plabel)
+                
+            ax.set_xlim([limits[0,0], limits[0,1]])
+            ax.set_ylim([limits[1,0], limits[1,1]])
+            ax.set_zlim([limits[2,0], limits[2,1]])
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_zlabel('z')
+            
+            if particles.shape[0] <= 10:
+                ax.legend()
         
         
     def vector_plot(self,variables=0):
