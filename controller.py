@@ -3,7 +3,7 @@ from math import floor
 import numpy as np
 
 ## Class
-class simulationManager:
+class controller:
     ## Main Methods
     def __init__(self,**kwargs):
         ## Default values

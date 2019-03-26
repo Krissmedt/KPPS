@@ -213,11 +213,11 @@ class kpps_analysis:
 
                 
 ########################### Main Run Loops ####################################
-    def run_fieldIntegrator(self,species,fields,simulationManager,**kwargs):     
+    def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields.q = np.zeros((fields.q.shape),dtype=np.float)
         for method in self.fieldIntegrator_methods:
-            method(species,fields,simulationManager)
-        return species
+            method(species_list,fields,simulationManager)
+        return species_list
 
 
     def fieldGather(self,species,fields,**kwargs):
@@ -232,30 +232,31 @@ class kpps_analysis:
         return species
     
 
-    def run_particleIntegrator(self,species,fields,simulationManager,**kwargs):    
-        for method in self.particleIntegrator_methods:
-            method(species,fields,simulationManager)
-
-        return species
+    def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            for method in self.particleIntegrator_methods:
+                method(species,fields,simulationManager)
     
-    def runHooks(self,species,fields,simulationManager,**kwargs):
+        return species_list
+    
+    def runHooks(self,species_list,fields,simulationManager,**kwargs):
         for method in self.hooks:
-            method(species,fields,simulationManager)
+            method(species_list,fields,simulationManager)
             
-        return species
+        return species_list, fields
     
     
-    def run_preAnalyser(self,species,fields,simulationManager,**kwargs):
+    def run_preAnalyser(self,species_list,fields,simulationManager,**kwargs):
         for method in self.preAnalysis_methods:
-            method(species, fields, simulationManager)
+            method(species_list, fields, simulationManager)
 
-        return species
+        return species_list, fields
     
-    def run_postAnalyser(self,species,fields,simulationManager,**kwargs):
+    def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
         for method in self.postAnalysis_methods:
-            method(species,fields,simulationManager)
+            method(species_list,fields,simulationManager)
         
-        return species
+        return species_list, fields
     
 
 ##################### Imposed E-Field Methods #################################
@@ -412,10 +413,7 @@ class kpps_analysis:
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
             
-
         return self.FDMat
-    
-        
     
         
     def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
@@ -536,21 +534,24 @@ class kpps_analysis:
         return species
             
     
-    def trilinear_qScatter(self,species,mesh,simulationManager):
+    def trilinear_qScatter(self,species_list,mesh,simulationManager):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
-        for pii in range(0,species.nq):
-            li = self.cell_index(species.pos[pii],O,mesh.dh)
-            rpos = species.pos[pii] - O - li*mesh.dh
-            w = self.trilinear_weights(rpos,mesh.dh)
+        
 
-            mesh.q[li[0],li[1],li[2]] += species.q * w[0]
-            mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
-            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
-            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
-            mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
-            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
-            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
-            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
+        for species in species_list:
+            for pii in range(0,species.nq):
+                li = self.cell_index(species.pos[pii],O,mesh.dh)
+                rpos = species.pos[pii] - O - li*mesh.dh
+                w = self.trilinear_weights(rpos,mesh.dh)
+                
+                mesh.q[li[0],li[1],li[2]] += species.q * w[0]
+                mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
+                mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
+                mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
+                mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
+                mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
+                mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
+                mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
         self.scatter_BC(species,mesh)
         mesh.rho = mesh.q/mesh.dv
@@ -882,21 +883,28 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
-    def periodic_fixed_1d(self,species,mesh,controller):
+
+    def fixed_phi_1d(self,species,mesh,controller):
         self.mi_z0 = 0
         FDMat = self.FDMat.toarray()
         
         FDMat[0,0] = 1
+        FDMat[0,1:] = 0
         FDMat[-1,0] = 1/mesh.dz**2
 
         BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
         BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
         
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
+        BC_vector[1:] = mesh.BC_vector
+        mesh.BC_vector = BC_vector
+        
         self.FDMat = sps.csr_matrix(FDMat)
         
-        self.rho_mod_i = [0,-2]
-        self.rho_mod_vals = [0,0]
+        self.rho_mod_i = [0]
+        self.rho_mod_vals = [0]
+
         self.solver_pre = self.rho_mod_1d
         self.solver_post = self.mirrored_boundary_z
         
@@ -915,8 +923,9 @@ class kpps_analysis:
         
         self.FDMat = sps.csr_matrix(FDMat)
         
-        self.rho_mod_i = [0,-2]
-        self.rho_mod_vals = [0,0]
+        self.rho_mod_i = [0]
+        self.rho_mod_vals = [0]
+
         self.solver_pre = self.rho_mod_1d
         self.solver_post = self.mirrored_boundary_z
         
@@ -1002,26 +1011,30 @@ class kpps_analysis:
         return u
     
     
-    def energy_calc_penning(self,species,fields,simulationManager,**kwargs):
-        x = self.toVector(species.pos)
-        v = self.toVector(species.vel)
-        u = self.get_u(x,v)
+    def energy_calc_penning(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            x = self.toVector(species.pos)
+            v = self.toVector(species.vel)
+            u = self.get_u(x,v)
+            
+            species.energy = u.transpose() @ self.H @ u
         
-        species.energy = u.transpose() @ self.H @ u
-        
-        return species
+        return species_list
     
     
-    def centreMass(self,species,fields,simulationManager,**kwargs):
-        nq = np.float(species.nq)
-        mq = np.float(species.mq)
-
-        species.cm[0] = np.sum(species.pos[:,0]*mq)/(nq*mq)
-        species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
-        species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
+    def centreMass(self,species_list,fields,simulationManager,**kwargs):
+        for species in species_list:
+            nq = np.float(species.nq)
+            mq = np.float(species.mq)
+    
+            species.cm[0] = np.sum(species.pos[:,0]*mq)/(nq*mq)
+            species.cm[1] = np.sum(species.pos[:,1]*mq)/(nq*mq)
+            species.cm[2] = np.sum(species.pos[:,2]*mq)/(nq*mq)
+            
+        return species_list
         
 
-    def rhs_tally(self,species,fields,simulationManager):
+    def rhs_tally(self,species_list,fields,simulationManager):
         rhs_eval = self.rhs_dt * simulationManager.tSteps
         simulationManager.rhs_eval = rhs_eval
         
