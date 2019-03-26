@@ -9,6 +9,11 @@ from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
+def update_line(num, xdata,ydata, line):
+    line.set_data(xdata[num,:],ydata[num,:])
+        
+    return line
+
 def update_lines(num, xdata,ydata, lines):
     for xdat,ydat,line in zip(xdata,ydata,lines):
         line.set_data(xdat[num,:],ydat[num,:])
@@ -20,11 +25,11 @@ ppc = 40
 L = 2*pi
 res = 63
 dt = 0.01
-Nt = 100
+Nt = 1000
 
 v = 1
-vmod = 0.001
-a = 100
+vmod = 0.1
+a = 1
 
 omega = 1
 
@@ -32,7 +37,7 @@ nq = ppc*res
 q = omega**2 *(1/1) * 1 * L/(nq/2)
 
 simulate = True
-sim_name = 'two_stream_1d'
+sim_name = 'two_stream_1d_integral_phi'
 
 
 ############################ Setup and Run ####################################
@@ -51,7 +56,7 @@ sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 
 species_params['nq'] = nq
-species_params['q'] = 1
+species_params['q'] = q
 species_params['mq'] = species_params['q']
 
 mesh_params['node_charge'] = ppc*species_params['q']
@@ -79,7 +84,7 @@ analysis_params['field_type'] = 'pic'
 analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
-analysis_params['poisson_M_adjust_1d'] = 'constant_phi_1d'
+analysis_params['poisson_M_adjust_1d'] = 'integral_phi_1d'
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -166,52 +171,90 @@ phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples,
                                    fargs=(xdata,ydata,lines),
                                    interval=1000/fps)
 
+
+####################### Analysis and Visualisation ############################
+pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
+mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+
+#tsPlots = [ts for ts in range(Nt)]
+tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
+
+Z = np.zeros((DH.samples,res+1),dtype=np.float)
+Z[:] = np.linspace(0,L,res+1)
+
+pps = np.int(ppc*res/2)
+p1_data = pData_dict['pos'][:,0:pps,2]
+p2_data = pData_dict['pos'][:,pps:pps*2,2]
+
+v_data = pData_dict['vel'][:,:,2] 
+v_max = np.abs(np.max(v_data))
+v_min = np.abs(np.min(v_data))
+v_h = v_max+v_min
+v_data = v_data/v_h
+
+v1_data = v_data[:,0:pps]
+v2_data = v_data[:,pps:pps*2]
+
+
+rho_data = mData_dict['rho'][:,1,1,:-1]
+#rho_max = np.max(rho_data)
+#rho_data = rho_data/rho_max
+
+phi_data = mData_dict['phi'][:,1,1,:-1]
+#phi_min = np.abs(np.min(phi_data))
+#phi_max = np.abs(np.max(phi_data))
+#phi_h = phi_min+phi_max
+#phi_data = (phi_data+phi_min)/phi_h
+
+fps = 10
+
+
+
+fig = plt.figure(DH.figureNo+1)
+p_ax = fig.add_subplot(1,1,1)
+line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',label='Beam 1, v=1')[0]
+line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',label='Beam 2, v=-1')[0]
+p_ax.set_xlim([0.0, L])
+p_ax.set_xlabel('$z$')
+p_ax.set_ylabel('$v_z$')
+p_ax.set_ylim([-0.5, 0.5])
+p_ax.set_title('Two stream instability phase space, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+p_ax.legend()
+
+fig2 = plt.figure(DH.figureNo+2)
+dist_ax = fig2.add_subplot(1,1,1)
+rho_line = dist_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
+phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
+dist_ax.set_xlim([0.0, L])
+dist_ax.set_xlabel('$z$')
+dist_ax.set_ylabel('$rho_z$/$\phi_z$')
+dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+dist_ax.legend()
+
+
+
+# Setting data/line lists:
+pdata = [p1_data,p2_data]
+vdata = [v1_data,v2_data]
+phase_lines = [line_p1,line_p2]
+
+
+xdata = [Z,Z]
+ydata = [rho_data,phi_data]
+lines = [rho_line,phi_line]
+
+# Creating the Animation object
+phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples, 
+                                   fargs=(pdata,vdata,phase_lines),
+                                   interval=1000/fps)
+
+
+dist_ani = animation.FuncAnimation(fig2, update_lines, DH.samples, 
+                                   fargs=(xdata,ydata,lines),
+                                   interval=1000/fps)
+
+
 phase_ani.save(sim_name+'_phase.mp4')
+dist_ani.save(sim_name+'_dist.mp4')
 
 plt.show()
-
-"""
-fig = plt.figure(DH.figureNo+1)
-for ts in range(0,DH.samples):
-    print(ts)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.scatter(pData_dict['pos'][ts,:,2],pData_dict['vel'][ts,:,2],label=str(ts))
-    ax.set_xscale('linear')
-    ax.set_xlabel('$z$')
-    ax.set_yscale('linear')
-    ax.set_ylabel('vz')
-    ax.legend()
-    plt.show()
-    plt.pause(1/(DH.samples/fps))
-
-
-    fig = plt.figure(DH.figureNo+2)
-    ax = fig.add_subplot(1, 1, 1)
-    for ts in tsPlots:
-        ax.plot(Z,mData_dict['rho'][ts,1,1,:-1],label=str(ts))
-    ax.set_xscale('linear')
-    ax.set_xlabel('$z$')
-    ax.set_yscale('linear')
-    ax.set_ylabel(r'$\rho $')
-    ax.legend()
-    
-    fig = plt.figure(DH.figureNo+3)
-    ax = fig.add_subplot(1, 1, 1)
-    for ts in tsPlots:
-        ax.plot(Z,mData_dict['phi'][ts,1,1,:-1],label=str(ts))
-    ax.set_xscale('linear')
-    ax.set_xlabel('$z$')
-    ax.set_yscale('linear')
-    ax.set_ylabel(r'$\phi $')
-    ax.legend()
-    
-    fig = plt.figure(DH.figureNo+4)
-    ax = fig.add_subplot(1, 1, 1)
-    for ts in tsPlots:
-        ax.plot(Z,mData_dict['E'][ts,2,1,1,:-1],label=str(ts))
-    ax.set_xscale('linear')
-    ax.set_xlabel('$z$')
-    ax.set_yscale('linear')
-    ax.set_ylabel(r'$E_z $')
-    ax.legend()
-    """
