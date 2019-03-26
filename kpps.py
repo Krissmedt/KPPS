@@ -8,7 +8,6 @@ from particleLoader import particleLoader as pLoader_class
 from meshLoader import meshLoader
 from controller import controller
 from dataHandler2 import dataHandler2 as dataHandler
-from caseHandler import caseHandler
 from kpps_analysis import kpps_analysis
 
 class kpps:
@@ -17,7 +16,7 @@ class kpps:
         self.speciesSettings = []
         self.pLoaderSettings = []
         self.meshSettings = {}
-        self.caseSettings = {}
+        self.mLoaderSettings = {}
         self.analysisSettings = {}
         self.dataSettings = {}
         
@@ -66,7 +65,7 @@ class kpps:
         
         fields = mesh(**self.meshSettings)
         
-        mLoader = meshLoader(**self.caseSettings)
+        mLoader = meshLoader(**self.mLoaderSettings)
         
         analyser = kpps_analysis(simulationManager=sim,
                                  **self.analysisSettings)

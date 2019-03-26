@@ -41,7 +41,7 @@ loader1_params = {}
 species_params = []
 loader_params = []
 mesh_params = {}
-case_params = {}
+mLoader_params = {}
 analysis_params = {}
 data_params = {}
 
@@ -69,12 +69,12 @@ loader_params = [loader1_params]
 mesh_params['node_charge'] = ppc*beam1_params['q']
 
 
-case_params['zlimits'] = [0,L]
+mLoader_params['zlimits'] = [0,L]
 
-case_params['mesh_init'] = 'box'
-case_params['resolution'] = [2,2,res]
-#case_params['BC_function'] = bc_pot
-case_params['store_node_pos'] = False
+mLoader_params['mesh_init'] = 'box'
+mLoader_params['resolution'] = [2,2,res]
+#mLoader_params['BC_function'] = bc_pot
+mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_synced'
@@ -116,7 +116,7 @@ model = dict(simSettings=sim_params,
              pLoaderSettings=loader_params,
              meshSettings=mesh_params,
              analysisSettings=analysis_params,
-             caseSettings=case_params,
+             mLoaderSettings=mLoader_params,
              dataSettings=data_params)
 
 if simulate == True:
