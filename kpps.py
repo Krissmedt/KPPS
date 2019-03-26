@@ -4,7 +4,9 @@
 import copy as cp
 from species import species as species_class
 from mesh import mesh
-from simulationManager import simulationManager
+from particleLoader import particleLoader as pLoader_class
+from meshLoader import meshLoader
+from controller import controller
 from dataHandler2 import dataHandler2 as dataHandler
 from caseHandler import caseHandler
 from kpps_analysis import kpps_analysis
@@ -13,6 +15,7 @@ class kpps:
     def __init__(self,**kwargs):          
         self.simSettings = {}
         self.speciesSettings = []
+        self.pLoaderSettings = []
         self.meshSettings = {}
         self.caseSettings = {}
         self.analysisSettings = {}
@@ -30,9 +33,13 @@ class kpps:
             self.meshSettings = kwargs['meshSettings']
         self.simSettings['meshSettings'] = self.meshSettings
             
-        if 'caseSettings' in kwargs:
-            self.caseSettings = kwargs['caseSettings']
-        self.simSettings['caseSettings'] = self.caseSettings
+        if 'pLoaderSettings' in kwargs:
+            self.pLoaderSettings = kwargs['pLoaderSettings']
+        self.simSettings['pLoaderSettings'] = self.pLoaderSettings
+        
+        if 'mLoaderSettings' in kwargs:
+            self.mLoaderSettings = kwargs['mLoaderSettings']
+        self.simSettings['mLoaderSettings'] = self.mLoaderSettings
             
         if 'analysisSettings' in kwargs:
             self.analysisSettings = kwargs['analysisSettings']
@@ -45,18 +52,21 @@ class kpps:
             
     def run(self):
         ## Load required modules
+        sim = controller(**self.simSettings)
+            
         species_list = []
         for setting in self.speciesSettings:
             species = species_class(**setting)
             species_list.append(species)
             
-        fields = mesh(**self.meshSettings)
-        sim = simulationManager(**self.simSettings)
+        pLoader_list = []
+        for setting in self.pLoaderSettings:
+            pLoader = pLoader_class(**setting)
+            pLoader_list.append(pLoader)
         
-        case = caseHandler(species_list=species_list,
-                           mesh=fields,
-                           sim=sim,
-                           **self.caseSettings)
+        fields = mesh(**self.meshSettings)
+        
+        mLoader = meshLoader(**self.caseSettings)
         
         analyser = kpps_analysis(simulationManager=sim,
                                  **self.analysisSettings)
@@ -65,6 +75,11 @@ class kpps:
                                **self.dataSettings)
 
         ## Main time loop
+        for loader in pLoader_list:
+            loader.run(species_list,sim)
+            
+        mLoader.run(mesh,sim)
+
         analyser.run_preAnalyser(species_list,fields,sim)
         dHandler.run_setup()
         dHandler.run(species_list,fields,sim)
