@@ -26,12 +26,15 @@ res = 63
 dt = 0.01
 Nt = 100
 
+dx_mag = 0.0001
+dx_mode = 1
+
 v = 1
-vmod = 0.1
-a = 1
+dv_mag = 0
+dv_mode = 1
 
 simulate = True
-sim_name = 'two_stream_1d_integral_phi'
+sim_name = 'two_stream_1d_1beam'
 
 
 
@@ -59,11 +62,10 @@ beam1_params['nq'] = ppc*res
 beam1_params['mq'] = 1
 beam1_params['q'] = 1
 
-
 loader1_params['load_type'] = 'direct'
 loader1_params['speciestoLoad'] = [0]
-loader1_params['pos'] = particle_pos_init(ppc,res,L)
-loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,vmod,a)
+loader1_params['pos'] = particle_pos_init(ppc,res,L,dx_mag,dx_mode)
+loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
 
 species_params = [beam1_params]
 loader_params = [loader1_params]
@@ -138,8 +140,10 @@ Z = np.zeros((DH.samples,res+1),dtype=np.float)
 Z[:] = np.linspace(0,L,res+1)
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
-rho_max = np.max(rho_data)
-rho_data = rho_data/rho_max
+rho_min = np.abs(np.min(rho_data))
+rho_max = np.abs(np.max(rho_data))
+rho_h = rho_min+rho_max
+rho_data = (rho_data+rho_min)/rho_h
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
 phi_min = np.abs(np.min(phi_data))
@@ -157,6 +161,7 @@ p_ax.set_xlabel('$z$')
 p_ax.set_ylabel('$v_z$')
 p_ax.set_ylim([0, 2])
 p_ax.set_title('Two stream instability phase space, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+p_ax.legend()
 
 fig2 = plt.figure(DH.figureNo+2)
 dist_ax = fig2.add_subplot(1,1,1)
@@ -165,8 +170,9 @@ phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
 dist_ax.set_xlim([0.0, L])
 dist_ax.set_xlabel('$z$')
 dist_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
-#dist_ax.set_ylim([0, 1])
+dist_ax.set_ylim([-1, 1])
 dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+dist_ax.legend()
 
 # Setting data/line lists:
 xdata = [Z,Z]

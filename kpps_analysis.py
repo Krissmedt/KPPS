@@ -246,15 +246,19 @@ class kpps_analysis:
         return species_list, fields
     
     
-    def run_preAnalyser(self,species_list,fields,simulationManager,**kwargs):
+    def run_preAnalyser(self,species_list,mesh,**kwargs):
+        for species in species_list:
+            self.check_boundCross(species,mesh,**kwargs)
+            
         for method in self.preAnalysis_methods:
-            method(species_list, fields, simulationManager)
+            method(species_list, mesh,**kwargs)
 
-        return species_list, fields
+        return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
-        for method in self.postAnalysis_methods:
-            method(species_list,fields,simulationManager)
+        for species in species_list:
+            for method in self.postAnalysis_methods:
+                method(species_list,fields,simulationManager)
         
         return species_list, fields
     
@@ -353,7 +357,7 @@ class kpps_analysis:
         return fields
 
 
-    def poisson_cube2nd_setup(self,species,fields,simulationManager,**kwargs):
+    def poisson_cube2nd_setup(self,species,fields,controller=None,**kwargs):
         self.interior_shape = fields.res-1
         nx = self.interior_shape[0]
         ny = self.interior_shape[1]
@@ -375,13 +379,13 @@ class kpps_analysis:
         k[1] = -2*(1/fields.dy**2 + 1/fields.dz**2)
         k[2] = -2*(1/fields.dx**2 + 1/fields.dy**2 + 1/fields.dz**2)
         
-        diag = [1/fields.dz**2,k[simulationManager.ndim-1],1/fields.dz**2]
+        diag = [1/fields.dz**2,k[controller.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))
         self.FDMat = Dk
-        FDMatrix_adjust_z(species,fields,simulationManager)
+        FDMatrix_adjust_z(species,fields,controller)
         self.pot_diff_list.append(self.pot_differentiate_z)
         
-        if simulationManager.ndim >= 2:
+        if controller.ndim >= 2:
             self.interior_shape[1] += 1
             if self.mesh_boundary_y == 'open':
                 FDMatrix_adjust_y = self.poisson_M_adjust_2d
@@ -391,13 +395,13 @@ class kpps_analysis:
             I = sps.identity(nz)
             diag = sps.diags([1],shape=(ny,ny))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
-            FDMatrix_adjust_y(species,fields,simulationManager)
+            FDMatrix_adjust_y(species,fields,controller)
             
             Ek = sps.kron(diag,Dk) + sps.kron(off_diag,I/fields.dy**2)
             self.FDMat = Ek
             self.pot_diff_list.append(self.pot_differentiate_y)
             
-        if simulationManager.ndim == 3:
+        if controller.ndim == 3:
             self.interior_shape[0] += 1
             if self.mesh_boundary_y == 'open':
                 FDMatrix_adjust_x = self.poisson_M_adjust_3d
@@ -407,7 +411,7 @@ class kpps_analysis:
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
-            FDMatrix_adjust_x(species,fields,simulationManager)
+            FDMatrix_adjust_x(species,fields,controller)
             
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
@@ -423,7 +427,7 @@ class kpps_analysis:
                                            self.mi_z0:self.mi_zN])
 
         self.solver_pre(species,fields,simulationManager)
-        phi = sps.linalg.spsolve(self.FDMat,rho*self.unit_scale_poisson - fields.BC_vector)
+        phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
         
         fields.phi[self.mi_x0::self.mi_xN,
@@ -543,7 +547,7 @@ class kpps_analysis:
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
                 rpos = species.pos[pii] - O - li*mesh.dh
                 w = self.trilinear_weights(rpos,mesh.dh)
-                
+
                 mesh.q[li[0],li[1],li[2]] += species.q * w[0]
                 mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
                 mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
@@ -639,7 +643,7 @@ class kpps_analysis:
         return species
         
     
-    def collSetup(self,species,fields,simulationManager,**kwargs):
+    def collSetup(self,species,fields,controller=None,**kwargs):
         if self.nodeType == 'lobatto':
             self.ssi = 1    #Set sweep-start-index 'ssi'
             self.collocationClass = CollGaussLobatto
@@ -863,16 +867,16 @@ class kpps_analysis:
                 method(species,mesh,**kwargs)
         return species
     
-    def periodic_particles_x(self,species,mesh):    
+    def periodic_particles_x(self,species,mesh,**kwargs):    
         self.periodic_particles(species,0,mesh.xlimits)
         
-    def periodic_particles_y(self,species,mesh):    
+    def periodic_particles_y(self,species,mesh,**kwargs):    
         self.periodic_particles(species,1,mesh.ylimits)
         
-    def periodic_particles_z(self,species,mesh):    
+    def periodic_particles_z(self,species,mesh,**kwargs):  
         self.periodic_particles(species,2,mesh.zlimits)
     
-    def periodic_particles(self,species,axis,limits):
+    def periodic_particles(self,species,axis,limits,**kwargs):
         for pii in range(0,species.nq):
             if species.pos[pii,axis] < limits[0]:
                 overshoot = limits[0]-species.pos[pii,axis]
@@ -985,7 +989,7 @@ class kpps_analysis:
         self.v_con[k-1,m] = np.average(np.abs(vn[:,m+1] - v[:,m+1]))
         
         
-    def display_residuals(self,species,fields,simulationManager):
+    def display_residuals(self,species,fields,**kwargs):
         print("Position convergence:")
         print(self.x_con)
         
@@ -1011,7 +1015,7 @@ class kpps_analysis:
         return u
     
     
-    def energy_calc_penning(self,species_list,fields,simulationManager,**kwargs):
+    def energy_calc_penning(self,species_list,fields,**kwargs):
         for species in species_list:
             x = self.toVector(species.pos)
             v = self.toVector(species.vel)
@@ -1022,7 +1026,7 @@ class kpps_analysis:
         return species_list
     
     
-    def centreMass(self,species_list,fields,simulationManager,**kwargs):
+    def centreMass(self,species_list,fields,**kwargs):
         for species in species_list:
             nq = np.float(species.nq)
             mq = np.float(species.mq)
@@ -1034,8 +1038,8 @@ class kpps_analysis:
         return species_list
         
 
-    def rhs_tally(self,species_list,fields,simulationManager):
-        rhs_eval = self.rhs_dt * simulationManager.tSteps
+    def rhs_tally(self,species_list,fields,controller=None):
+        rhs_eval = self.rhs_dt * controller.tSteps
         simulationManager.rhs_eval = rhs_eval
         
         return rhs_eval

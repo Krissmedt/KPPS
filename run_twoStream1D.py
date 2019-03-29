@@ -1,5 +1,6 @@
 from kpps import kpps
 from math import sqrt, fsum, pi, exp, cos, sin, floor
+from decimal import Decimal
 import io 
 import pickle as pk
 import matplotlib.pyplot as plt
@@ -20,31 +21,66 @@ def update_lines(num, xdata,ydata, lines):
         
     return lines
 
+def update_phase(num,xdata,ydata,lines):
+    t = '%.1E' % Decimal(str(num*dt))
+    time = r't = '+ t
+    p_text.set_text(time)
+    
+    lines = update_lines(num,xdata,ydata,lines)
+    
+    return lines
+
+def update_dist(num,xdata,ydata,lines):
+    for ydat in ydata:
+        ymin = np.min(ydat[num,:])
+        ymax = np.max(ydat[num,:])
+        ydat[num,:] = ydat[num,:] - ymin
+        yh = ymax-ymin + 0.0001
+        ydat[num,:] = ydat[num,:]/yh
+    
+    mintext = '%.2E' % Decimal(str(ymin))
+    maxtext = '%.2E' % Decimal(str(ymax))
+    t = '%.1E' % Decimal(str(num*dt))
+    phi_range = r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']'
+    dist_text.set_text(phi_range)
+        
+    lines = update_lines(num,xdata,ydata,lines)
+    
+    return lines
+
 
 ppc = 40
 L = 2*pi
 res = 63
-dt = 0.01
+dt = 0.1
 Nt = 1000
+tend = 30
+
+dx_mag = 0.0001
+dx_mode = 1
 
 v = 1
-vmod = 0.1
-a = 1
+dv_mag = 0
+dv_mode = 1
 
+a = -1
 omega = 1
 
 nq = ppc*res
-q = omega**2 *(1/1) * 1 * L/(nq/2)
+q = omega*omega *(1/a) * 1 * L/(nq/2)
 
 simulate = True
-sim_name = 'two_stream_1d_integral_phi'
+sim_name = 'two_stream_1d'
 
 
 ############################ Setup and Run ####################################
 sim_params = {}
-species_params = {}
+beam1_params = {}
+loader1_params = {}
+beam2_params = {}
+loader2_params = {}
 mesh_params = {}
-case_params = {}
+mLoader_params = {}
 analysis_params = {}
 data_params = {}
 
@@ -52,24 +88,39 @@ sim_params['tSteps'] = Nt
 sim_params['simID'] = sim_name
 sim_params['t0'] = 0
 sim_params['dt'] = dt
+#sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
+sim_params['zlimits'] = [0,L]
 
-species_params['nq'] = nq
-species_params['q'] = q
-species_params['mq'] = species_params['q']
+beam1_params['name'] = 'beam1'
+beam1_params['nq'] = np.int(ppc/2*res)
+beam1_params['a'] = a
+beam1_params['q'] = q
 
-mesh_params['node_charge'] = ppc*species_params['q']
+loader1_params['load_type'] = 'direct'
+loader1_params['speciestoLoad'] = [0]
+loader1_params['pos'] = particle_pos_init(ppc/2,res,L,dx_mag,dx_mode)
+loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
 
-case_params['particle_init'] = 'direct'
-case_params['pos'] = particle_pos_init_2sp(ppc,res,L,dist_type='linear')
-case_params['vel'] = particle_vel_init_2sp(case_params['pos'],v,vmod,a)
-case_params['zlimits'] = [0,L]
+beam2_params['name'] = 'beam2'
+beam2_params['nq'] = np.int(ppc/2*res)
+beam2_params['a'] = a
+beam2_params['q'] = q
 
-case_params['mesh_init'] = 'box'
-case_params['resolution'] = [2,2,res]
-#case_params['BC_function'] = bc_pot
-case_params['store_node_pos'] = False
+loader2_params['load_type'] = 'direct'
+loader2_params['speciestoLoad'] = [1]
+loader2_params['pos'] = particle_pos_init(ppc/2,res,L,-dx_mag,dx_mode)
+loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
+
+species_params = [beam1_params,beam2_params]
+loader_params = [loader1_params,loader2_params]
+
+mesh_params['node_charge'] = ppc*beam1_params['q']
+mLoader_params['load_type'] = 'box'
+mLoader_params['resolution'] = [2,2,res]
+#mLoader_params['BC_function'] = bc_pot
+mLoader_params['store_node_pos'] = True
 
 analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_synced'
@@ -108,9 +159,10 @@ data_params['plot_params'] = plot_params
 ## Numerical solution ##
 model = dict(simSettings=sim_params,
              speciesSettings=species_params,
+             pLoaderSettings=loader_params,
              meshSettings=mesh_params,
              analysisSettings=analysis_params,
-             caseSettings=case_params,
+             mLoaderSettings=mLoader_params,
              dataSettings=data_params)
 
 if simulate == True:
@@ -121,135 +173,74 @@ else:
     DH = dataHandler2()
     DH.load_sim(sim_name=sim_name,overwrite=True)
 
-####################### Analysis and Visualisation ############################
-pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
-mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
-
-Z = np.linspace(0,L,res+1)
-
-pps = np.int(ppc*res/2)
-p1_data = pData_dict['pos'][:,0:pps,2]
-p2_data = pData_dict['pos'][:,pps:pps*2,2]
-
-v_data = pData_dict['vel'][:,:,2] 
-v_max = np.abs(np.max(v_data))
-v_min = np.abs(np.min(v_data))
-v_h = v_max+v_min
-v_data = v_data/v_h
-
-v1_data = v_data[:,0:pps]
-v2_data = v_data[:,pps:pps*2]
-
-fps = 10
-
-# Attaching 3D axis to the figure
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-
-
-# Creating fifty line objects.
-# NOTE: Can't pass empty arrays into 3d version of plot()
-line_p1 = ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo')[0]
-line_p2 = ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro')[0]
-
-# Setting the axes properties
-ax.set_xlim([0.0, L])
-ax.set_xlabel('$z$')
-
-ax.set_ylabel('$v_z$')
-ax.set_ylim([-0.75, 0.75])
-ax.set_title('Phase space')
-
-# Setup data/line lists
-pps = np.int(ppc*res/2)
-xdata = [p1_data,p2_data]
-ydata = [v1_data,v2_data]
-lines = [line_p1,line_p2]
-
-# Creating the Animation object
-phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples, 
-                                   fargs=(xdata,ydata,lines),
-                                   interval=1000/fps)
-
 
 ####################### Analysis and Visualisation ############################
-pData_dict = DH.load_p(['pos','vel','E'],sim_name=sim_name)
-mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+pData_list = DH.load_p(['pos','vel','E'],species=['beam1','beam2'],sim_name=sim_name)
 
-#tsPlots = [ts for ts in range(Nt)]
-tsPlots = [0,floor(Nt/4),floor(2*Nt/4),floor(3*Nt/4),-1]
+p1Data_dict = pData_list[0]
+p2Data_dict = pData_list[1]
+
+mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
 
 Z = np.zeros((DH.samples,res+1),dtype=np.float)
 Z[:] = np.linspace(0,L,res+1)
 
-pps = np.int(ppc*res/2)
-p1_data = pData_dict['pos'][:,0:pps,2]
-p2_data = pData_dict['pos'][:,pps:pps*2,2]
+p1_data = p1Data_dict['pos'][:,:,2]
+p2_data = p2Data_dict['pos'][:,:,2]
 
-v_data = pData_dict['vel'][:,:,2] 
-v_max = np.abs(np.max(v_data))
-v_min = np.abs(np.min(v_data))
-v_h = v_max+v_min
-v_data = v_data/v_h
+v1_data = p1Data_dict['vel'][:,:,2] 
+v2_data = p2Data_dict['vel'][:,:,2] 
 
-v1_data = v_data[:,0:pps]
-v2_data = v_data[:,pps:pps*2]
-
+v1_max = np.max(v1_data)
+v2_min = np.min(v2_data)
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
-#rho_max = np.max(rho_data)
-#rho_data = rho_data/rho_max
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
-#phi_min = np.abs(np.min(phi_data))
-#phi_max = np.abs(np.max(phi_data))
-#phi_h = phi_min+phi_max
-#phi_data = (phi_data+phi_min)/phi_h
 
 fps = 10
 
-
-
-fig = plt.figure(DH.figureNo+1)
+fig = plt.figure(DH.figureNo+3,dpi=150)
 p_ax = fig.add_subplot(1,1,1)
 line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',label='Beam 1, v=1')[0]
 line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',label='Beam 2, v=-1')[0]
+p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
 p_ax.set_xlim([0.0, L])
 p_ax.set_xlabel('$z$')
 p_ax.set_ylabel('$v_z$')
-p_ax.set_ylim([-0.5, 0.5])
+p_ax.set_ylim([-4,4])
 p_ax.set_title('Two stream instability phase space, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
 p_ax.legend()
-
-fig2 = plt.figure(DH.figureNo+2)
-dist_ax = fig2.add_subplot(1,1,1)
-rho_line = dist_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
-phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
-dist_ax.set_xlim([0.0, L])
-dist_ax.set_xlabel('$z$')
-dist_ax.set_ylabel('$rho_z$/$\phi_z$')
-dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
-dist_ax.legend()
-
-
 
 # Setting data/line lists:
 pdata = [p1_data,p2_data]
 vdata = [v1_data,v2_data]
 phase_lines = [line_p1,line_p2]
 
+fig2 = plt.figure(DH.figureNo+4,dpi=150)
+dist_ax = fig2.add_subplot(1,1,1)
+rho_line = dist_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
+phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
+dist_text = dist_ax.text(.05,.05,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
+dist_ax.set_xlim([0.0, L])
+dist_ax.set_xlabel('$z$')
+dist_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
+dist_ax.set_ylim([-0.2, 1.2])
+dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+dist_ax.legend()
 
+# Setting data/line lists:
 xdata = [Z,Z]
 ydata = [rho_data,phi_data]
 lines = [rho_line,phi_line]
 
 # Creating the Animation object
-phase_ani = animation.FuncAnimation(fig, update_lines, DH.samples, 
+phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples, 
                                    fargs=(pdata,vdata,phase_lines),
                                    interval=1000/fps)
 
 
-dist_ani = animation.FuncAnimation(fig2, update_lines, DH.samples, 
+dist_ani = animation.FuncAnimation(fig2, update_dist, DH.samples, 
                                    fargs=(xdata,ydata,lines),
                                    interval=1000/fps)
 
