@@ -420,13 +420,13 @@ class kpps_analysis:
         return self.FDMat
     
         
-    def poisson_cube2nd(self,species,fields,simulationManager,**kwargs):
+    def poisson_cube2nd(self,species_list,fields,simulationManager,**kwargs):
         
         rho = self.meshtoVector(fields.rho[self.mi_x0:self.mi_xN,
                                            self.mi_y0:self.mi_yN,
                                            self.mi_z0:self.mi_zN])
 
-        self.solver_pre(species,fields,simulationManager)
+        self.solver_pre(species_list,fields,simulationManager)
         phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
         
@@ -434,10 +434,10 @@ class kpps_analysis:
                    self.mi_y0:self.mi_yN,
                    self.mi_z0:self.mi_zN] = phi
 
-        self.solver_post(species,fields,simulationManager)
-        
+        self.solver_post(species_list,fields,simulationManager)
         for nd in range(0,simulationManager.ndim):
             self.pot_diff_list[nd](fields)
+
             
         return fields
         
@@ -887,6 +887,21 @@ class kpps_analysis:
                 species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
         
         
+    def simple_1d(self,species,mesh,controller):
+        self.mi_z0 = 0
+        FDMat = self.FDMat.toarray()
+        
+        FDMat[0,1] = 1/mesh.dz**2
+        FDMat[-1,0] = 1/mesh.dz**2
+
+        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
+        BC_vector[1:] = mesh.BC_vector
+        mesh.BC_vector = BC_vector
+                
+        self.FDMat = sps.csr_matrix(FDMat)
+
+        self.solver_post = self.mirrored_boundary_z
+        
 
     def fixed_phi_1d(self,species,mesh,controller):
         self.mi_z0 = 0
@@ -900,9 +915,6 @@ class kpps_analysis:
         BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
         
-        BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
-        BC_vector[1:] = mesh.BC_vector
-        mesh.BC_vector = BC_vector
         
         self.FDMat = sps.csr_matrix(FDMat)
         

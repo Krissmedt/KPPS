@@ -70,7 +70,7 @@ loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode
 species_params = [beam1_params]
 loader_params = [loader1_params]
 
-mesh_params['node_charge'] = ppc*beam1_params['q']
+mesh_params['node_charge'] = 2*ppc*q
 mLoader_params['zlimits'] = [0,L]
 mLoader_params['load_type'] = 'box'
 mLoader_params['resolution'] = [2,2,res]

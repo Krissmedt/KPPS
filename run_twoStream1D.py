@@ -49,11 +49,11 @@ def update_dist(num,xdata,ydata,lines):
     return lines
 
 
-ppc = 40
+ppc = 20
 L = 2*pi
-res = 63
+res = 64
 dt = 0.1
-Nt = 1000
+Nt = 500
 tend = 30
 
 dx_mag = 0.0001
@@ -70,7 +70,7 @@ nq = ppc*res
 q = omega*omega *(1/a) * 1 * L/(nq/2)
 
 simulate = True
-sim_name = 'two_stream_1d'
+sim_name = 'two_stream_1d_simple'
 
 
 ############################ Setup and Run ####################################
@@ -94,29 +94,30 @@ sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
 
 beam1_params['name'] = 'beam1'
-beam1_params['nq'] = np.int(ppc/2*res)
-beam1_params['a'] = a
+beam1_params['nq'] = np.int(ppc*res)
+#beam1_params['a'] = a
+beam1_params['mq'] = -q
 beam1_params['q'] = q
-
 loader1_params['load_type'] = 'direct'
 loader1_params['speciestoLoad'] = [0]
-loader1_params['pos'] = particle_pos_init(ppc/2,res,L,dx_mag,dx_mode)
+loader1_params['pos'] = particle_pos_init(ppc,res,L,dx_mag,dx_mode)
 loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
 
 beam2_params['name'] = 'beam2'
-beam2_params['nq'] = np.int(ppc/2*res)
-beam2_params['a'] = a
+beam2_params['nq'] = np.int(ppc*res)
+#beam2_params['a'] = a
+beam2_params['mq'] = -q
 beam2_params['q'] = q
 
 loader2_params['load_type'] = 'direct'
 loader2_params['speciestoLoad'] = [1]
-loader2_params['pos'] = particle_pos_init(ppc/2,res,L,-dx_mag,dx_mode)
+loader2_params['pos'] = particle_pos_init(ppc,res,L,-dx_mag,dx_mode)
 loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
 
 species_params = [beam1_params,beam2_params]
 loader_params = [loader1_params,loader2_params]
 
-mesh_params['node_charge'] = ppc*beam1_params['q']
+mesh_params['node_charge'] = 2*ppc*q
 mLoader_params['load_type'] = 'box'
 mLoader_params['resolution'] = [2,2,res]
 #mLoader_params['BC_function'] = bc_pot
@@ -135,7 +136,7 @@ analysis_params['field_type'] = 'pic'
 analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
-analysis_params['poisson_M_adjust_1d'] = 'integral_phi_1d'
+analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -197,6 +198,7 @@ v2_min = np.min(v2_data)
 rho_data = mData_dict['rho'][:,1,1,:-1]
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
+
 
 fps = 10
 
