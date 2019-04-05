@@ -102,17 +102,7 @@ class dataHandler2:
                 self.dataFoldername = self.mkDataDir(self.dataFoldername)
                 self.mkDataDir(self.vtkFoldername)
         
-        self.controller_obj.simID = self.dataFoldername
-        
-        try:
-            sim_filename = self.dataFoldername + "/sim"
-            sim_file = io.open(sim_filename,mode='wb')
-            pk.dump(self.controller_obj,sim_file)
-            
-        except FileNotFoundError:
-            print("DataHandler: No simulation folder found, make sure either write or "  
-                  + "write_vtk is set to true, cancelling run.")
-            raise SystemExit(0)       
+        self.controller_obj.simID = self.dataFoldername  
             
         
     def dumper(self,species_list,fields,simulationManager):
@@ -140,9 +130,14 @@ class dataHandler2:
         
 ######################### Post-Run Functionality ##############################
         
-    def post(self,species_list,fields,simulationManager):
+    def post(self,species_list,fields,controller):
         for method in self.postOps:
-            method(species_list,fields,simulationManager)
+            method(species_list,fields,controller)
+            
+        sim_filename = self.dataFoldername + "/sim"
+        sim_file = io.open(sim_filename,mode='wb')
+        self.controller_obj = controller
+        pk.dump(controller,sim_file)
             
     def load_sim(self,sim_name=None,overwrite=False):
         try:
@@ -189,19 +184,19 @@ class dataHandler2:
         for key, value in return_dict.items():
             return_dict[key] = np.array(value)
             
-        return return_dict
+        return return_dict, sim
         
     def load_p(self,variables,species=['none'],sim_name=None,overwrite=False):
         species_list = []
         for spec in species:
             dtype = 'p_' + spec
-            species_dict = self.load(dtype,variables,sim_name=sim_name)
+            species_dict, sim = self.load(dtype,variables,sim_name=sim_name)
             species_list.append(species_dict)
             
         return species_list
     
     def load_m(self,variables,sim_name=None,overwrite=False):
-        return_dict = self.load('m',variables,sim_name=sim_name)
+        return_dict, sim = self.load('m',variables,sim_name=sim_name)
         return return_dict
         
     def load_parameters(self,modules=None,sim_name=None):

@@ -2,68 +2,45 @@ import io
 import pickle as pk
 import numpy as np
 import time
-from simulationManager import simulationManager as simMan
+import math
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
+from mesh import mesh
 
-# Fixing random state for reproducibility
-np.random.seed(19680801)
+def update_hist(num, data, histogram_axis):
+    hist_ax.cla()
+    hist_ax.hist(data[num,:],100)
+    hist_ax.set_xlim([0,10])
+    hist_ax.set_xlabel('No.')
+    hist_ax.set_ylabel(r'f')
+    hist_ax.set_ylim([0, 20])
 
-
-def Gen_RandLine(length, dims=2):
-    """
-    Create a line using a random walk algorithm
-
-    length is the number of points for the line.
-    dims is the number of dimensions the line has.
-    """
-    lineData = np.empty((dims, length))
-    lineData[:, 0] = np.random.rand(dims)
-    for index in range(1, length):
-        # scaling the random numbers by 0.1 so
-        # movement is small compared to position.
-        # subtraction by 0.5 is to change the range to [-0.5, 0.5]
-        # to allow a line to move backwards.
-        step = ((np.random.rand(dims) - 0.5) * 0.1)
-        lineData[:, index] = lineData[:, index - 1] + step
-
-    return lineData
+    return hist_ax
 
 
-def update_lines(num, dataLines, lines):
-    for line, data in zip(lines, dataLines):
-        # NOTE: there is no .set_data() for 3 dim data...
-        line.set_data(data[0:2, :num])
-        line.set_3d_properties(data[2, :num])
-    return lines
+N = 1000
+Nt = 100
 
-# Attaching 3D axis to the figure
-fig = plt.figure()
-ax = p3.Axes3D(fig)
+data = np.zeros((Nt,N),dtype=np.float)
 
-# Fifty lines of random 3-D lines
-data = [Gen_RandLine(25, 3) for index in range(50)]
+for ti in range(Nt):
+    data[ti,:] = np.random.random(N) * 10
 
-# Creating fifty line objects.
-# NOTE: Can't pass empty arrays into 3d version of plot()
-lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1])[0] for dat in data]
-print(data[0].shape)
+fig = plt.figure(1,dpi=150)
+hist_ax = fig.add_subplot(1,1,1)
+#histogram = hist_ax.hist(data[0,:],bins=100,label=r'data histogram')[0]
 
-# Setting the axes properties
-ax.set_xlim3d([0.0, 1.0])
-ax.set_xlabel('X')
 
-ax.set_ylim3d([0.0, 1.0])
-ax.set_ylabel('Y')
 
-ax.set_zlim3d([0.0, 1.0])
-ax.set_zlabel('Z')
 
-ax.set_title('3D Test')
-
+fps = 10
 # Creating the Animation object
-line_ani = animation.FuncAnimation(fig, update_lines, 25, fargs=(data, lines),
-                                   interval=50, blit=True)
+hist_ani = animation.FuncAnimation(fig, update_hist, Nt, 
+                                   fargs=(data,hist_ax),
+                                   interval=1000/fps)
 
+
+
+hist_ani.save('hist.mp4')
 plt.show()

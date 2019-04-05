@@ -1,7 +1,9 @@
 ################### Kris' Plasma Particle Simulator (KPPS) ####################
 
 ## Dependencies
+import matplotlib.pyplot as plt
 import copy as cp
+import time
 from species import species as species_class
 from mesh import mesh
 from particleLoader import particleLoader as pLoader_class
@@ -50,8 +52,9 @@ class kpps:
             
             
     def run(self):
+        tStart = time.time()
+        
         ## Load required modules
-     
         sim = controller(**self.simSettings)
       
         species_list = []
@@ -80,23 +83,29 @@ class kpps:
             
         mLoader.run(fields,sim)
 
-        analyser.run_preAnalyser(species_list,fields,sim)
+        analyser.run_preAnalyser(species_list,fields,controller=sim)
 
         dHandler.run_setup()
-        dHandler.run(particles,fields,sim)
+        dHandler.run(species_list,fields,sim)
         sim.inputPrint()
-
+        
+        tRun = time.time()
         for ts in range(1,sim.tSteps+1):
             sim.updateTime()
-            analyser.run_fieldIntegrator(particles,fields,sim)
-            analyser.run_particleIntegrator(particles,fields,sim) 
-            analyser.runHooks(particles,fields,sim)
-            dHandler.run(particles,fields,sim)
+            analyser.run_fieldIntegrator(species_list,fields,sim)
+            analyser.run_particleIntegrator(species_list,fields,sim) 
+            analyser.runHooks(species_list,fields,sim)
+            dHandler.run(species_list,fields,sim)
 
-        
+
         ## Post-analysis and data plotting
-        analyser.run_postAnalyser(particles,fields,sim)
-        dHandler.post(particles,fields,sim)
+        analyser.run_postAnalyser(species_list,fields,sim)
+        
+        tStop = time.time()   
+        sim.setupTime = tRun-tStart 
+        sim.runTime = tStop-tRun
+        
+        dHandler.post(species_list,fields,sim)
         dHandler.plot()
 
         return dHandler

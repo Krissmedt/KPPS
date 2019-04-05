@@ -52,8 +52,8 @@ def update_dist(num,xdata,ydata,lines):
 ppc = 20
 L = 2*pi
 res = 64
-dt = 0.1
-Nt = 500
+dt = 0.5
+Nt = 60
 tend = 30
 
 dx_mag = 0.0001
@@ -69,8 +69,8 @@ omega = 1
 nq = ppc*res
 q = omega*omega *(1/a) * 1 * L/(nq/2)
 
-simulate = True
-sim_name = 'two_stream_1d_simple'
+simulate = False
+sim_name = 'two_stream_1d_simple_SDC(2)'
 
 
 ############################ Setup and Run ####################################
@@ -117,14 +117,14 @@ loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mod
 species_params = [beam1_params,beam2_params]
 loader_params = [loader1_params,loader2_params]
 
-mesh_params['node_charge'] = 2*ppc*q
+mesh_params['node_charge'] = -2*ppc*q
 mLoader_params['load_type'] = 'box'
 mLoader_params['resolution'] = [2,2,res]
 #mLoader_params['BC_function'] = bc_pot
 mLoader_params['store_node_pos'] = True
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_synced'
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
@@ -169,10 +169,12 @@ model = dict(simSettings=sim_params,
 if simulate == True:
     kppsObject = kpps(**model)
     DH = kppsObject.run()
-    sim_name = DH.controller_obj.simID
+    
+    sim = DH.controller_obj
+    sim_name = sim.simID
 else:
     DH = dataHandler2()
-    DH.load_sim(sim_name=sim_name,overwrite=True)
+    sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
 
 
 ####################### Analysis and Visualisation ############################
@@ -200,7 +202,7 @@ rho_data = mData_dict['rho'][:,1,1,:-1]
 phi_data = mData_dict['phi'][:,1,1,:-1]
 
 
-fps = 10
+fps = 2
 
 fig = plt.figure(DH.figureNo+3,dpi=150)
 p_ax = fig.add_subplot(1,1,1)
@@ -251,3 +253,6 @@ phase_ani.save(sim_name+'_phase.mp4')
 dist_ani.save(sim_name+'_dist.mp4')
 
 plt.show()
+
+print("Setup time = " + str(sim.setupTime))
+print("Run time = " + str(sim.runTime))

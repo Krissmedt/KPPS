@@ -14,6 +14,9 @@ class controller:
         self.dt = 1
         self.tSteps = 1
         
+        self.setupTime = 0
+        self.runTime = 0
+        
         self.xlimits = np.array([0,1],dtype=np.float)
         self.ylimits = np.array([0,1],dtype=np.float)
         self.zlimits = np.array([0,1],dtype=np.float)

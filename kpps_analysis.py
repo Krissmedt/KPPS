@@ -435,10 +435,10 @@ class kpps_analysis:
                    self.mi_z0:self.mi_zN] = phi
 
         self.solver_post(species_list,fields,simulationManager)
+
         for nd in range(0,simulationManager.ndim):
             self.pot_diff_list[nd](fields)
-
-            
+        
         return fields
         
     
@@ -447,9 +447,9 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
 
         #E-field x-component differentiation
-        fields.E[0,0,:,:] = -2*(fields.phi[0,:,:]-fields.phi[1,:,:])
-        fields.E[0,1:n[0]-1,:,:] = -(fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
-        fields.E[0,n[0]-1,:,:] = -2*(fields.phi[n[0]-2,:,:]-fields.phi[n[0]-1,:,:])
+        fields.E[0,0,:,:] = 2*(fields.phi[0,:,:]-fields.phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = (fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
+        fields.E[0,n[0]-1,:,:] = 2*(fields.phi[n[0]-2,:,:]-fields.phi[n[0]-1,:,:])
         fields.E[0,:,:,:]/(2*fields.dx)
 
         return fields
@@ -459,9 +459,9 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
         
         #E-field y-component differentiation
-        fields.E[1,:,0,:] = -2*(fields.phi[:,0,:]-fields.phi[:,1,:])
-        fields.E[1,:,1:n[1]-1,:] = -(fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
-        fields.E[1,:,n[1]-1,:] = -2*(fields.phi[:,n[1]-2,:]-fields.phi[:,n[1]-1,:])
+        fields.E[1,:,0,:] = 2*(fields.phi[:,0,:]-fields.phi[:,1,:])
+        fields.E[1,:,1:n[1]-1,:] = (fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
+        fields.E[1,:,n[1]-1,:] = 2*(fields.phi[:,n[1]-2,:]-fields.phi[:,n[1]-1,:])
         fields.E[1,:,:,:]/(2*fields.dy)
         
         return fields
@@ -472,9 +472,9 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
         
         #E-field z-component differentiation
-        fields.E[2,:,:,0] = -2*(fields.phi[:,:,0]-fields.phi[:,:,1])
-        fields.E[2,:,:,1:n[2]-1] = -(fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
-        fields.E[2,:,:,n[2]-1] = -2*(fields.phi[:,:,n[2]-2]-fields.phi[:,:,n[2]-1])
+        fields.E[2,:,:,0] = 2*(fields.phi[:,:,0]-fields.phi[:,:,1])
+        fields.E[2,:,:,1:n[2]-1] = (fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
+        fields.E[2,:,:,n[2]-1] = 2*(fields.phi[:,:,n[2]-2]-fields.phi[:,:,n[2]-1])
         fields.E[2,:,:,:]/(2*fields.dz)
         
         return fields
@@ -485,10 +485,10 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
 
         #E-field x-component differentiation
-        fields.E[0,0,:,:] = -(fields.phi[-3,:,:]-fields.phi[1,:,:])
-        fields.E[0,1:n[0]-1,:,:] = -(fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
+        fields.E[0,0,:,:] = (fields.phi[-3,:,:]-fields.phi[1,:,:])
+        fields.E[0,1:n[0]-1,:,:] = (fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
         fields.E[0,-2,:,:] = fields.E[0,0,:,:]
-        fields.E[0,:,:,:]/(2*fields.dx)
+        fields.E[0,:,:,:] = fields.E[0,:,:,:]/(2*fields.dx)
 
         return fields
     
@@ -497,10 +497,10 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
         
         #E-field y-component differentiation
-        fields.E[1,:,0,:] = -(fields.phi[:,-3,:]-fields.phi[:,1,:])
-        fields.E[1,:,1:n[1]-1,:] = -(fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
+        fields.E[1,:,0,:] = (fields.phi[:,-3,:]-fields.phi[:,1,:])
+        fields.E[1,:,1:n[1]-1,:] = (fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
         fields.E[1,:,-2,:] = fields.E[1,:,0,:]
-        fields.E[1,:,:,:]/(2*fields.dy)
+        fields.E[1,:,:,:] = fields.E[1,:,:,:]/(2*fields.dy)
         
         return fields
     
@@ -510,10 +510,10 @@ class kpps_analysis:
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
 
         #E-field z-component differentiation
-        fields.E[2,:,:,0] = -(fields.phi[:,:,-3]-fields.phi[:,:,1])
-        fields.E[2,:,:,1:n[2]-1] = -(fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
+        fields.E[2,:,:,0] = (fields.phi[:,:,-3]-fields.phi[:,:,1])
+        fields.E[2,:,:,1:n[2]-1] = (fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
         fields.E[2,:,:,-2] = fields.E[2,:,:,0]
-        fields.E[2,:,:,:]/(2*fields.dz)
+        fields.E[2,:,:,:] = fields.E[2,:,:,:]/(2*fields.dz)
         
         return fields
     
