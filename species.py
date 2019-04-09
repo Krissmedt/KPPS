@@ -16,6 +16,8 @@ class species:
         self.a = 1    #charge-to-mass ratio alpha
         self.energy = 0.
         self.cm = np.array([0,0,0])
+        self.KE = 0
+        self.KE_sum = 0
         
         
         ## Iterate through keyword arguments and store all in object (self)

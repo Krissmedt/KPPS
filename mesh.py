@@ -40,4 +40,6 @@ class mesh:
         self.phi = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.E = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.CE = 0
+        self.PE = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        self.PE_sum = 0
         self.B = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)

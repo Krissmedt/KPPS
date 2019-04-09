@@ -1037,7 +1037,19 @@ class kpps_analysis:
         
         return species_list
     
-    
+    def kinetic_energy(self,species_list,fields,controller,**kwargs):
+        for species in species_list:
+            species.KE = 0.5 * species.mq * np.linalg.norm(species.vel,ord=2,axis=1)
+            species.KE_sum = np.sum(species.KE)
+            
+        return species
+            
+    def field_energy(self,species_list,fields,controller,**kwargs):
+        fields.PE = 0.5*fields.rho*fields.phi
+        fields.PE_sum = np.sum(fields.PE[:-1,:-1,:-1])
+        
+        return fields
+        
     def centreMass(self,species_list,fields,**kwargs):
         for species in species_list:
             nq = np.float(species.nq)

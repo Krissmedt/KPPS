@@ -21,16 +21,16 @@ def update_lines(num, xdata,ydata, lines):
         
     return lines
 
-def update_phase(num,xdata,ydata,lines):
-    t = '%.1E' % Decimal(str(num*dt))
-    time = r't = '+ t
-    p_text.set_text(time)
+def update_phase(num,xdata,ydata,lines,KE):
+    t = '%.2E' % Decimal(str(num*dt))
+    text = r't = '+ t + '; KE = ' + str(KE[num])
+    p_text.set_text(text)
     
     lines = update_lines(num,xdata,ydata,lines)
     
     return lines
 
-def update_dist(num,xdata,ydata,lines):
+def update_dist(num,xdata,ydata,lines,PE):
     for ydat in ydata:
         ymin = np.min(ydat[num,:])
         ymax = np.max(ydat[num,:])
@@ -40,20 +40,35 @@ def update_dist(num,xdata,ydata,lines):
     
     mintext = '%.2E' % Decimal(str(ymin))
     maxtext = '%.2E' % Decimal(str(ymax))
-    t = '%.1E' % Decimal(str(num*dt))
-    phi_range = r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']'
-    dist_text.set_text(phi_range)
+    t = '%.2E' % Decimal(str(num*dt))
+    text = (r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']' 
+                 + '; PE = ' + str(PE[num]))
+    dist_text.set_text(text)
         
     lines = update_lines(num,xdata,ydata,lines)
     
     return lines
 
+def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
+    histogram_axis.cla()
+    histogram_axis.hist(data[num,:],bins)
+    histogram_axis.set_xlim([xmin,xmax])
+    histogram_axis.set_xlabel('No.')
+    histogram_axis.set_ylabel(r'f')
+    histogram_axis.set_ylim([0, ymax])
+    t = '%.2E' % Decimal(str(num*dt))
+    time = r't = '+ t
+    hist_text = histogram_axis.text(.05,.95,time,
+                                    transform=dist_ax.transAxes,
+                                    verticalalignment='top',fontsize=14)
+
+    return histogram_axis
 
 ppc = 20
 L = 2*pi
 res = 64
-dt = 0.5
-Nt = 60
+dt = 0.1
+Nt = 300
 tend = 30
 
 dx_mag = 0.0001
@@ -69,8 +84,8 @@ omega = 1
 nq = ppc*res
 q = omega*omega *(1/a) * 1 * L/(nq/2)
 
-simulate = False
-sim_name = 'two_stream_1d_simple_SDC(2)'
+simulate = True
+sim_name = 'two_stream_1d_simple'
 
 
 ############################ Setup and Run ####################################
@@ -124,7 +139,7 @@ mLoader_params['resolution'] = [2,2,res]
 mLoader_params['store_node_pos'] = True
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
@@ -137,6 +152,7 @@ analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
+analysis_params['hooks'] = ['kinetic_energy','field_energy']
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -178,12 +194,12 @@ else:
 
 
 ####################### Analysis and Visualisation ############################
-pData_list = DH.load_p(['pos','vel','E'],species=['beam1','beam2'],sim_name=sim_name)
+pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
 
 p1Data_dict = pData_list[0]
 p2Data_dict = pData_list[1]
 
-mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+mData_dict = DH.load_m(['phi','E','rho','PE_sum'],sim_name=sim_name)
 
 Z = np.zeros((DH.samples,res+1),dtype=np.float)
 Z[:] = np.linspace(0,L,res+1)
@@ -196,13 +212,14 @@ v2_data = p2Data_dict['vel'][:,:,2]
 
 v1_max = np.max(v1_data)
 v2_min = np.min(v2_data)
+KE_data = p1Data_dict['KE_sum'] + p2Data_dict['KE_sum']
 
 rho_data = mData_dict['rho'][:,1,1,:-1]
 
 phi_data = mData_dict['phi'][:,1,1,:-1]
+PE_data = mData_dict['PE_sum']
 
-
-fps = 2
+fps = 10
 
 fig = plt.figure(DH.figureNo+3,dpi=150)
 p_ax = fig.add_subplot(1,1,1)
@@ -233,6 +250,22 @@ dist_ax.set_ylim([-0.2, 1.2])
 dist_ax.set_title('Two stream instability potential, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
 dist_ax.legend()
 
+hist_data = np.concatenate((v1_data,v2_data),axis=1)
+fig3 = plt.figure(DH.figureNo+5,dpi=150)
+hist_ax = fig3.add_subplot(1,1,1)
+hist_text = hist_ax.text(.95,.95,'',transform=dist_ax.transAxes,verticalalignment='top',fontsize=14)
+hist_ymax = ppc*res
+hist_xmax = np.max(hist_data)
+hist_xmin = np.min(hist_data)
+n_bins = 40
+vmag0 = 0.5*(abs(2*v))
+min_vel = -3*vmag0
+hist_dv = (-2*min_vel)/n_bins
+hist_bins = []
+for b in range(0,n_bins):
+    hist_bins.append(min_vel+b*hist_dv)
+
+
 # Setting data/line lists:
 xdata = [Z,Z]
 ydata = [rho_data,phi_data]
@@ -240,18 +273,22 @@ lines = [rho_line,phi_line]
 
 # Creating the Animation object
 phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples, 
-                                   fargs=(pdata,vdata,phase_lines),
+                                   fargs=(pdata,vdata,phase_lines,KE_data),
                                    interval=1000/fps)
 
 
 dist_ani = animation.FuncAnimation(fig2, update_dist, DH.samples, 
-                                   fargs=(xdata,ydata,lines),
+                                   fargs=(xdata,ydata,lines,PE_data),
                                    interval=1000/fps)
 
+hist_ani = animation.FuncAnimation(fig3, update_hist, Nt, 
+                                   fargs=(hist_data,hist_ax,hist_bins,
+                                          hist_xmin,hist_xmax,hist_ymax),
+                                   interval=1000/fps)
 
 phase_ani.save(sim_name+'_phase.mp4')
 dist_ani.save(sim_name+'_dist.mp4')
-
+hist_ani.save(sim_name+'_hist.mp4')
 plt.show()
 
 print("Setup time = " + str(sim.setupTime))
