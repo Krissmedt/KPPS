@@ -24,7 +24,7 @@ ppc = 20
 L = 2*pi
 res = 63
 dt = 0.01
-Nt = 100
+Nt = 300
 
 dx_mag = 0.0001
 dx_mode = 1

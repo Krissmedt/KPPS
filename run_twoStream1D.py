@@ -67,8 +67,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 ppc = 20
 L = 2*pi
 res = 64
-dt = 0.1
-Nt = 300
+dt = 0.05
+Nt = 1000
 tend = 30
 
 dx_mag = 0.0001
@@ -80,12 +80,13 @@ dv_mode = 1
 
 a = -1
 omega = 1
+max_gRate = omega/2
 
 nq = ppc*res
 q = omega*omega *(1/a) * 1 * L/(nq/2)
 
 simulate = True
-sim_name = 'two_stream_1d_simple'
+sim_name = 'tsi_1d_simple_' + str(Nt) + '_' + str(Nt*dt) 
 
 
 ############################ Setup and Run ####################################
@@ -210,6 +211,15 @@ p2_data = p2Data_dict['pos'][:,:,2]
 v1_data = p1Data_dict['vel'][:,:,2] 
 v2_data = p2Data_dict['vel'][:,:,2] 
 
+vdiff = np.zeros((v1_data.shape[0]-1,v1_data.shape[1]),dtype=np.float)
+for ti in range(0,v1_data.shape[0]-1):
+    vdiff[ti,:] = v1_data[ti,:]-v1_data[ti+1,:]
+    
+max_vdiff = np.max(np.abs(vdiff))
+avg_vdiff = np.mean(np.abs(vdiff),axis=1)
+num_gRate = max_vdiff/dt
+num_gRate_avg = np.max(avg_vdiff)/dt
+
 v1_max = np.max(v1_data)
 v2_min = np.min(v2_data)
 KE_data = p1Data_dict['KE_sum'] + p2Data_dict['KE_sum']
@@ -219,7 +229,7 @@ rho_data = mData_dict['rho'][:,1,1,:-1]
 phi_data = mData_dict['phi'][:,1,1,:-1]
 PE_data = mData_dict['PE_sum']
 
-fps = 10
+fps = 1/sim.dt
 
 fig = plt.figure(DH.figureNo+3,dpi=150)
 p_ax = fig.add_subplot(1,1,1)
@@ -293,3 +303,5 @@ plt.show()
 
 print("Setup time = " + str(sim.setupTime))
 print("Run time = " + str(sim.runTime))
+#print("Maximum particle growth rate in beam 1 velocity: "+str(num_gRate))
+#print("Maximum average growth rate in beam 1 velocity: "+str(num_gRate_avg))
