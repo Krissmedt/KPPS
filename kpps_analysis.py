@@ -617,9 +617,9 @@ class kpps_analysis:
     
     def boris_staggered(self,species,mesh,simulationParameters,**kwargs):
         dt = simulationParameters.dt
-        alpha = species.nq/species.mq
+        alpha = species.a
 
-        self.fieldGather(species)
+        self.fieldGather(species,mesh)
         
         species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
         species.pos = species.pos + simulationParameters.dt * species.vel
@@ -993,6 +993,18 @@ class kpps_analysis:
         mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
         
 ################################ Hook methods #################################
+    def ES_vel_rewind(self,species_list,mesh,**kwargs):
+        try:
+            dt = kwargs['controller'].dt
+            
+            for species in species_list:
+                self.fieldGather(species,mesh)
+                species.vel = species.vel - species.E * species.q * dt
+
+        except (NameError, AttributeError):
+            print('No controller time-step specified, skipping velocity rewind.')
+        
+        
     def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
         self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
         self.x_res[k-1,m] = np.average(np.linalg.norm(xn[:,m+1]-xQuad))
