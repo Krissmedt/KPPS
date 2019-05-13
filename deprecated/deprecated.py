@@ -60,3 +60,57 @@ def poisson_cube2nd_setup_old(self,species,fields,simulationManager,**kwargs):
     
     self.Fk = Fk
     return self.Fk
+
+
+
+
+
+
+        for k in range(1,K+1):
+            #print("k = " + str(k))
+            
+            for m in range(self.ssi,M):
+                #print("m = " + str(m))
+                #Determine next node (m+1) positions
+                
+                sumSQ = 0
+                for l in range(1,M+1):
+                    F[:,l] = self.lorentzf(species,fields,x[:,l],v[:,l])
+                    sumSQ += SQ[m+1,l]*F[:,l]
+                
+                sumSX = 0
+                for l in range(1,m+1):
+                    sumSX += SX[m+1,l]*(self.lorentzf(species,fields,xn[:,l],vn[:,l]) - F[:,l])
+
+
+                xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
+                xn[:,m+1] = xQuad + sumSX 
+                
+                
+                #Determine next node (m+1) velocities
+                sumS = 0
+                for l in range(1,M+1):
+                    sumS += Smat[m+1,l] * F[:,l]
+                
+                vQuad = vn[:,m] + sumS
+                
+                ck_dm = -1/2 * (F[:,m+1]
+                        +F[:,m]) + 1/dm[m] * sumS
+                
+                #Sample the electric field at the half-step positions (yields form Nx3)
+                half_E = (self.gatherE(species,fields,xn[:,m])+self.gatherE(species,fields,xn[:,m+1]))/2
+                
+                
+                #Resort all other 3d vectors to shape Nx3 for use in Boris function
+                v_oldNode = self.toMatrix(vn[:,m])
+                ck_dm = self.toMatrix(ck_dm)
+                
+                v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
+                vn[:,m+1] = self.toVector(v_new)
+                
+                
+                self.calc_residuals(k,m,x,xn,xQuad,v,vn,vQuad)
+                
+                
+            x[:,:] = xn[:,:]
+            v[:,:] = vn[:,:]
