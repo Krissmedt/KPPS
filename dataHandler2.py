@@ -232,11 +232,11 @@ class dataHandler2:
             dtype = "p_" + spec
             if 'pos' not in variables:
                 variables.append('pos')
-                data = self.load(dtype,variables,sim_name=sim_name)
+                data,sim = self.load(dtype,variables,sim_name=sim_name)
                 variables.remove('pos')
             else:
-                data = self.load(dtype,variables,sim_name=sim_name)
-            
+                data,sim = self.load(dtype,variables,sim_name=sim_name)
+
             particles = self.set_taggedList(data,particles)
             
             for var in variables:
@@ -268,7 +268,7 @@ class dataHandler2:
     def trajectory_plot(self,species=['none'],particles=None,sim_name=None):
         for spec in species: 
             dtype = "p_" + spec
-            posData = self.load(dtype,['pos'],sim_name=0)
+            posData,sim = self.load(dtype,['pos'],sim_name=0)
             xArray = posData['pos'][:,:,0]
             yArray = posData['pos'][:,:,1]
             zArray = posData['pos'][:,:,2]

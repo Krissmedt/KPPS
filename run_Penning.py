@@ -13,7 +13,7 @@ sim_no = 0
 schemes = {'lobatto':'boris_SDC'}
 
 M = 3
-iterations = [3]
+iterations = [2]
 
 omegaB = 25.0
 omegaE = 4.9
@@ -21,43 +21,41 @@ epsilon = -1
 
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])              
-dt = np.array([0.01,0.005])
-
+dt = np.array([0.02,0.01,0.005])
+dt = np.array([0.01])
 
 sim_params = {}
 species_params = {}
-case_params = {}
+ploader_params = {}
 analysis_params = {}
 data_params = {}
 
+
 sim_params['t0'] = 0
-sim_params['tEnd'] = 1
+sim_params['tEnd'] = 0.01
 sim_params['percentBar'] = True
+sim_params['dimensions'] = 3
+sim_params['xlimits'] = [0,20]
+sim_params['ylimits'] = [0,20]
+sim_params['zlimits'] = [0,15]
 sim_params['simID'] = 'simple_penning'
 
-species_params['mq'] = 1
 species_params['q'] = 1
 species_params['a'] = 1
-
-case_params['dimensions'] = 3
-case_params['particle_init'] = 'direct'
-case_params['dx'] = 0.01
-case_params['dv'] = 5
-case_params['pos'] = np.array([[10,0,0]])
-case_params['vel'] = np.array([[100,0,100]])
-
-case_params['mesh_init'] = 'box'
-case_params['resolution'] = [1,2,3]
-case_params['store_node_pos'] = True
+mq = species_params['q']/species_params['a']
+ploader_params['load_type'] = 'direct'
+ploader_params['speciestoLoad'] = [0]
+ploader_params['pos'] = np.array([[10,0,0]])
+ploader_params['vel'] = np.array([[100,0,100]])
 
 H1 = epsilon*omegaE**2
 H = np.array([[H1,1,H1,1,-2*H1,1]])
-H = species_params['mq']/2 * np.diag(H[0])
+H = mq/2 * np.diag(H[0])
+
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = M
-
+analysis_params['K'] = 3
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'coulomb'
 analysis_params['external_fields'] = True
@@ -67,15 +65,18 @@ analysis_params['E_magnitude'] = -epsilon*omegaE**2/species_params['a']
 analysis_params['B_type'] = 'uniform'
 analysis_params['B_transform'] = [0,0,1]
 analysis_params['B_magnitude'] = omegaB/species_params['a']
+analysis_params['hooks'] = ['energy_calc_penning']
+analysis_params['H'] = H
 
 analysis_params['centreMass_check'] = True
 analysis_params['residual_check'] = False
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 2
+
+data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['write_vtk'] = False
-data_params['time_plotting'] = True
+data_params['time_plotting'] = False
 data_params['tagged_particles'] = 'all'
 data_params['time_plot_vars'] = ['pos']
 data_params['trajectory_plotting'] = True
@@ -95,9 +96,15 @@ plot_params['axes.titlepad'] = 10
 data_params['plot_params'] = plot_params
 
 
+species_params = [species_params]
+loader_params = [ploader_params]
+
+run_times_inner = np.zeros((dt.shape[0],len(iterations)),dtype=np.float)
+run_times = []
+
 ## Analytical solution ##
-x0 = case_params['pos']
-v0 = case_params['vel']
+x0 = ploader_params['pos']
+v0 = ploader_params['vel']
 omegaTilde = sqrt(-2 * epsilon) * omegaE
 omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
 omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
@@ -145,6 +152,7 @@ for key, value in schemes.items():
     analysis_params['particleIntegrator'] = value
     analysis_params['nodeType'] = key
     
+    j = 0
     for K in iterations:
         analysis_params['K'] = K
         for i in range(0,len(dt)):
@@ -164,11 +172,10 @@ for key, value in schemes.items():
             finalTs = floor(sim_params['tEnd']/dt[i])
             model = dict(simSettings=sim_params,
                          speciesSettings=species_params,
+                         pLoaderSettings=loader_params,
                          analysisSettings=analysis_params,
-                         caseSettings=case_params,
                          dataSettings=data_params)
             
-
             kppsObject = kpps(**model)
             
             
@@ -185,7 +192,8 @@ for key, value in schemes.items():
             rhs_evals[i] = sim.rhs_eval
             
             var_list = ['pos','energy']
-            data_dict = dHandler.load_p(var_list,sim_name=s_name)
+            data_list = dHandler.load_p(var_list,sim_name=s_name)
+            data_dict = data_list[0]
             
             tArray = data_dict['t']
             xArray = data_dict['pos'][:,0,0]
@@ -197,8 +205,13 @@ for key, value in schemes.items():
             xRel[i] = abs(xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
             yRel[i] = abs(yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
             zRel[i] = abs(zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            
+            run_times_inner[i,j] = sim.runTime
+            
             sim_no += 1
-  
+            
+        j += 1
+        
         exactEnergy = np.array(exactEnergy)
         energyError = abs(hArray[1:]-exactEnergy[1:])
         energyConvergence = energyError - energyError[0]
@@ -230,6 +243,8 @@ for key, value in schemes.items():
         
         if key == 'boris':
             break
+    
+    run_times.append(run_times_inner)
         
 
 ## Order plot finish
@@ -279,4 +294,6 @@ ax2.set_xlabel('$t$')
 ax2.set_ylim(0,10**4)
 ax2.set_ylabel('$\Delta E$')
 ax2.legend()
+
+print(run_times[0])
 

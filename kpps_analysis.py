@@ -228,7 +228,7 @@ class kpps_analysis:
         
         for method in self.fieldGather_methods:
                 method(species,fields)
-            
+
         return species
     
 
@@ -239,9 +239,9 @@ class kpps_analysis:
     
         return species_list
     
-    def runHooks(self,species_list,fields,simulationManager,**kwargs):
+    def runHooks(self,species_list,fields,**kwargs):
         for method in self.hooks:
-            method(species_list,fields,simulationManager)
+            method(species_list,fields,**kwargs)
             
         return species_list, fields
     
@@ -269,7 +269,7 @@ class kpps_analysis:
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
                 species.E[pii,:] += direction * self.E_magnitude
-        
+
         return species
     
     
@@ -640,6 +640,7 @@ class kpps_analysis:
         E_half = (E_old+E_new)/2
         
         species.vel = self.boris(species.vel,E_half,species.B,dt,alpha)
+
         return species
         
     
@@ -714,17 +715,26 @@ class kpps_analysis:
         xn = np.zeros((d,M+1),dtype=np.float)
         vn = np.zeros((d,M+1),dtype=np.float)
         
+        F = np.zeros((d,M+1),dtype=np.float)
+        Fn = np.zeros((d,M+1),dtype=np.float)
         
         #Populate node solutions with x0, v0
-        for m in range(0,M+1):
-            x0[:,m] = self.toVector(species.pos)
-            v0[:,m] = self.toVector(species.vel)
-
+        x0[:,0] = self.toVector(species.pos)
+        v0[:,0] = self.toVector(species.vel)
+        F[:,0] = self.lorentzf(species,fields,x0[:,0],v0[:,0])
+        
+        for m in range(1,M+1):
+            x0[:,m] = x0[:,0]
+            v0[:,m] = v0[:,0]
+            F[:,m] = F[:,0]
+            
         x = np.copy(x0)
         v = np.copy(v0)
         
         xn[:,:] = x[:,:]
         vn[:,:] = v[:,:]
+        Fn[:,:] = F[:,:]
+        F2 = np.copy(F)
         
         #print()
         #print(simulationManager.ts)
@@ -734,14 +744,17 @@ class kpps_analysis:
             for m in range(self.ssi,M):
                 #print("m = " + str(m))
                 #Determine next node (m+1) positions
-                sumSX = 0
-                for l in range(1,m+1):
-                    sumSX += SX[m+1,l]*(self.lorentzf(species,fields,xn[:,l],vn[:,l]) - self.lorentzf(species,fields,x[:,l],v[:,l]))
-
+                Fn[:,m] = self.lorentzf(species,fields,xn[:,m],vn[:,m])
+                
                 sumSQ = 0
                 for l in range(1,M+1):
-                    sumSQ += SQ[m+1,l]*self.lorentzf(species,fields,x[:,l],v[:,l])
+                    F2[:,l] = self.lorentzf(species,fields,x[:,l],v[:,l])
+                    sumSQ += SQ[m+1,l]*F[:,l]
                 
+                sumSX = 0
+                for l in range(1,m+1):
+                    sumSX += SX[m+1,l]*(Fn[:,l] - F[:,l])
+
                 xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
                 xn[:,m+1] = xQuad + sumSX 
                 
@@ -749,12 +762,12 @@ class kpps_analysis:
                 #Determine next node (m+1) velocities
                 sumS = 0
                 for l in range(1,M+1):
-                    sumS += Smat[m+1,l] * self.lorentzf(species,fields,x[:,l],v[:,l])
+                    sumS += Smat[m+1,l] * F[:,l]
                 
                 vQuad = vn[:,m] + sumS
                 
-                ck_dm = -1/2 * (self.lorentzf(species,fields,x[:,m+1],v[:,m+1])
-                        +self.lorentzf(species,fields,x[:,m],v[:,m])) + 1/dm[m] * sumS
+                ck_dm = -1/2 * (F[:,m+1]
+                        +F[:,m]) + 1/dm[m] * sumS
                 
                 #Sample the electric field at the half-step positions (yields form Nx3)
                 half_E = (self.gatherE(species,fields,xn[:,m])+self.gatherE(species,fields,xn[:,m+1]))/2
@@ -770,7 +783,11 @@ class kpps_analysis:
                 
                 self.calc_residuals(k,m,x,xn,xQuad,v,vn,vQuad)
                 
+                print('F = ' +str(F))
+                print('F2 = ' +str(F2))
+                print('FN = ' +str(Fn))
                 
+            F[:,:] = Fn[:,:]
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
                 
@@ -1049,14 +1066,14 @@ class kpps_analysis:
         
         return species_list
     
-    def kinetic_energy(self,species_list,fields,controller,**kwargs):
+    def kinetic_energy(self,species_list,fields,**kwargs):
         for species in species_list:
             species.KE = 0.5 * species.mq * np.linalg.norm(species.vel,ord=2,axis=1)
             species.KE_sum = np.sum(species.KE)
             
         return species
             
-    def field_energy(self,species_list,fields,controller,**kwargs):
+    def field_energy(self,species_list,fields,**kwargs):
         fields.PE = 0.5*fields.rho*fields.phi
         fields.PE_sum = np.sum(fields.PE[:-1,:-1,:-1])
         
@@ -1074,10 +1091,16 @@ class kpps_analysis:
         return species_list
         
 
-    def rhs_tally(self,species_list,fields,controller=None):
-        rhs_eval = self.rhs_dt * controller.tSteps
-        simulationManager.rhs_eval = rhs_eval
-        
+    def rhs_tally(self,species_list,fields,**kwargs):
+        try:
+            controller = kwargs['controller']
+            
+            rhs_eval = self.rhs_dt * controller.tSteps
+            controller.rhs_eval = rhs_eval
+        except:
+            print('Could not retrieve controller, rhs eval set to zero.')
+            rhs_eval = 0
+            
         return rhs_eval
 
 ############################ Misc. functionality ##############################
