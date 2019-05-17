@@ -12,8 +12,8 @@ sim_no = 0
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
 schemes = {'lobatto':'boris_SDC'}
 
-M = 3
-iterations = [2]
+M = 5
+iterations = [1,5]
 
 omegaB = 25.0
 omegaE = 4.9
@@ -22,7 +22,7 @@ epsilon = -1
 #dt = np.array([12.8,6.4,3.2,1.6,0.8,0.4,0.2,0.1,0.05,0.025,0.0125])
 #dt = np.array([0.1,0.05,0.025,0.0125,0.0125/2,0.0125/4,0.0125/8,0.0125/16])              
 dt = np.array([0.02,0.01,0.005])
-dt = np.array([0.01])
+#dt = np.array([0.01])
 
 sim_params = {}
 species_params = {}
@@ -32,7 +32,7 @@ data_params = {}
 
 
 sim_params['t0'] = 0
-sim_params['tEnd'] = 0.01
+sim_params['tEnd'] = 1
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 3
 sim_params['xlimits'] = [0,20]

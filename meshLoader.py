@@ -223,7 +223,7 @@ class meshLoader:
         return output
     
     
-    def custom_ph(self,species_list):
+    def custom_ph(self,mesh,controller):
         print('No custom case method specified, mesh loader will do nothing.')        
     
     def stringtoMethod(self,front):
