@@ -110,10 +110,12 @@ class dataHandler2:
             p_filename = self.dataFoldername + "/p_" + species.name + "_t" + str(simulationManager.ts)
             p_file = io.open(p_filename,mode='wb')
             pk.dump(species,p_file)
+            p_file.close()
     
         m_filename = self.dataFoldername + "/m_t" + str(simulationManager.ts)
         m_file = io.open(m_filename,mode='wb')
         pk.dump(fields,m_file)
+        m_file.close()
     
     def vtk_dumper(self,species_list,fields,simulationManager):
         ts = simulationManager.ts
@@ -151,6 +153,7 @@ class dataHandler2:
                       ' with associated ID found, load failed.')
         
         sim = pk.load(sim_file)
+        pk
         if overwrite == True:
             self.controller_obj = sim
             self.set_params(sim.dataSettings)
@@ -161,20 +164,29 @@ class dataHandler2:
                 
         return sim, sim_name
 
-    def load(self,dataType,variables,sim_name=None,overwrite=False):
+    def load(self,dataType,variables,sim_name=None,overwrite=False,load_limit=None):
         # Will load specified variables for all dumps for data objects 'species'
         # or 'mesh' identified by dataType input, strings 'p' and 'm' for 
         # species and mesh objects respectively.
+        # 'load_limit' can be used to load fewer than the max time-steps
+        
         sim, sim_name = self.load_sim(sim_name,overwrite)
+        try:
+            skip = np.int(sim.tSteps/load_limit)
+        except TypeError:
+            skip = 1
+        
+        
         return_dict = {}
         for var in variables:
             return_dict[var] = []
         
         return_dict['t'] = []
-        for ti in range(0,self.samples+1):
+        for ti in range(0,self.samples+1,skip):
             data_file = io.open("./" + str(sim_name) + "/" + dataType + "_t" 
                                 + str(self.samplePeriod*ti),mode='rb')
             dataObject = pk.load(data_file)
+            data_file.close()
             
             t = sim.t0 + self.samplePeriod*ti*sim.dt
             return_dict['t'].append(t)
@@ -186,7 +198,7 @@ class dataHandler2:
             
         return return_dict, sim
         
-    def load_p(self,variables,species=['none'],sim_name=None,overwrite=False):
+    def load_p(self,variables,species=['none'],sim_name=None,overwrite=False,load_limit=None):
         species_list = []
         for spec in species:
             dtype = 'p_' + spec
@@ -195,7 +207,7 @@ class dataHandler2:
             
         return species_list
     
-    def load_m(self,variables,sim_name=None,overwrite=False):
+    def load_m(self,variables,sim_name=None,overwrite=False,load_limit=None):
         return_dict, sim = self.load('m',variables,sim_name=sim_name)
         return return_dict
         

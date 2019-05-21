@@ -65,15 +65,15 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-resolutions = [128]
-steps = [25,50,100,200,400]
+steps = [25,50,100,200,400,800,1600]
+resolutions = [64,128,256,1024]
 iterations = [1,3]
 
 M = 3
 L = 2*pi
 tend = 20
 
-dx_mag = 0.00000001
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -89,7 +89,7 @@ ppc = 20
 
 
 
-prefix = ''
+prefix = 'long'
 simulate = True
 plot = False
 
@@ -139,7 +139,7 @@ analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 1
+data_params['samplePeriod'] = 5
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 

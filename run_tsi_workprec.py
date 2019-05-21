@@ -65,13 +65,13 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [25,50,100,200]
-resolutions = [32,64,128]
+steps = [25,50,100,200,400,800,1600,3200,6400,12800]
+resolutions = [64,128,256,512,1024]
 
 L = 2*pi
-tend = 20
+tend = 50
 
-dx_mag = 0.00000001
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -86,7 +86,7 @@ max_gRate = omega/2
 ppc = 20
 #nq = 1280
 
-prefix = 'E-8'
+prefix = 'long'
 simulate = True
 plot = False
 
@@ -133,7 +133,7 @@ analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 1
+data_params['samplePeriod'] = 5
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 
@@ -150,6 +150,7 @@ data_params['plot_params'] = plot_params
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
+    dt = tend/Nt
     for res in resolutions:
         #ppc = nq/res
         nq = ppc*res
