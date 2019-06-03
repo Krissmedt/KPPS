@@ -11,7 +11,7 @@ from mesh import mesh
 
 
 vth = 0.5
-nq = 30000
+nq = 2**14
 L = 1
 n = 1000/L
 bins = 100
@@ -20,6 +20,9 @@ A = n/(np.sqrt(math.pi)*vth)
 U = np.linspace(-1,1,100)
 f1 = np.zeros(100)
 v = np.zeros(nq)
+u = 0
+
+v[:] = u
 
 for i in range(0,100):
     f1[i] = A*math.exp(-U[i]**2/vth**2)
@@ -33,8 +36,8 @@ for pii in range(0,nq-1,2):
     
     V0 = vth/np.sqrt(2) * Z0
     V1 = vth/np.sqrt(2) * Z1
-    v[pii] = V0
-    v[pii+1] = V1
+    v[pii] += V0
+    v[pii+1] += V1
     
 mean = np.mean(v)
 lowest = np.min(v)
@@ -67,3 +70,7 @@ ax.hist(v,bins)
 fig = plt.figure(2)
 ax = fig.add_subplot(1,1,1)
 ax.hist(v,bins)
+
+fig = plt.figure(3)
+ax = fig.add_subplot(1,1,1)
+ax.hist(v_sub,bins)
