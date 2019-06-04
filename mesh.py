@@ -24,6 +24,8 @@ class mesh:
         self.yres = 1
         self.zres = 1
         
+        self.gather_count = 0
+        
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
         for key, value in self.params.items():

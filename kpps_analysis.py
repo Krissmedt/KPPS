@@ -200,7 +200,7 @@ class kpps_analysis:
         self.setup_OpsList(self.bound_cross_methods)
         self.setup_OpsList(self.hooks)
         self.setup_OpsList(self.postAnalysis_methods)
-        
+
         ## Physical constants
         if self.units == 'si':
             self.makeSI()
@@ -222,13 +222,13 @@ class kpps_analysis:
 
     def fieldGather(self,species,fields,**kwargs):
         #Establish field values at particle positions via methods specified at initialisation.
-        
+
         species.E = np.zeros((len(species.E),3),dtype=np.float)
         species.B = np.zeros((len(species.B),3),dtype=np.float)
         
         for method in self.fieldGather_methods:
                 method(species,fields)
-            
+
         return species
     
 
@@ -239,9 +239,9 @@ class kpps_analysis:
     
         return species_list
     
-    def runHooks(self,species_list,fields,simulationManager,**kwargs):
+    def runHooks(self,species_list,fields,**kwargs):
         for method in self.hooks:
-            method(species_list,fields,simulationManager)
+            method(species_list,fields,**kwargs)
             
         return species_list, fields
     
@@ -269,7 +269,7 @@ class kpps_analysis:
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
                 species.E[pii,:] += direction * self.E_magnitude
-        
+
         return species
     
     
@@ -640,10 +640,15 @@ class kpps_analysis:
         E_half = (E_old+E_new)/2
         
         species.vel = self.boris(species.vel,E_half,species.B,dt,alpha)
+
         return species
         
     
-    def collSetup(self,species,fields,controller=None,**kwargs):
+    def collSetup(self,species_list,fields,controller=None,**kwargs):
+        M = self.M
+        K = self.K
+        dt = controller.dt
+        
         if self.nodeType == 'lobatto':
             self.ssi = 1    #Set sweep-start-index 'ssi'
             self.collocationClass = CollGaussLobatto
@@ -665,25 +670,28 @@ class kpps_analysis:
         self.Smat = coll._gen_Smatrix           #Generate s_(m,j), i.e. the large node-to-node weights matrix
 
         self.delta_m = coll._gen_deltas         #Generate vector of node spacings
-
         
-    def boris_SDC(self, species,fields, simulationManager,**kwargs):        
-
-        M = self.M
-        K = self.K
+        for species in species_list:
+            self.fieldGather(species,fields)
+            species.F = species.a*(species.E + np.cross(species.vel,species.B))
+            
+        self.coll_params = {}
+        
         d = 3*species.nq
         
-        dt = simulationManager.dt
-        t = simulationManager.t
+        self.coll_params['dt'] = controller.dt
         
         #Remap collocation weights from [0,1] to [tn,tn+1]
-        nodes = (t-dt) + self.nodes * dt
-        weights = self.weights * dt 
-
+        #nodes = (t-dt) + self.nodes * dt
+        self.coll_params['weights'] = self.weights * dt 
+        
         Qmat = self.Qmat * dt
         Smat = self.Smat * dt
+        delta_m = self.delta_m * dt
 
-        dm = self.delta_m * dt
+        self.coll_params['Qmat'] = Qmat
+        self.coll_params['Smat'] = Smat
+        self.coll_params['dm'] = delta_m
 
         #Define required calculation matrices
         QE = np.zeros((M+1,M+1),dtype=np.float)
@@ -693,86 +701,142 @@ class kpps_analysis:
         SX = np.zeros((M+1,M+1),dtype=np.float)
         
         for i in range(0,M):
-            QE[(i+1):,i] = dm[i]
-            QI[(i+1):,i+1] = dm[i] 
+            QE[(i+1):,i] = delta_m[i]
+            QI[(i+1):,i+1] = delta_m[i] 
         
         QT = 1/2 * (QE + QI)
         QX = QE @ QT + (QE*QE)/2
         SX[:,:] = QX[:,:]
         SX[1:,:] = QX[1:,:] - QX[0:-1,:]      
-
-        SQ = Smat @ Qmat
+        
+        self.coll_params['SX'] = SX
+        self.coll_params['SQ'] = Smat @ Qmat
         
         self.x_con = np.zeros((K,M))
         self.x_res = np.zeros((K,M))
         self.v_con = np.zeros((K,M))
         self.v_res = np.zeros((K,M))
         
-        x0 = np.zeros((d,M+1),dtype=np.float)
-        v0 = np.zeros((d,M+1),dtype=np.float)
+        self.coll_params['x0'] = np.zeros((d,M+1),dtype=np.float)
+        self.coll_params['v0'] = np.zeros((d,M+1),dtype=np.float)
         
-        xn = np.zeros((d,M+1),dtype=np.float)
-        vn = np.zeros((d,M+1),dtype=np.float)
+        self.coll_params['xn'] = np.zeros((d,M+1),dtype=np.float)
+        self.coll_params['vn'] = np.zeros((d,M+1),dtype=np.float)
         
-        
-        #Populate node solutions with x0, v0
-        for m in range(0,M+1):
-            x0[:,m] = self.toVector(species.pos)
-            v0[:,m] = self.toVector(species.vel)
+        self.coll_params['F'] = np.zeros((d,M+1),dtype=np.float)
+        self.coll_params['Fn'] = np.zeros((d,M+1),dtype=np.float)
 
+        
+    def boris_SDC(self, species,fields, simulationManager,**kwargs):        
+
+        M = self.M
+        K = self.K
+
+        #Remap collocation weights from [0,1] to [tn,tn+1]
+        #nodes = (t-dt) + self.nodes * dt
+        weights =  self.coll_params['weights']
+
+        Qmat =  self.coll_params['Qmat']
+        Smat =  self.coll_params['Smat']
+
+        dm =  self.coll_params['dm']
+
+        SX =  self.coll_params['SX'] 
+
+        SQ =  self.coll_params['SQ']
+
+        
+        x0 =  self.coll_params['x0']
+        v0 =  self.coll_params['v0']
+        
+        xn =  self.coll_params['xn']
+        vn =  self.coll_params['vn']
+        
+        F = self.coll_params['Fn']
+        Fn = self.coll_params['F']
+        
+        #Populate node solutions with x0, v0, F0
+        x0[:,0] = self.toVector(species.pos)
+        v0[:,0] = self.toVector(species.vel)
+        F[:,0] = self.toVector(species.F)
+        En_m0 = species.E
+        
+        for m in range(1,M+1):
+            x0[:,m] = x0[:,0]
+            v0[:,m] = v0[:,0]
+            F[:,m] = F[:,0]
+            
         x = np.copy(x0)
         v = np.copy(v0)
         
         xn[:,:] = x[:,:]
         vn[:,:] = v[:,:]
+        Fn[:,:] = F[:,:]
         
         #print()
         #print(simulationManager.ts)
         for k in range(1,K+1):
             #print("k = " + str(k))
-            
+            En_m = En_m0 #reset electric field values for new sweep
+
             for m in range(self.ssi,M):
                 #print("m = " + str(m))
                 #Determine next node (m+1) positions
-                sumSX = 0
-                for l in range(1,m+1):
-                    sumSX += SX[m+1,l]*(self.lorentzf(species,fields,xn[:,l],vn[:,l]) - self.lorentzf(species,fields,x[:,l],v[:,l]))
-
                 sumSQ = 0
                 for l in range(1,M+1):
-                    sumSQ += SQ[m+1,l]*self.lorentzf(species,fields,x[:,l],v[:,l])
+                    sumSQ += SQ[m+1,l]*F[:,l]
                 
+                sumSX = 0
+                for l in range(1,m+1):
+                    sumSX += SX[m+1,l]*(Fn[:,l] - F[:,l])
+
                 xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
+                
+                
+                ### POSITION UPDATE FOR NODE m/SWEEP k ###
                 xn[:,m+1] = xQuad + sumSX 
+                ##########################################
                 
-                
-                #Determine next node (m+1) velocities
                 sumS = 0
                 for l in range(1,M+1):
-                    sumS += Smat[m+1,l] * self.lorentzf(species,fields,x[:,l],v[:,l])
+                    sumS += Smat[m+1,l] * F[:,l]
                 
                 vQuad = vn[:,m] + sumS
                 
-                ck_dm = -1/2 * (self.lorentzf(species,fields,x[:,m+1],v[:,m+1])
-                        +self.lorentzf(species,fields,x[:,m],v[:,m])) + 1/dm[m] * sumS
+                ck_dm = -1/2 * (F[:,m+1]
+                        +F[:,m]) + 1/dm[m] * sumS
+                
+                ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
+                species.pos = self.toMatrix(xn[:,m+1],3)
+                self.check_boundCross(species,fields,**kwargs)
+                self.fieldGather(species,fields)
+                ###########################################
                 
                 #Sample the electric field at the half-step positions (yields form Nx3)
-                half_E = (self.gatherE(species,fields,xn[:,m])+self.gatherE(species,fields,xn[:,m+1]))/2
-                
+                half_E = (En_m+species.E)/2
+                En_m = species.E              #Save m+1 value as next node's m value
                 
                 #Resort all other 3d vectors to shape Nx3 for use in Boris function
                 v_oldNode = self.toMatrix(vn[:,m])
                 ck_dm = self.toMatrix(ck_dm)
                 
+                ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
                 v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
                 vn[:,m+1] = self.toVector(v_new)
-                
+                ##########################################
                 
                 self.calc_residuals(k,m,x,xn,xQuad,v,vn,vQuad)
                 
+                ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
+                species.vel = species.toMatrix(vn[:,m+1])
+                species.F = species.a*(species.E + np.cross(species.vel,species.B))
+                Fn[:,m+1] = species.toVector(species.F)
+                #########################################
                 
+            F[:,:] = Fn[:,:]
             x[:,:] = xn[:,:]
             v[:,:] = vn[:,:]
+            
                 
         species = self.updateStep(species,fields,x,v,x0,v0,weights,Qmat)
 
@@ -1049,14 +1113,14 @@ class kpps_analysis:
         
         return species_list
     
-    def kinetic_energy(self,species_list,fields,controller,**kwargs):
+    def kinetic_energy(self,species_list,fields,**kwargs):
         for species in species_list:
             species.KE = 0.5 * species.mq * np.linalg.norm(species.vel,ord=2,axis=1)
             species.KE_sum = np.sum(species.KE)
             
         return species
             
-    def field_energy(self,species_list,fields,controller,**kwargs):
+    def field_energy(self,species_list,fields,**kwargs):
         fields.PE = 0.5*fields.rho*fields.phi
         fields.PE_sum = np.sum(fields.PE[:-1,:-1,:-1])
         
@@ -1074,10 +1138,16 @@ class kpps_analysis:
         return species_list
         
 
-    def rhs_tally(self,species_list,fields,controller=None):
-        rhs_eval = self.rhs_dt * controller.tSteps
-        simulationManager.rhs_eval = rhs_eval
-        
+    def rhs_tally(self,species_list,fields,**kwargs):
+        try:
+            controller = kwargs['controller']
+            
+            rhs_eval = self.rhs_dt * controller.tSteps
+            controller.rhs_eval = rhs_eval
+        except:
+            print('Could not retrieve controller, rhs eval set to zero.')
+            rhs_eval = 0
+            
         return rhs_eval
 
 ############################ Misc. functionality ##############################

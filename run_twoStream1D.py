@@ -68,7 +68,6 @@ ppc = 20
 L = 2*pi
 res = 64
 dt = 0.1
-Nt = 1000
 tend = 30
 
 dx_mag = 0.0001
@@ -88,7 +87,7 @@ q = omega**2 * L / (nq*a*1)
 real_omega = np.sqrt(nq/L * 1 * q * a)
 print(real_omega)
 
-simulate = False
+simulate = True
 plot = True
 
 ############################ Setup and Run ####################################
@@ -102,10 +101,10 @@ mLoader_params = {}
 analysis_params = {}
 data_params = {}
 
-sim_params['tSteps'] = Nt
+#sim_params['tSteps'] = Nt
 sim_params['t0'] = 0
 sim_params['dt'] = dt
-#sim_params['tEnd'] = tend
+sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
@@ -140,8 +139,8 @@ mLoader_params['resolution'] = [2,2,res]
 mLoader_params['store_node_pos'] = True
 
 analysis_params['particleIntegration'] = True
-#analysis_params['particleIntegrator'] = 'boris_synced'
-analysis_params['particleIntegrator'] = 'boris_staggered'
+analysis_params['particleIntegrator'] = 'boris_SDC'
+#analysis_params['particleIntegrator'] = 'boris_staggered'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = 3
 analysis_params['K'] = 3
@@ -154,7 +153,7 @@ analysis_params['background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+#analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 
 data_params['samplePeriod'] = 1
@@ -176,7 +175,6 @@ plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
 
 sim_name = 'tsi_1d_' + analysis_params['particleIntegrator'] + '_' + str(Nt) + '_' + str(Nt*dt) 
-#sim_name = 'hail_mary3_double'
 sim_params['simID'] = sim_name
 
 ## Numerical solution ##

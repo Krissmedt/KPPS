@@ -94,7 +94,7 @@ class kpps:
             sim.updateTime()
             analyser.run_fieldIntegrator(species_list,fields,sim)
             analyser.run_particleIntegrator(species_list,fields,sim) 
-            analyser.runHooks(species_list,fields,sim)
+            analyser.runHooks(species_list,fields,controller=sim)
             dHandler.run(species_list,fields,sim)
 
 

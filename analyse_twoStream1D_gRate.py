@@ -11,8 +11,10 @@ from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
-#sim_name = 'hail_mary3_double'
-sim_name = 'tsi_1d_boris_staggered_1000_100.0'
+#sim_name = 'tsi_1d_boris_SDC_300_30.0'
+#sim_name = 'tsi_1d_boris_staggered_300_30.0'
+sim_name = 'tsi_1d_boris_staggered_3000_30.0'
+
 omega_p = 1
 res = 64
 
@@ -62,9 +64,10 @@ PE_data = mData_dict['PE_sum']
 
 
 ## Growth rate phi plot setup
-start_dt = 0
-max_t = 12
-max_steps = np.int(max_t/sim.dt)
+start_time = 12
+start_dt = np.int(start_time/sim.dt)-5
+max_t = 15
+max_steps = np.int(max_t/sim.dt)-5
 g_tArray = tArray[5:max_steps]
 
 ## Growth rate phi plot setup
@@ -89,11 +92,12 @@ gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
 #g_ax.set_ylim([0,2])
 gphi_ax.set_title('Two stream instability phi growth, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
 
+print(avg_error)
 
-
+"""
 ## Growth rate rho plot setup
 rho_data = mData_dict['rho'][:,1,1,:-1]
-max_rho_data = np.amax(np.abs(rho_data[5:max_steps]),axis=1)
+max_rho_data = np.amax(np.abs(rho_data[0:max_steps]),axis=1)
 max_rho_data_log = np.log(max_rho_data)
 
 g_rho_slope = (max_rho_data_log[(start_dt+1):-1] - max_rho_data_log[start_dt:-2])/dt
@@ -113,29 +117,5 @@ grho_ax.set_xlabel('$t$')
 grho_ax.set_ylabel(r'$\log(|\rho|_{max}$)')
 #g_ax.set_ylim([0,2])
 grho_ax.set_title('Two stream instability rho growth, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
+"""
 
-
-
-## Growth rate vel plot setup
-vel_data = p1Data_dict['vel'][:,:,2]
-max_vel_data = np.amax(np.abs(vel_data[5:max_steps]),axis=1)
-max_vel_data_log = np.log(max_vel_data)
-
-g_vel_slope = (max_vel_data_log[(start_dt+1):-1] - max_vel_data_log[start_dt:-2])/dt
-avg_vel_slope = round(np.average(g_vel_slope),2)
-
-errors_vel = g_vel_slope - real_slope
-avg_error_vel = np.average(errors_vel)
-avg_error_vel = avg_error/real_slope * 100
-slope_text = 'Avg. slope from 6s to ' + str(max_t) + 's: ' + str(avg_vel_slope)
-
-fig = plt.figure(DH.figureNo+5,dpi=150)
-gvel_ax = fig.add_subplot(1,1,1)
-line_gvel = gvel_ax.plot(g_tArray,max_vel_data_log)
-text_gvel = gvel_ax.text(.05,.95,slope_text,transform=gvel_ax.transAxes,
-                         verticalalignment='bottom',fontsize=8)
-#g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
-gvel_ax.set_xlabel('$t$')
-gvel_ax.set_ylabel(r'$\log(|v_1|_{max}$)')
-#g_ax.set_ylim([0,2])
-gvel_ax.set_title('Two stream instability vel growth, dt=' + str(dt) + ', Nt=' + str(Nt) +', Nz=' + str(res+1))
