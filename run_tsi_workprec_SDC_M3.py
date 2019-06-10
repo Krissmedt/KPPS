@@ -67,9 +67,9 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
 steps = [3200,6400]
 resolutions = [128]
-iterations = [5]
+iterations = [1,3]
 
-M = 5
+M = 3
 L = 2*pi
 tend = 20
 rate = 5
@@ -124,7 +124,7 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_staggered'
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['nodeType'] = 'lobatto'
 analysis_params['M'] = M
 analysis_params['looped_axes'] = ['z']
@@ -137,7 +137,6 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-#analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 
 data_params['samplePeriod'] = rate
 data_params['write'] = True

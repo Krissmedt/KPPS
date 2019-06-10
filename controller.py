@@ -16,6 +16,8 @@ class controller:
         
         self.setupTime = 0
         self.runTime = 0
+
+        self.percentBar = False
         
         self.xlimits = np.array([0,1],dtype=np.float)
         self.ylimits = np.array([0,1],dtype=np.float)
@@ -26,6 +28,7 @@ class controller:
         self.caseSettings = {}
         self.analysisSettings = {}
         self.dataSettings = {}
+
         
         ## Dummy values, must be set in parameters or elsewhere!
         self.rhs_dt = None
@@ -73,7 +76,7 @@ class controller:
         
         self.hookFunctions = []
         try: 
-            if self.params['percentBar'] == True:
+            if self.percentBar == True:
                 self.hookFunctions.append(self.displayProgress)
         except AttributeError:
             pass

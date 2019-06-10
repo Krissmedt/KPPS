@@ -13,7 +13,7 @@ from mesh import mesh
 vth = 0.5
 nq = 2**14
 L = 1
-n = 1000/L
+n = 500/L
 bins = 100
 
 A = n/(np.sqrt(math.pi)*vth)
@@ -66,6 +66,7 @@ fig = plt.figure(1)
 ax = fig.add_subplot(1,1,1)
 ax.plot(U,f1)
 ax.hist(v,bins)
+#plt.show()
 
 fig = plt.figure(2)
 ax = fig.add_subplot(1,1,1)
@@ -74,3 +75,4 @@ ax.hist(v,bins)
 fig = plt.figure(3)
 ax = fig.add_subplot(1,1,1)
 ax.hist(v_sub,bins)
+plt.show()

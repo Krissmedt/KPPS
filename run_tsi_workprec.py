@@ -65,11 +65,11 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [25,50,100,200,400,800,1600,3200,6400,12800]
-resolutions = [64,128,256,512,1024]
+steps = [50,100,200,400,800]
+resolutions = [128]
 
 L = 2*pi
-tend = 50
+tend = 20
 
 dx_mag = 0.0001
 dx_mode = 1
@@ -86,7 +86,7 @@ max_gRate = omega/2
 ppc = 20
 #nq = 1280
 
-prefix = 'long'
+prefix = ''
 simulate = True
 plot = False
 
@@ -119,7 +119,7 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_staggered'
+analysis_params['particleIntegrator'] = 'boris_synced_half'
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -130,7 +130,7 @@ analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
-analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+#analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 analysis_params['rhs_check'] = True
 
 data_params['samplePeriod'] = 5

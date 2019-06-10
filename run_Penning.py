@@ -10,7 +10,7 @@ simulate = True
 sim_no = 0
 
 #schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
-schemes = {'lobatto':'boris_SDC'}
+schemes = {'lobatto':'boris_SDC','boris':'boris_synced','boris_half':'boris_synced_half'}
 
 M = 5
 iterations = [1,5]
@@ -59,7 +59,7 @@ analysis_params['K'] = 3
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'coulomb'
 analysis_params['external_fields'] = True
-analysis_params['E_type'] = 'custom'
+analysis_params['E_type'] = 'transform'
 analysis_params['E_transform'] = np.array([[1,0,0],[0,1,0],[0,0,-2]])
 analysis_params['E_magnitude'] = -epsilon*omegaE**2/species_params['a']
 analysis_params['B_type'] = 'uniform'

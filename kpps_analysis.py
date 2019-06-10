@@ -28,14 +28,14 @@ class kpps_analysis:
         self.q0 = 1.602176620898*10**(-19) #Elementary charge (C)
         
         self.E_type = 'none'
-        self.E_magnitude = 1
+        self.E_magnitude = 0
         self.E_transform = np.zeros((3,3),dtype=np.float)
         
         self.coulomb = self.coulomb_cgs
         self.lambd = 0 
         
         self.B_type = 'none'
-        self.B_magnitude = 1
+        self.B_magnitude = 0
         self.B_transform = np.zeros((1,3),dtype=np.float)
         
          # Hook inputs
@@ -52,11 +52,14 @@ class kpps_analysis:
         self.particleIntegration = False
         self.particleIntegrator = 'boris_SDC'
         self.nodeType = 'lobatto'
+        self.M = 2
+        self.K = 1
         self.rhs_dt = 1
-        self.gather = self.coulomb
+        self.gather = self.none
         self.bound_cross_methods = []
         self.looped_axes = []
-        
+        self.calc_residuals = self.calc_residuals_max
+        self.display_residuals = self.display_residuals_max
         
         self.fieldIntegration = False
         self.field_type = 'custom' #Can be pic, coulomb or custom
@@ -249,6 +252,8 @@ class kpps_analysis:
     def run_preAnalyser(self,species_list,mesh,**kwargs):
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
+            self.fieldGather(species,mesh,**kwargs)
+            species.E_half = species.E
             
         for method in self.preAnalysis_methods:
             method(species_list, mesh,**kwargs)
@@ -265,11 +270,10 @@ class kpps_analysis:
 
 ##################### Imposed E-Field Methods #################################
     def eFieldImposed(self,species,fields,**kwargs):
-        if self.E_type == "custom":
+        if self.E_type == "transform":
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
                 species.E[pii,:] += direction * self.E_magnitude
-
         return species
     
     
@@ -630,16 +634,16 @@ class kpps_analysis:
     def boris_synced(self,species,mesh,simulationParameters,**kwargs):
         dt = simulationParameters.dt
         alpha = species.a
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh,species.E))
         self.check_boundCross(species,mesh,**kwargs)
         
         E_old = species.E
         self.fieldGather(species,mesh)
         E_new = species.E
         
-        E_half = (E_old+E_new)/2
+        species.E_half = (E_old+E_new)/2
         
-        species.vel = self.boris(species.vel,E_half,species.B,dt,alpha)
+        species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
 
         return species
         
@@ -712,11 +716,6 @@ class kpps_analysis:
         self.coll_params['SX'] = SX
         self.coll_params['SQ'] = Smat @ Qmat
         
-        self.x_con = np.zeros((K,M))
-        self.x_res = np.zeros((K,M))
-        self.v_con = np.zeros((K,M))
-        self.v_res = np.zeros((K,M))
-        
         self.coll_params['x0'] = np.zeros((d,M+1),dtype=np.float)
         self.coll_params['v0'] = np.zeros((d,M+1),dtype=np.float)
         
@@ -726,7 +725,12 @@ class kpps_analysis:
         self.coll_params['F'] = np.zeros((d,M+1),dtype=np.float)
         self.coll_params['Fn'] = np.zeros((d,M+1),dtype=np.float)
 
-        
+        for species in species_list:
+            species.x_con = np.zeros((K,M))
+            species.x_res = np.zeros((K,M))
+            species.v_con = np.zeros((K,M))
+            species.v_res = np.zeros((K,M))
+            
     def boris_SDC(self, species,fields, simulationManager,**kwargs):        
 
         M = self.M
@@ -825,7 +829,7 @@ class kpps_analysis:
                 vn[:,m+1] = self.toVector(v_new)
                 ##########################################
                 
-                self.calc_residuals(k,m,x,xn,xQuad,v,vn,vQuad)
+                self.calc_residuals(species,k,m,x,xn,xQuad,v,vn,vQuad)
                 
                 ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
                 species.vel = species.toMatrix(vn[:,m+1])
@@ -887,9 +891,9 @@ class kpps_analysis:
         F = species.toVector(F)
         return F
     
-    def lorentz_std(self,species,fields):
+    def lorentz_std(self,species,fields,E_half):
         self.fieldGather(species,fields)
-        F = species.a*(species.E + np.cross(species.vel,species.B))
+        F = species.a*(E_half + np.cross(species.vel,species.B))
         return F
     
     
@@ -1062,33 +1066,51 @@ class kpps_analysis:
             dt = kwargs['controller'].dt
             
             for species in species_list:
-                self.fieldGather(species,mesh)
                 species.vel = species.vel - species.E * species.q * dt
 
         except (NameError, AttributeError):
             print('No controller time-step specified, skipping velocity rewind.')
         
         
-    def calc_residuals(self,k,m,x,xn,xQuad,v,vn,vQuad):
-        self.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
-        self.x_res[k-1,m] = np.average(np.linalg.norm(xn[:,m+1]-xQuad))
+    def calc_residuals_avg(self,species,k,m,x,xn,xQuad,v,vn,vQuad):
+        species.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))
+        species.x_res[k-1,m] = np.average(np.linalg.norm(xn[:,m+1]-xQuad))
         
-        self.v_res[k-1,m] = np.average(np.linalg.norm(vn[:,m+1]-vQuad))
-        self.v_con[k-1,m] = np.average(np.abs(vn[:,m+1] - v[:,m+1]))
+        species.v_res[k-1,m] = np.average(np.linalg.norm(vn[:,m+1]-vQuad))
+        species.v_con[k-1,m] = np.average(np.abs(vn[:,m+1] - v[:,m+1]))
+        
+    def calc_residuals_max(self,species,k,m,x,xn,xQuad,v,vn,vQuad):
+        species.x_con[k-1,m] = np.max(np.abs(xn[:,m+1] - x[:,m+1]))
+        species.x_res[k-1,m] = np.max(np.linalg.norm(xn[:,m+1]-xQuad))
+        
+        species.v_res[k-1,m] = np.max(np.linalg.norm(vn[:,m+1]-vQuad))
+        species.v_con[k-1,m] = np.max(np.abs(vn[:,m+1] - v[:,m+1]))
+    
+    
+    def display_convergence(self,species_list,fields,**kwargs):
+        for species in species_list:
+            print("Position convergence, " + str(species.name) + ":")
+            print(species.x_con)
+            
+            print("Velocity convergence, " + str(species.name) + ":")  
+            print(species.v_con)
         
         
-    def display_residuals(self,species,fields,**kwargs):
-        print("Position convergence:")
-        print(self.x_con)
-        
-        print("Velocity convergence:")  
-        print(self.v_con)
-        
-        print("Position residual:")
-        print(self.x_res)
-        
-        print("Velocity residual:")
-        print(self.v_res)
+    def display_residuals_full(self,species_list,fields,**kwargs):
+        for species in species_list:
+            print("Position residual, " + str(species.name) + ":")
+            print(species.x_res)
+            
+            print("Velocity residual, " + str(species.name) + ":")
+            print(species.v_res)
+            
+    def display_residuals_max(self,species_list,fields,**kwargs):
+        for species in species_list:
+            print("Position residual, " + str(species.name) + ":")
+            print(np.max(species.x_res,1))
+            
+            print("Velocity residual, " + str(species.name) + ":")
+            print(np.max(species.v_res,1))
         
         
     def get_u(self,x,v):
