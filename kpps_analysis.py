@@ -30,6 +30,8 @@ class kpps_analysis:
         self.E_type = 'none'
         self.E_magnitude = 0
         self.E_transform = np.zeros((3,3),dtype=np.float)
+        self.static_E = 0
+        self.custom_static_E = self.none
         
         self.coulomb = self.coulomb_cgs
         self.lambd = 0 
@@ -37,6 +39,8 @@ class kpps_analysis:
         self.B_type = 'none'
         self.B_magnitude = 0
         self.B_transform = np.zeros((1,3),dtype=np.float)
+        self.static_B = 0
+        self.custom_static_B = self.none
         
          # Hook inputs
         self.pre_hook_list = []
@@ -88,7 +92,7 @@ class kpps_analysis:
         self.scatter_BC = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
-        self.imposeFields = False
+        self.external_fields_mesh = False
         
         
         self.units = 'cgs'
@@ -157,10 +161,14 @@ class kpps_analysis:
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
                 self.fieldIntegrator_methods.append(self.background) 
                 self.fieldIntegrator_methods.append(self.fIntegrator)
-     
-                if self.imposeFields  == True:
-                    self.preAnalysis_methods.append(self.imposed_field_mesh)
-                    
+ 
+        if self.external_fields_mesh  == True:
+            self.preAnalysis_methods.append(self.calc_static_E)
+            self.preAnalysis_methods.append(self.calc_static_B)
+            
+            self.fieldIntegrator_methods.append(self.impose_static_E)
+            self.fieldIntegrator_methods.append(self.impose_static_B)
+                
         if self.external_fields == True:
             self.fieldGather_methods.append(self.eFieldImposed)
             self.fieldGather_methods.append(self.bFieldImposed)
@@ -218,6 +226,9 @@ class kpps_analysis:
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields.q = np.zeros((fields.q.shape),dtype=np.float)
+        fields.E = np.zeros((fields.E.shape),dtype=np.float)
+        fields.B = np.zeros((fields.B.shape),dtype=np.float)
+        
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
         return species_list
@@ -252,11 +263,14 @@ class kpps_analysis:
     def run_preAnalyser(self,species_list,mesh,**kwargs):
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
-            self.fieldGather(species,mesh,**kwargs)
-            species.E_half = species.E
             
         for method in self.preAnalysis_methods:
             method(species_list, mesh,**kwargs)
+            
+        for species in species_list:
+            self.check_boundCross(species,mesh,**kwargs)
+            self.fieldGather(species,mesh,**kwargs)
+            species.E_half = species.E
 
         return species_list, mesh
     
@@ -274,6 +288,11 @@ class kpps_analysis:
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
                 species.E[pii,:] += direction * self.E_magnitude
+                
+        if self.E_type == "exponential":
+                direction = species.pos[pii,:]/np.linalg.norm(species.pos[pii,:])
+                species.E[pii,:] += direction * np.exp(species.pos[pii,:])
+                
         return species
     
     
@@ -314,31 +333,53 @@ class kpps_analysis:
         
     
 ########################## Field Analysis Methods #############################
-    def imposed_field_mesh(self,species,fields,simulationManager):
-        k = self.E_magnitude
-               
-        if self.E_type == "custom":
+    def calc_static_E(self,species,fields,controller):
+        self.static_E = fields.E[:]
+        if self.E_type == "transform":
             inputMatrix = np.array(self.E_transform)
             for xi in range(0,len(fields.pos[0,:,0,0])):
                 for yi in range(0,len(fields.pos[0,0,:,0])):
                     for zi in range(0,len(fields.pos[0,0,0,:])):
                         direction = np.dot(inputMatrix,fields.pos[:,xi,yi,zi])
-                        fields.E[:,xi,yi,zi] += direction * k        
-        
-        bMag = self.B_magnitude
+                        self.static_E[:,xi,yi,zi] += direction * self.E_magnitude 
+
+        if self.E_type == "custom":
+            self.custom_static_E(species,fields,controller)
+
+        fields.E = self.static_E
+        return fields
+    
+    
+    def calc_static_B(self,species,fields,controller):
+        self.static_B = fields.B[:]
         if self.B_type == "uniform":
+            bMag = self.B_magnitude
             direction = np.array(self.B_transform)
             try:
                 for xi in range(0,len(fields.pos[0,:,0,0])):
                     for yi in range(0,len(fields.pos[0,0,:,0])):
                         for zi in range(0,len(fields.pos[0,0,0,:])):
-                            fields.B[:,xi,yi,zi] = np.multiply(bMag,direction)
+                            self.static_B[:,xi,yi,zi] = np.multiply(bMag,direction)
             except TypeError:
                 print("Analyser: TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
-
+                
+        if self.B_type == "custom":
+            self.custom_static_B(species,fields,controller)
+     
+        fields.B = self.static_B
         return fields
     
+    def impose_static_E(self,species,fields,controller):
+        fields.E += self.static_E
+        
+        return fields
+    
+    def impose_static_B(self,species,fields,controller):
+        fields.B += self.static_B
+        
+        return fields
+        
     def coulomb_field(self,species,fields,simulationManager,**kwargs):
         #Needs mesh position storing turned on
         rpos_array = np.zeros((3,fields.xres+1,
@@ -523,7 +564,7 @@ class kpps_analysis:
     
     
     def trilinear_gather(self,species,mesh):
-        #print(mesh.rho.sum())
+        #print(mesh.E[2,1,1,:])
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
             li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -731,8 +772,8 @@ class kpps_analysis:
             species.v_con = np.zeros((K,M))
             species.v_res = np.zeros((K,M))
             
-    def boris_SDC(self, species,fields, simulationManager,**kwargs):        
-
+    def boris_SDC(self, species,fields, simulationManager,**kwargs):
+        print(species.vel)
         M = self.M
         K = self.K
 

@@ -45,7 +45,8 @@ class Test_boris:
         loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 
         mLoader_params['load_type'] = 'box'
-        mLoader_params['resolution'] = [2,2,5]
+        mLoader_params['resolution'] = [2,2,100]
+        mLoader_params['store_node_pos'] = True
         
         analysis_params['particleIntegration'] = True
         analysis_params['nodeType'] = 'lobatto'
@@ -71,11 +72,6 @@ class Test_boris:
         self.pLoader_params = [loader1_params]
         self.mLoader_params = mLoader_params
         self.analysis_params = analysis_params
-
-        
-        
-        
-        
         
         
         ### Trick test parameters ###
@@ -151,26 +147,7 @@ class Test_boris:
         self.analysis_params['pre_hook_list'] = []
         self.sim_params['dt'] = self.dt
         
-        sim = controller(**self.sim_params)
-        analyser = kpps_analysis(**self.analysis_params)
-        spec1 = species(**self.species_params[0])
-        species_list = [spec1]
-        pLoader1 = pLoader(**self.pLoader_params[0])
-        mLoader = meshLoader(**self.mLoader_params)
-        mesh1 = mesh()
-        
-        pLoader1.run(species_list,sim)
-        mLoader.run(mesh1,sim)
-        
-        analyser.run_preAnalyser(species_list,mesh1,controller=sim)
-        
-        print("Running: " + self.analysis_params['particleIntegrator'] + " at dt = " + str(self.dt))
-        for t in range(1,self.steps+1):
-            self.print_step(species_list,t)
-            sim.updateTime()
-            analyser.run_fieldIntegrator(species_list,mesh1,sim)
-            analyser.run_particleIntegrator(species_list,mesh1,sim) 
-            analyser.runHooks(species_list,mesh1,controller=sim)
+        species_list, mesh1 = self.test_kpps()
             
         return species_list[0]
             
@@ -179,26 +156,7 @@ class Test_boris:
         self.analysis_params['pre_hook_list'] = []
         self.sim_params['dt'] = self.dt
         
-        sim = controller(**self.sim_params)
-        analyser = kpps_analysis(**self.analysis_params)
-        spec1 = species(**self.species_params[0])
-        species_list = [spec1]
-        pLoader1 = pLoader(**self.pLoader_params[0])
-        mLoader = meshLoader(**self.mLoader_params)
-        mesh1 = mesh()
-        
-        pLoader1.run(species_list,sim)
-        mLoader.run(mesh1,sim)
-        
-        analyser.run_preAnalyser(species_list,mesh1,controller=sim)
-        
-        print("Running: " + self.analysis_params['particleIntegrator'] + " at dt = " + str(self.dt))
-        for t in range(1,self.steps+1):
-            self.print_step(species_list,t)
-            sim.updateTime()
-            analyser.run_fieldIntegrator(species_list,mesh1,sim)
-            analyser.run_particleIntegrator(species_list,mesh1,sim) 
-            analyser.runHooks(species_list,mesh1,controller=sim)
+        species_list, mesh1 = self.test_kpps()
             
         return species_list[0]
     
@@ -207,6 +165,12 @@ class Test_boris:
         self.analysis_params['pre_hook_list'] = ['ES_vel_rewind']
         self.sim_params['dt'] = self.dt
         
+        species_list, mesh1 = self.test_kpps()
+            
+        return species_list[0]
+    
+    
+    def test_kpps(self):
         sim = controller(**self.sim_params)
         analyser = kpps_analysis(**self.analysis_params)
         spec1 = species(**self.species_params[0])
@@ -222,14 +186,17 @@ class Test_boris:
         
         print("Running: " + self.analysis_params['particleIntegrator'] + " at dt = " + str(self.dt))
         for t in range(1,self.steps+1):
+            print(species_list[0].pos)
             self.print_step(species_list,t)
             sim.updateTime()
             analyser.run_fieldIntegrator(species_list,mesh1,sim)
-            analyser.run_particleIntegrator(species_list,mesh1,sim) 
+            analyser.run_particleIntegrator(species_list,mesh1,sim)
             analyser.runHooks(species_list,mesh1,controller=sim)
+
             
-        return species_list[0]
-            
+        return species_list, mesh1
+    
+    
     def print_step(self,species_list,t):
         if self.print == True:
             print("*************** t = " + str(t-1) + " ***********************")
@@ -249,11 +216,24 @@ class Test_boris:
         v_plu  = v_min + np.cross(v_star, s)
         return v_plu + 0.5*dt*E_np12 + 0.5*dt*c_i
     
+    def exponential_pos(self,t,c1,c2):
+        x = math.log(1/2 *c1*(math.tanh**2 * (1/2 * math.sqrt(c1*(c2 + t)**2)) - 1))
+        return x
+    
+    def exponential_vel(self,t,c1,c2):
+        v_num = c1*(c2+t)*math.tanh(1/2 * math.sqrt(c1*(c2+t)**2)) * math.sech(1/2 * math.sqrt(c1*(c2+t)**2))
+        v_den = math.sqrt(c1*(c2+t)**2) * (math.tanh(1/2 * math.sqrt(c1*(c2+t)**2))-1)
+        v1 = v_num/v_den
+        v2 = -math.sqrt(c1) * math.tanh(1/2 * math.sqrt(c1)*(c2+t))
+        
+        return v1,v2
     
     
 test_obj = Test_boris()
 test_obj.setup()
 test_obj.test_trick()
+
+######################## Linear oscillator test ###############################
 
 real_pos = np.zeros((test_obj.steps+1,2),dtype=np.float)
 real_pos[0,:] = [0.5,0.75]
@@ -269,11 +249,17 @@ for t in range(1,test_obj.steps+1):
 
 
 end = 1
-dts = [1,0.5,0.2,0.1,0.05,0.025]
+dts = [1]
+
 pos_sync = []
 pos_stag = []
 pos_sdc = []
 
+pos_sync_pic = []
+pos_stag_pic = []
+pos_sdc_pic = []
+
+#solutions for simple harmonic osc
 real_pos[-1,0] = 0.5 * math.cos(end)
 real_pos[-1,1] = 0.75 * math.cos(end)
 real_vel[-1,0] = -0.5 * math.sin(end)
@@ -281,38 +267,62 @@ real_vel[-1,1] = -0.75 * math.sin(end)
 
 
 for dt in dts:
+    rewind_vel = -0.5 * math.sin(-dt)
     test_obj.dt = dt
     test_obj.steps = np.int(end/dt)
-
-    spec_sync = test_obj.test_synced()
-    spec_stag = test_obj.test_staggered()
+    
+    test_obj.analysis_params['external_fields'] = True
+    test_obj.analysis_params['external_fields_mesh'] = False
+    #spec_sync = test_obj.test_synced()
+    #spec_stag = test_obj.test_staggered()
     spec_sdc = test_obj.test_SDC()
     
-    pos_sync.append(spec_sync.pos[:,2])
-    pos_stag.append(spec_stag.pos[:,2])
+    #pos_sync.append(spec_sync.pos[:,2])
+    #pos_stag.append(spec_stag.pos[:,2])
     pos_sdc.append(spec_sdc.pos[:,2])
+    
+    test_obj.analysis_params['gather'] = 'trilinear_gather'
+    test_obj.analysis_params['external_fields'] = False
+    test_obj.analysis_params['external_fields_mesh'] = True
+    #spec_sync_pic = test_obj.test_synced()
+    #spec_stag_pic = test_obj.test_staggered()
+    spec_sdc_pic = test_obj.test_SDC()    
+
+    #pos_sync_pic.append(spec_sync_pic.pos[:,2])
+    #pos_stag_pic.append(spec_stag_pic.pos[:,2])
+    pos_sdc_pic.append(spec_sdc_pic.pos[:,2])
     
     
 pos_sync = np.array(pos_sync)
 pos_stag = np.array(pos_stag)
 pos_sdc = np.array(pos_sdc)
+pos_sync_pic = np.array(pos_sync_pic)
+pos_stag_pic = np.array(pos_stag_pic)
+pos_sdc_pic = np.array(pos_sdc_pic)
 
-zRel_sync = np.abs(pos_sync - real_pos[-1,:])
-zRel_stag = np.abs(pos_stag- real_pos[-1,:])
+#zRel_sync = np.abs(pos_sync - real_pos[-1,:])
+#zRel_stag = np.abs(pos_stag- real_pos[-1,:])
 zRel_sdc = np.abs(pos_sdc - real_pos[-1,:])
     
+#zRel_sync_pic = np.abs(pos_sync_pic - real_pos[-1,:])
+#zRel_stag_pic = np.abs(pos_stag_pic- real_pos[-1,:])
+zRel_sdc_pic = np.abs(pos_sdc_pic - real_pos[-1,:])
+
 ##Order Plot w/ dt
 fig_dt = plt.figure(1)
 ax_dt = fig_dt.add_subplot(1, 1, 1)
-ax_dt.plot(dts,zRel_sync[:,0],label='Synced')
-ax_dt.plot(dts,zRel_stag[:,0],label='Staggered')
-#ax_dt.plot(dts,zRel_sdc[:,0],label='SDC')
+#ax_dt.plot(dts,zRel_sync[:,0],label='Synced')
+#ax_dt.plot(dts,zRel_stag[:,0],label='Staggered')
+#ax_dt.plot(dts,zRel_sync_pic[:,0],label='Synced PIC')
+#ax_dt.plot(dts,zRel_stag_pic[:,0],label='Staggered PIC')
+ax_dt.plot(dts,zRel_sdc[:,0],label='SDC')
+ax_dt.plot(dts,zRel_sdc_pic[:,0],label='SDC PIC')
 
 ## Order plot finish
 dHandler = DH()
 ax_dt.set_xscale('log')
 #ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel('\Delta t$')
+ax_dt.set_xlabel('$\Delta t$')
 ax_dt.set_yscale('log')
 #ax_dt.set_ylim(10**(-7),10**1)
 ax_dt.set_ylabel('$\Delta x^{(rel)}$')
