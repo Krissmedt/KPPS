@@ -32,6 +32,7 @@ class kpps_analysis:
         self.E_transform = np.zeros((3,3),dtype=np.float)
         self.static_E = 0
         self.custom_static_E = self.none
+        self.custom_external_E = self.none
         
         self.coulomb = self.coulomb_cgs
         self.lambd = 0 
@@ -41,6 +42,7 @@ class kpps_analysis:
         self.B_transform = np.zeros((1,3),dtype=np.float)
         self.static_B = 0
         self.custom_static_B = self.none
+        self.custom_external_B = self.none
         
          # Hook inputs
         self.pre_hook_list = []
@@ -145,23 +147,20 @@ class kpps_analysis:
                 pass
         
             self.fieldIntegrator_methods.append(self.scatter)
-        
-        # Setup required particle analysis methods
-        if self.particleIntegration == True:
-            self.particleIntegrator_methods.append(self.particleIntegrator)
-            if self.particleIntegrator == 'boris_SDC':
-                self.preAnalysis_methods.append(self.collSetup)
-            
-            self.fieldGather_methods.append(self.gather)  
             
             
         # Setup required field analysis methods
         if self.fieldIntegration == True:           
             if self.field_type == 'pic':
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
+                self.preAnalysis_methods.append(self.scatter)
+                self.preAnalysis_methods.append(self.background)
+                self.preAnalysis_methods.append(self.fIntegrator)
+                
                 self.fieldIntegrator_methods.append(self.background) 
                 self.fieldIntegrator_methods.append(self.fIntegrator)
- 
+
+
         if self.external_fields_mesh  == True:
             self.preAnalysis_methods.append(self.calc_static_E)
             self.preAnalysis_methods.append(self.calc_static_B)
@@ -173,9 +172,17 @@ class kpps_analysis:
             self.fieldGather_methods.append(self.eFieldImposed)
             self.fieldGather_methods.append(self.bFieldImposed)
             
+            
+        # Setup required particle analysis methods
+        if self.particleIntegration == True:
+            self.particleIntegrator_methods.append(self.particleIntegrator)
 
+            if self.particleIntegrator == 'boris_SDC':
+                self.preAnalysis_methods.append(self.collSetup)
+            
+            self.fieldGather_methods.append(self.gather)
                 
-        
+
         # Load hook methods
         if self.rhs_check == True:
             self.preAnalysis_methods.append(self.rhs_tally)
@@ -231,15 +238,15 @@ class kpps_analysis:
         
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
+
         return species_list
 
 
     def fieldGather(self,species,fields,**kwargs):
         #Establish field values at particle positions via methods specified at initialisation.
-
         species.E = np.zeros((len(species.E),3),dtype=np.float)
         species.B = np.zeros((len(species.B),3),dtype=np.float)
-        
+
         for method in self.fieldGather_methods:
                 method(species,fields)
 
@@ -293,6 +300,9 @@ class kpps_analysis:
                 direction = species.pos[pii,:]/np.linalg.norm(species.pos[pii,:])
                 species.E[pii,:] += direction * np.exp(species.pos[pii,:])
                 
+        if self.E_type == "custom":
+            fields = self.custom_external_E(species,fields,controller=None)
+                
         return species
     
     
@@ -314,7 +324,7 @@ class kpps_analysis:
     
     
     def coulomb_si(self, species,fields,**kwargs):
-        species.E = self.coulomb_cgs(species,fields) * 1/(4*pi*self.ep0)
+        self.coulomb_cgs(species,fields) * 1/(4*pi*self.ep0)
         
         return species
 
@@ -324,34 +334,37 @@ class kpps_analysis:
     def bFieldImposed(self,species,fields,**kwargs):
         if self.B_type == 'uniform':
             try:
-                species.B[:,0:] = np.multiply(self.B_magnitude,self.B_transform)
+                species.B[:,0:] += np.multiply(self.B_magnitude,self.B_transform)
             except TypeError:
                 print("Analyser: TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
-
+                
+        if self.E_type == "custom":
+            fields = self.custom_external_B(species,fields,controller=None)
+            
         return species
         
     
 ########################## Field Analysis Methods #############################
-    def calc_static_E(self,species,fields,controller):
-        self.static_E = fields.E[:]
+    def calc_static_E(self,species_list,fields,controller):
         if self.E_type == "transform":
             inputMatrix = np.array(self.E_transform)
             for xi in range(0,len(fields.pos[0,:,0,0])):
                 for yi in range(0,len(fields.pos[0,0,:,0])):
                     for zi in range(0,len(fields.pos[0,0,0,:])):
                         direction = np.dot(inputMatrix,fields.pos[:,xi,yi,zi])
-                        self.static_E[:,xi,yi,zi] += direction * self.E_magnitude 
+                        fields.E[:,xi,yi,zi] += direction * self.E_magnitude 
 
         if self.E_type == "custom":
-            self.custom_static_E(species,fields,controller)
+            fields, static_E = self.custom_static_E(species_list,fields,controller)
 
-        fields.E = self.static_E
+        self.static_E = np.zeros(np.shape(fields.E))
+        self.static_E[:] = fields.E[:]
         return fields
     
     
-    def calc_static_B(self,species,fields,controller):
-        self.static_B = fields.B[:]
+    def calc_static_B(self,species_list,fields,controller):
+
         if self.B_type == "uniform":
             bMag = self.B_magnitude
             direction = np.array(self.B_transform)
@@ -359,23 +372,24 @@ class kpps_analysis:
                 for xi in range(0,len(fields.pos[0,:,0,0])):
                     for yi in range(0,len(fields.pos[0,0,:,0])):
                         for zi in range(0,len(fields.pos[0,0,0,:])):
-                            self.static_B[:,xi,yi,zi] = np.multiply(bMag,direction)
+                            fields.B[:,xi,yi,zi] -= np.multiply(bMag,direction)
             except TypeError:
                 print("Analyser: TypeError raised, did you input a length 3 vector "
                       + "as transform to define the uniform magnetic field?")
                 
         if self.B_type == "custom":
-            self.custom_static_B(species,fields,controller)
+            fields, static_B = self.custom_static_B(species_list,fields,controller=None)
      
-        fields.B = self.static_B
+        self.static_B = np.zeros(np.shape(fields.B))
+        self.static_B[:] = fields.B[:]
         return fields
     
-    def impose_static_E(self,species,fields,controller):
+    def impose_static_E(self,species_list,fields,controller=None):
         fields.E += self.static_E
         
         return fields
     
-    def impose_static_B(self,species,fields,controller):
+    def impose_static_B(self,species_list,fields,controller=None):
         fields.B += self.static_B
         
         return fields
@@ -402,7 +416,7 @@ class kpps_analysis:
         return fields
 
 
-    def poisson_cube2nd_setup(self,species,fields,controller=None,**kwargs):
+    def poisson_cube2nd_setup(self,species_list,fields,controller=None,**kwargs):
         self.interior_shape = fields.res-1
         nx = self.interior_shape[0]
         ny = self.interior_shape[1]
@@ -427,7 +441,7 @@ class kpps_analysis:
         diag = [1/fields.dz**2,k[controller.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))
         self.FDMat = Dk
-        FDMatrix_adjust_z(species,fields,controller)
+        FDMatrix_adjust_z(species_list,fields,controller)
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if controller.ndim >= 2:
@@ -440,7 +454,7 @@ class kpps_analysis:
             I = sps.identity(nz)
             diag = sps.diags([1],shape=(ny,ny))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(ny,ny))
-            FDMatrix_adjust_y(species,fields,controller)
+            FDMatrix_adjust_y(species_list,fields,controller)
             
             Ek = sps.kron(diag,Dk) + sps.kron(off_diag,I/fields.dy**2)
             self.FDMat = Ek
@@ -456,7 +470,7 @@ class kpps_analysis:
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
-            FDMatrix_adjust_x(species,fields,controller)
+            FDMatrix_adjust_x(species_list,fields,controller)
             
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
@@ -465,13 +479,13 @@ class kpps_analysis:
         return self.FDMat
     
         
-    def poisson_cube2nd(self,species_list,fields,simulationManager,**kwargs):
+    def poisson_cube2nd(self,species_list,fields,controller=None):
         
         rho = self.meshtoVector(fields.rho[self.mi_x0:self.mi_xN,
                                            self.mi_y0:self.mi_yN,
                                            self.mi_z0:self.mi_zN])
 
-        self.solver_pre(species_list,fields,simulationManager)
+        self.solver_pre(species_list,fields,controller)
         phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
         
@@ -479,11 +493,11 @@ class kpps_analysis:
                    self.mi_y0:self.mi_yN,
                    self.mi_z0:self.mi_zN] = phi
 
-        self.solver_post(species_list,fields,simulationManager)
+        self.solver_post(species_list,fields,controller)
 
-        for nd in range(0,simulationManager.ndim):
+        for nd in range(0,controller.ndim):
             self.pot_diff_list[nd](fields)
-        
+
         return fields
         
     
@@ -583,7 +597,7 @@ class kpps_analysis:
         return species
             
     
-    def trilinear_qScatter(self,species_list,mesh,simulationManager):
+    def trilinear_qScatter(self,species_list,mesh,controller):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         
 
@@ -719,7 +733,7 @@ class kpps_analysis:
         for species in species_list:
             self.fieldGather(species,fields)
             species.F = species.a*(species.E + np.cross(species.vel,species.B))
-            
+
         self.coll_params = {}
         
         d = 3*species.nq
@@ -771,12 +785,12 @@ class kpps_analysis:
             species.x_res = np.zeros((K,M))
             species.v_con = np.zeros((K,M))
             species.v_res = np.zeros((K,M))
-            
+        
+
     def boris_SDC(self, species,fields, simulationManager,**kwargs):
-        print(species.vel)
         M = self.M
         K = self.K
-
+        
         #Remap collocation weights from [0,1] to [tn,tn+1]
         #nodes = (t-dt) + self.nodes * dt
         weights =  self.coll_params['weights']
@@ -805,7 +819,7 @@ class kpps_analysis:
         v0[:,0] = self.toVector(species.vel)
         F[:,0] = self.toVector(species.F)
         En_m0 = species.E
-        
+
         for m in range(1,M+1):
             x0[:,m] = x0[:,0]
             v0[:,m] = v0[:,0]
@@ -817,7 +831,7 @@ class kpps_analysis:
         xn[:,:] = x[:,:]
         vn[:,:] = v[:,:]
         Fn[:,:] = F[:,:]
-        
+
         #print()
         #print(simulationManager.ts)
         for k in range(1,K+1):
@@ -836,10 +850,10 @@ class kpps_analysis:
                     sumSX += SX[m+1,l]*(Fn[:,l] - F[:,l])
 
                 xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
-                
-                
+                          
                 ### POSITION UPDATE FOR NODE m/SWEEP k ###
                 xn[:,m+1] = xQuad + sumSX 
+                
                 ##########################################
                 
                 sumS = 0
@@ -884,14 +898,13 @@ class kpps_analysis:
             
                 
         species = self.updateStep(species,fields,x,v,x0,v0,weights,Qmat)
-
         return species
     
     
     def lobatto_update(self,species,mesh,x,v,*args,**kwargs):
         pos = x[:,-1]
         vel = v[:,-1]
-
+        
         species.pos = species.toMatrix(pos)
         species.vel = species.toMatrix(vel)
         self.check_boundCross(species,mesh,**kwargs)

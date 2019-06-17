@@ -45,7 +45,7 @@ class Test_boris:
         loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 
         mLoader_params['load_type'] = 'box'
-        mLoader_params['resolution'] = [2,2,100]
+        mLoader_params['resolution'] = [2,2,10000]
         mLoader_params['store_node_pos'] = True
         
         analysis_params['particleIntegration'] = True
@@ -142,6 +142,113 @@ class Test_boris:
         print ("Defect with Kris Boris: %5.3e" % np.linalg.norm(defect, np.inf))
         
         
+    def test_linear(self):
+        real_pos = np.zeros((self.steps+1,2),dtype=np.float)
+        real_pos[0,:] = [0.5,0.75]
+        
+        real_vel = np.zeros((self.steps+1,2),dtype=np.float)
+        real_vel[0,:] = [0.,0.]
+        
+        for t in range(1,test_obj.steps+1):
+            real_pos[t,0] = 0.5 * math.cos(t*self.dt)
+            real_pos[t,1] = 0.75 * math.cos(t*self.dt)
+            real_vel[t,0] = -0.5 * math.sin(t*self.dt)
+            real_vel[t,1] = -0.75 * math.sin(t*self.dt)
+        
+        
+        end = 1
+        dts = [1,0.5,0.25,0.125]
+        
+        pos_sync = []
+        pos_stag = []
+        pos_sdc = []
+        
+        pos_sync_pic = []
+        pos_stag_pic = []
+        pos_sdc_pic = []
+        
+        #solutions for simple harmonic osc
+        real_pos[-1,0] = 0.5 * math.cos(end)
+        real_pos[-1,1] = 0.75 * math.cos(end)
+        real_vel[-1,0] = -0.5 * math.sin(end)
+        real_vel[-1,1] = -0.75 * math.sin(end)
+        
+        
+        for dt in dts:
+            rewind_vel = -0.5 * math.sin(-dt)
+            self.dt = dt
+            self.steps = np.int(end/dt)
+            
+            self.analysis_params['gather'] = 'none'
+            self.analysis_params['external_fields'] = True
+            self.analysis_params['external_fields_mesh'] = False
+            spec_sync = self.test_synced()
+            spec_stag = self.test_staggered()
+            spec_sdc = self.test_SDC()
+            
+            pos_sync.append(spec_sync.pos[:,2])
+            pos_stag.append(spec_stag.pos[:,2])
+            pos_sdc.append(spec_sdc.pos[:,2])
+            
+            self.analysis_params['gather'] = 'trilinear_gather'
+            self.analysis_params['external_fields'] = False
+            self.analysis_params['external_fields_mesh'] = True
+            spec_sync_pic = self.test_synced()
+            spec_stag_pic = self.test_staggered()
+            spec_sdc_pic = self.test_SDC()    
+        
+            pos_sync_pic.append(spec_sync_pic.pos[:,2])
+            pos_stag_pic.append(spec_stag_pic.pos[:,2])
+            pos_sdc_pic.append(spec_sdc_pic.pos[:,2])
+            
+            
+        pos_sync = np.array(pos_sync)
+        pos_stag = np.array(pos_stag)
+        pos_sdc = np.array(pos_sdc)
+        pos_sync_pic = np.array(pos_sync_pic)
+        pos_stag_pic = np.array(pos_stag_pic)
+        pos_sdc_pic = np.array(pos_sdc_pic)
+        
+        zRel_sync = np.abs(pos_sync - real_pos[-1,:])
+        zRel_stag = np.abs(pos_stag- real_pos[-1,:])
+        zRel_sdc = np.abs(pos_sdc - real_pos[-1,:])
+            
+        zRel_sync_pic = np.abs(pos_sync_pic - real_pos[-1,:])
+        zRel_stag_pic = np.abs(pos_stag_pic- real_pos[-1,:])
+        zRel_sdc_pic = np.abs(pos_sdc_pic - real_pos[-1,:])
+        
+        ##Order Plot w/ dt
+        fig_dt = plt.figure(1)
+        ax_dt = fig_dt.add_subplot(1, 1, 1)
+        ax_dt.plot(dts,zRel_sync[:,0],label='Synced')
+        ax_dt.plot(dts,zRel_stag[:,0],label='Staggered')
+        ax_dt.plot(dts,zRel_sync_pic[:,0],label='Synced PIC')
+        ax_dt.plot(dts,zRel_stag_pic[:,0],label='Staggered PIC')
+        ax_dt.plot(dts,zRel_sdc[:,0],label='SDC')
+        ax_dt.plot(dts,zRel_sdc_pic[:,0],label='SDC PIC')
+        
+        ## Order plot finish
+        dHandler = DH()
+        ax_dt.set_xscale('log')
+        #ax_dt.set_xlim(10**-3,10**-1)
+        ax_dt.set_xlabel('$\Delta t$')
+        ax_dt.set_yscale('log')
+        #ax_dt.set_ylim(10**(-7),10**1)
+        ax_dt.set_ylabel('$\Delta x^{(rel)}$')
+        
+        xRange = ax_dt.get_xlim()
+        yRange = ax_dt.get_ylim()
+        
+        ax_dt.plot(xRange,dHandler.orderLines(1,xRange,yRange),
+                    ls='-',c='0.25',label='1st Order')
+        ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
+                    ls='dotted',c='0.25',label='2nd Order')
+        ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
+                    ls='dashed',c='0.75',label='4th Order')
+        ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
+                    ls='dashdot',c='0.1',label='8th Order')
+        ax_dt.legend()
+        
     def test_synced(self):
         self.analysis_params['particleIntegrator'] = 'boris_synced'
         self.analysis_params['pre_hook_list'] = []
@@ -171,6 +278,8 @@ class Test_boris:
     
     
     def test_kpps(self):
+        print("Running: " + self.analysis_params['particleIntegrator'] + " at dt = " + str(self.dt))
+        print("************************ Setup *******************************")
         sim = controller(**self.sim_params)
         analyser = kpps_analysis(**self.analysis_params)
         spec1 = species(**self.species_params[0])
@@ -182,18 +291,19 @@ class Test_boris:
         pLoader1.run(species_list,sim)
         mLoader.run(mesh1,sim)
         
+        print(analyser.fieldIntegrator_methods)
+
         analyser.run_preAnalyser(species_list,mesh1,controller=sim)
-        
-        print("Running: " + self.analysis_params['particleIntegrator'] + " at dt = " + str(self.dt))
+        print("*************************** Run ******************************")
+
         for t in range(1,self.steps+1):
-            print(species_list[0].pos)
             self.print_step(species_list,t)
             sim.updateTime()
             analyser.run_fieldIntegrator(species_list,mesh1,sim)
             analyser.run_particleIntegrator(species_list,mesh1,sim)
             analyser.runHooks(species_list,mesh1,controller=sim)
 
-            
+        print("*************************** Done *****************************")            
         return species_list, mesh1
     
     
@@ -228,114 +338,152 @@ class Test_boris:
         
         return v1,v2
     
+    def nonLinear_ext_E(self,species,mesh,controller=None):
+        nq = species.pos.shape[0]
+        for pii in range(0,nq):
+            species.E[pii,2] += -np.power(species.pos[pii,2],3)
+        
+        return species
+
+
+    def nonLinear_mesh_E(self,species_list,mesh,controller=None):
+        for zi in range(0,mesh.E[2,1,1,:].shape[0]-1):
+            z = mesh.zlimits[0] + zi * mesh.dz
+            mesh.E[2,1,1,zi] += -np.power(z,3)
+    
+        static_E = np.zeros(mesh.E.shape)
+        static_E[:] = mesh.E[:]
+    
+        return mesh, static_E
     
 test_obj = Test_boris()
 test_obj.setup()
 test_obj.test_trick()
 
+run_linear = False
+run_nonLinear = True
+
 ######################## Linear oscillator test ###############################
-
-real_pos = np.zeros((test_obj.steps+1,2),dtype=np.float)
-real_pos[0,:] = [0.5,0.75]
-
-real_vel = np.zeros((test_obj.steps+1,2),dtype=np.float)
-real_vel[0,:] = [0.,0.]
-
-for t in range(1,test_obj.steps+1):
-    real_pos[t,0] = 0.5 * math.cos(t*test_obj.dt)
-    real_pos[t,1] = 0.75 * math.cos(t*test_obj.dt)
-    real_vel[t,0] = -0.5 * math.sin(t*test_obj.dt)
-    real_vel[t,1] = -0.75 * math.sin(t*test_obj.dt)
+if run_linear == True:
+    test_obj.test_linear()
 
 
-end = 1
-dts = [1]
-
-pos_sync = []
-pos_stag = []
-pos_sdc = []
-
-pos_sync_pic = []
-pos_stag_pic = []
-pos_sdc_pic = []
-
-#solutions for simple harmonic osc
-real_pos[-1,0] = 0.5 * math.cos(end)
-real_pos[-1,1] = 0.75 * math.cos(end)
-real_vel[-1,0] = -0.5 * math.sin(end)
-real_vel[-1,1] = -0.75 * math.sin(end)
-
-
-for dt in dts:
-    rewind_vel = -0.5 * math.sin(-dt)
-    test_obj.dt = dt
-    test_obj.steps = np.int(end/dt)
+############################# Non-linear oscillator test ######################
+if run_nonLinear == True:
+    end = 1
+    dts = [1,0.5,0.25,0.125]
+    #dts = [1]
     
+    pos_sync = []
+    pos_stag = []
+    pos_sdc = []
+    
+    pos_sync_pic = []
+    pos_stag_pic = []
+    pos_sdc_pic = []
+    
+    #solutions for non-linear osc
+    test_obj.analysis_params['E_type'] = 'custom'
+    test_obj.analysis_params['custom_external_E'] = test_obj.nonLinear_ext_E
+    test_obj.analysis_params['custom_static_E'] = test_obj.nonLinear_mesh_E
+    
+    test_obj.analysis_params['gather'] = 'none'
     test_obj.analysis_params['external_fields'] = True
     test_obj.analysis_params['external_fields_mesh'] = False
-    #spec_sync = test_obj.test_synced()
-    #spec_stag = test_obj.test_staggered()
-    spec_sdc = test_obj.test_SDC()
+
+    test_obj.dt = dts[-1]/2
+    test_obj.steps = np.int(end/test_obj.dt)
+    spec_comp = test_obj.test_SDC()
+    real_pos = spec_comp.pos[:,2]
     
-    #pos_sync.append(spec_sync.pos[:,2])
-    #pos_stag.append(spec_stag.pos[:,2])
-    pos_sdc.append(spec_sdc.pos[:,2])
+    for dt in dts:
+        rewind_vel = -0.5 * math.sin(-dt)
+        test_obj.dt = dt
+        test_obj.steps = np.int(end/dt)
+        
+        print('')
+        print('********************** Direct Runs *************************')
+        print('')
+        
+        test_obj.analysis_params['gather'] = 'none'
+        test_obj.analysis_params['external_fields'] = True
+        test_obj.analysis_params['external_fields_mesh'] = False
+        spec_sync = test_obj.test_synced()
+        spec_stag = test_obj.test_staggered()
+        spec_sdc = test_obj.test_SDC()
+        
+        pos_sync.append(spec_sync.pos[:,2])
+        pos_stag.append(spec_stag.pos[:,2])
+        pos_sdc.append(spec_sdc.pos[:,2])
+        
+        print('')
+        print('*********************** PIC Runs ***************************')
+        print('')
+        
+        test_obj.analysis_params['gather'] = 'trilinear_gather'
+        test_obj.analysis_params['external_fields'] = False
+        test_obj.analysis_params['external_fields_mesh'] = True
+        spec_sync_pic = test_obj.test_synced()
+        spec_stag_pic = test_obj.test_staggered()
+        spec_sdc_pic = test_obj.test_SDC()    
     
-    test_obj.analysis_params['gather'] = 'trilinear_gather'
-    test_obj.analysis_params['external_fields'] = False
-    test_obj.analysis_params['external_fields_mesh'] = True
-    #spec_sync_pic = test_obj.test_synced()
-    #spec_stag_pic = test_obj.test_staggered()
-    spec_sdc_pic = test_obj.test_SDC()    
+        pos_sync_pic.append(spec_sync_pic.pos[:,2])
+        pos_stag_pic.append(spec_stag_pic.pos[:,2])
+        pos_sdc_pic.append(spec_sdc_pic.pos[:,2])
+        
+        
+    pos_sync = np.array(pos_sync)
+    pos_stag = np.array(pos_stag)
+    pos_sdc = np.array(pos_sdc)
+    pos_sync_pic = np.array(pos_sync_pic)
+    pos_stag_pic = np.array(pos_stag_pic)
+    pos_sdc_pic = np.array(pos_sdc_pic)
+    
+    zRel_sync = np.abs(pos_sync - spec_comp.pos[:,2])
+    zRel_stag = np.abs(pos_stag- spec_comp.pos[:,2])
+    zRel_sdc = np.abs(pos_sdc - spec_comp.pos[:,2])
+        
+    zRel_sync_pic = np.abs(pos_sync_pic - spec_comp.pos[:,2])
+    zRel_stag_pic = np.abs(pos_stag_pic- spec_comp.pos[:,2])
+    zRel_sdc_pic = np.abs(pos_sdc_pic - spec_comp.pos[:,2])
+    
+    ##Order Plot w/ dt
+    fig_dt = plt.figure(2)
+    ax_dt = fig_dt.add_subplot(1, 1, 1)
+    ax_dt.plot(dts,zRel_sync[:,0],label='Synced')
+    ax_dt.plot(dts,zRel_stag[:,0],label='Staggered')
+    ax_dt.plot(dts,zRel_sync_pic[:,0],label='Synced PIC')
+    ax_dt.plot(dts,zRel_stag_pic[:,0],label='Staggered PIC')
+    ax_dt.plot(dts,zRel_sdc[:,0],label='SDC')
+    ax_dt.plot(dts,zRel_sdc_pic[:,0],label='SDC PIC')
+    
+    ## Order plot finish
+    dHandler = DH()
+    ax_dt.set_xscale('log')
+    #ax_dt.set_xlim(10**-3,10**-1)
+    ax_dt.set_xlabel('$\Delta t$')
+    ax_dt.set_yscale('log')
+    #ax_dt.set_ylim(10**(-7),10**1)
+    ax_dt.set_ylabel('$\Delta x^{(rel)}$')
+    
+    xRange = ax_dt.get_xlim()
+    yRange = ax_dt.get_ylim()
+    
+    ax_dt.plot(xRange,dHandler.orderLines(1,xRange,yRange),
+                ls='-',c='0.25',label='1st Order')
+    ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
+                ls='dashdot',c='0.1',label='8th Order')
+    ax_dt.legend()
 
-    #pos_sync_pic.append(spec_sync_pic.pos[:,2])
-    #pos_stag_pic.append(spec_stag_pic.pos[:,2])
-    pos_sdc_pic.append(spec_sdc_pic.pos[:,2])
+
+
     
     
-pos_sync = np.array(pos_sync)
-pos_stag = np.array(pos_stag)
-pos_sdc = np.array(pos_sdc)
-pos_sync_pic = np.array(pos_sync_pic)
-pos_stag_pic = np.array(pos_stag_pic)
-pos_sdc_pic = np.array(pos_sdc_pic)
-
-#zRel_sync = np.abs(pos_sync - real_pos[-1,:])
-#zRel_stag = np.abs(pos_stag- real_pos[-1,:])
-zRel_sdc = np.abs(pos_sdc - real_pos[-1,:])
     
-#zRel_sync_pic = np.abs(pos_sync_pic - real_pos[-1,:])
-#zRel_stag_pic = np.abs(pos_stag_pic- real_pos[-1,:])
-zRel_sdc_pic = np.abs(pos_sdc_pic - real_pos[-1,:])
-
-##Order Plot w/ dt
-fig_dt = plt.figure(1)
-ax_dt = fig_dt.add_subplot(1, 1, 1)
-#ax_dt.plot(dts,zRel_sync[:,0],label='Synced')
-#ax_dt.plot(dts,zRel_stag[:,0],label='Staggered')
-#ax_dt.plot(dts,zRel_sync_pic[:,0],label='Synced PIC')
-#ax_dt.plot(dts,zRel_stag_pic[:,0],label='Staggered PIC')
-ax_dt.plot(dts,zRel_sdc[:,0],label='SDC')
-ax_dt.plot(dts,zRel_sdc_pic[:,0],label='SDC PIC')
-
-## Order plot finish
-dHandler = DH()
-ax_dt.set_xscale('log')
-#ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel('$\Delta t$')
-ax_dt.set_yscale('log')
-#ax_dt.set_ylim(10**(-7),10**1)
-ax_dt.set_ylabel('$\Delta x^{(rel)}$')
-
-xRange = ax_dt.get_xlim()
-yRange = ax_dt.get_ylim()
-
-ax_dt.plot(xRange,dHandler.orderLines(1,xRange,yRange),
-            ls='-',c='0.25',label='1st Order')
-ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
-            ls='dashdot',c='0.1',label='8th Order')
-ax_dt.legend()
+    
+    
+    
