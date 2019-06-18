@@ -387,6 +387,9 @@ if run_nonLinear == True:
     test_obj.analysis_params['custom_external_E'] = test_obj.nonLinear_ext_E
     test_obj.analysis_params['custom_static_E'] = test_obj.nonLinear_mesh_E
     
+    #test_obj.analysis_params['gather'] = 'trilinear_gather'
+    #test_obj.analysis_params['external_fields'] = False
+    #test_obj.analysis_params['external_fields_mesh'] = True
     test_obj.analysis_params['gather'] = 'none'
     test_obj.analysis_params['external_fields'] = True
     test_obj.analysis_params['external_fields_mesh'] = False
