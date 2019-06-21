@@ -17,17 +17,15 @@ max_time = 17.5
 sims = {}
 
 
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [100,200,400,800,1600]
-sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [100,200,400,800,1600]
-sims['tsi__boris_SDC_M2K1_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-sims['tsi__boris_SDC_M3K3_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
-sims['tsi__boris_SDC_M5K1_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
+sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
+sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
+#sims['tsi__boris_SDC_M5K1_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
 sims['tsi__boris_SDC_M5K3_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
 sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
 #sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
 #sims['tsi_long_boris_SDC_M3K3_NZ1024_NQ20480_NT'] = [50,100,200,400,800,1600]
 
-comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT12800'
+comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT6400'
 
 omega_p = 1
 
@@ -85,8 +83,8 @@ for key, value in sims.items():
         DH = dataHandler2()
         sim_name = key + str(tsteps)
         sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
-        print(sim_name)
-        print(sim.tEnd)
+        print(sim.runTime)
+
         ####################### Analysis and Visualisation ############################
         dt = sim.dt
         Nt = sim.tSteps

@@ -69,6 +69,10 @@ class kpps_analysis:
         
         self.fieldIntegration = False
         self.field_type = 'custom' #Can be pic, coulomb or custom
+        self.field_solver = self.direct_solve
+        self.iter_x0 = None
+        self.iter_tol = 1e-05
+        self.iter_max = None
         self.FDMat = None
         self.mesh_boundary_z = 'fixed'
         self.mesh_boundary_y = 'fixed'
@@ -139,7 +143,8 @@ class kpps_analysis:
         if self.particleIntegration == True and self.fieldIntegration == True:
             if self.field_type == 'pic':
                 self.gather = self.trilinear_gather
-                self.scatter = self.trilinear_qScatter  
+                self.scatter = self.trilinear_qScatter
+                    
             elif self.field_type == 'coulomb':
                 self.gather = self.coulomb 
                 self.scatter = self.none
@@ -152,6 +157,7 @@ class kpps_analysis:
         # Setup required field analysis methods
         if self.fieldIntegration == True:           
             if self.field_type == 'pic':
+                self.field_solver = self.stringtoMethod(self.field_solver)
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
                 self.preAnalysis_methods.append(self.scatter)
                 self.preAnalysis_methods.append(self.background)
@@ -229,7 +235,6 @@ class kpps_analysis:
         elif self.units == 'custom':
             pass
 
-                
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields.q = np.zeros((fields.q.shape),dtype=np.float)
@@ -480,15 +485,16 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species_list,fields,controller=None):
-        
         rho = self.meshtoVector(fields.rho[self.mi_x0:self.mi_xN,
                                            self.mi_y0:self.mi_yN,
                                            self.mi_z0:self.mi_zN])
 
         self.solver_pre(species_list,fields,controller)
-        phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
-        phi = self.vectortoMesh(phi,self.interior_shape)
+        #phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         
+        phi = self.field_solver(self.FDMat,rho*self.unit_scale_poisson,fields.BC_vector)
+        phi = self.vectortoMesh(phi,self.interior_shape)
+
         fields.phi[self.mi_x0::self.mi_xN,
                    self.mi_y0:self.mi_yN,
                    self.mi_z0:self.mi_zN] = phi
@@ -499,7 +505,22 @@ class kpps_analysis:
             self.pot_diff_list[nd](fields)
 
         return fields
+    
+    def direct_solve(self,FDMat,rho,BC_vector):
+        phi = sps.linalg.spsolve(FDMat, -rho - BC_vector)
         
+        return phi
+    
+    def gmres_solve(self,FDMat,rho,BC_vector):
+        phi, self.solver_code = sps.linalg.gmres(FDMat, -rho - BC_vector,
+                                                   x0=self.iter_x0,
+                                                   tol=self.iter_tol,
+                                                   maxiter=self.iter_max)
+        
+        self.iter_x0 = phi
+        
+        return phi
+         
     
     def pot_diff_fixed_x(self,fields):
         ## Differentiate over electric potential for electric field
@@ -675,6 +696,7 @@ class kpps_analysis:
     
     
     def boris_staggered(self,species,mesh,simulationParameters,**kwargs):
+        #print(species.vel)
         dt = simulationParameters.dt
         alpha = species.a
 
@@ -1115,15 +1137,13 @@ class kpps_analysis:
         mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
         
 ################################ Hook methods #################################
-    def ES_vel_rewind(self,species_list,mesh,**kwargs):
-        try:
-            dt = kwargs['controller'].dt
-            
-            for species in species_list:
-                species.vel = species.vel - species.E * species.q * dt
+    def ES_vel_rewind(self,species_list,mesh,controller=None):
+        dt = controller.dt
+        
+        for species in species_list:
+            self.fieldGather(species,mesh)
+            species.vel = species.vel - species.E * species.q * dt/2
 
-        except (NameError, AttributeError):
-            print('No controller time-step specified, skipping velocity rewind.')
         
         
     def calc_residuals_avg(self,species,k,m,x,xn,xQuad,v,vn,vQuad):

@@ -290,8 +290,6 @@ class Test_boris:
         
         pLoader1.run(species_list,sim)
         mLoader.run(mesh1,sim)
-        
-        print(analyser.fieldIntegrator_methods)
 
         analyser.run_preAnalyser(species_list,mesh1,controller=sim)
         print("*************************** Run ******************************")
@@ -371,7 +369,7 @@ if run_linear == True:
 ############################# Non-linear oscillator test ######################
 if run_nonLinear == True:
     end = 1
-    dts = [1,0.5,0.25,0.125]
+    dts = [1,0.5,0.25,0.125,0.125/2,0.125/4]
     #dts = [1]
     
     pos_sync = []
@@ -394,7 +392,7 @@ if run_nonLinear == True:
     test_obj.analysis_params['external_fields'] = True
     test_obj.analysis_params['external_fields_mesh'] = False
 
-    test_obj.dt = dts[-1]/2
+    test_obj.dt = dts[-1]/4
     test_obj.steps = np.int(end/test_obj.dt)
     spec_comp = test_obj.test_SDC()
     real_pos = spec_comp.pos[:,2]
