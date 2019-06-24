@@ -74,6 +74,7 @@ class kpps_analysis:
         self.iter_tol = 1e-05
         self.iter_max = None
         self.FDMat = None
+        self.gather_order = 1
         self.mesh_boundary_z = 'fixed'
         self.mesh_boundary_y = 'fixed'
         self.mesh_boundary_x = 'fixed'
@@ -142,7 +143,12 @@ class kpps_analysis:
         # Setup required particle-field interpolation methods
         if self.particleIntegration == True and self.fieldIntegration == True:
             if self.field_type == 'pic':
-                self.gather = self.trilinear_gather
+                if self.gather_order == 1:
+                    self.gather = self.trilinear_gather
+                else:
+                    self.gather = self.lagrange_gather_1d
+                    self.preAnalysis_methods.append(self.lagrange_gather_setup)
+                    
                 self.scatter = self.trilinear_qScatter
                     
             elif self.field_type == 'coulomb':
@@ -615,6 +621,47 @@ class kpps_analysis:
                               w[6]*mesh.E[:,i+1,j+1,k] + 
                               w[7]*mesh.E[:,i+1,j+1,k+1])
             
+        return species
+    
+    
+    def lagrange_gather_setup(self,species,mesh):
+        k = self.gather_order
+        self.interpol_nodes = np.zeros((mesh.res[2]+1,k+1),dtype=np.int)
+        
+        if self.mesh_boundary_z == 'open':
+            for i in range(0,mesh.res[2]):
+                min_j = i - np.floor(k/2)
+                max_j = i + np.floor((k+1)/2)
+                self.interpol_nodes[i,:] = np.linspace(min_j,max_j,k+1)
+        else:
+            for i in range(0,mesh.res[2]):
+                min_j = i - np.floor(k/2)
+                max_j = i + np.floor((k+1)/2)
+                self.interpol_nodes[i,:] = np.linspace(min_j,max_j,k+1)
+        
+        
+    
+    def lagrange_gather_1d(self,species,mesh):
+        k = self.gather_order
+        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        for pii in range(0,species.nq):
+            li = self.cell_index(species.pos[pii],O,mesh.dh)
+            
+            xj_i = self.interpol_nodes[li,:]
+            Ej = mesh.E[2,1,1,xj_i[0]:xj_i[-1]]
+            xj = xj_i*mesh.dh[2]
+            
+            c = np.ones(k+1)
+            
+            for j in range(0,k+1):
+                for m in range(0,j):
+                    c[j] *= (species.pos[pii,2] - xj[m])/(xj[j] - xj[m])
+                for m in range(j+1,k+1):
+                    c[j] *= (species.pos[pii,2] - xj[m])/(xj[j] - xj[m])
+            
+            E = Ej*c
+            species.E[pii,2] = E.sum()
+                
         return species
             
     
