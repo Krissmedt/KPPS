@@ -95,7 +95,7 @@ class kpps_analysis:
         
         self.external_fields = False
         self.background = self.none
-        self.scatter = self.trilinear_qScatter
+        self.scatter = self.none
         self.scatter_BC = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
         self.fIntegrator = self.poisson_cube2nd
@@ -150,10 +150,13 @@ class kpps_analysis:
                     self.preAnalysis_methods.append(self.lagrange_gather_setup)
                     
                 self.scatter = self.trilinear_qScatter
+                
                     
             elif self.field_type == 'coulomb':
                 self.gather = self.coulomb 
                 self.scatter = self.none
+                
+                
             else:
                 pass
         
