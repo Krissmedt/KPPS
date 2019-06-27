@@ -370,7 +370,6 @@ if run_linear == True:
 if run_nonLinear == True:
     end = 1
     dts = [1,0.5,0.25,0.125,0.125/2,0.125/4]
-    #dts = [1]
     
     pos_sync = []
     pos_stag = []
@@ -392,7 +391,7 @@ if run_nonLinear == True:
     test_obj.analysis_params['external_fields'] = True
     test_obj.analysis_params['external_fields_mesh'] = False
 
-    test_obj.dt = dts[-1]/4
+    test_obj.dt = dts[-1]/8
     test_obj.steps = np.int(end/test_obj.dt)
     spec_comp = test_obj.test_SDC()
     real_pos = spec_comp.pos[:,2]
@@ -440,13 +439,13 @@ if run_nonLinear == True:
     pos_stag_pic = np.array(pos_stag_pic)
     pos_sdc_pic = np.array(pos_sdc_pic)
     
-    zRel_sync = np.abs(pos_sync - spec_comp.pos[:,2])
-    zRel_stag = np.abs(pos_stag- spec_comp.pos[:,2])
-    zRel_sdc = np.abs(pos_sdc - spec_comp.pos[:,2])
+    zRel_sync = np.abs(pos_sync - spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
+    zRel_stag = np.abs(pos_stag- spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
+    zRel_sdc = np.abs(pos_sdc - spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
         
-    zRel_sync_pic = np.abs(pos_sync_pic - spec_comp.pos[:,2])
-    zRel_stag_pic = np.abs(pos_stag_pic- spec_comp.pos[:,2])
-    zRel_sdc_pic = np.abs(pos_sdc_pic - spec_comp.pos[:,2])
+    zRel_sync_pic = np.abs(pos_sync_pic - spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
+    zRel_stag_pic = np.abs(pos_stag_pic- spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
+    zRel_sdc_pic = np.abs(pos_sdc_pic - spec_comp.pos[:,2])/np.abs(spec_comp.pos[:,2])
     
     ##Order Plot w/ dt
     fig_dt = plt.figure(2)
