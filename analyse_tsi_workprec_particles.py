@@ -16,15 +16,12 @@ max_time = 20
 
 sims = {}
 
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi__boris_SDC_M5K1_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K3_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
-#sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-#sims['tsi_long_boris_SDC_M3K3_NZ1024_NQ20480_NT'] = [50,100,200,400,800,1600]
+sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400]
+#sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
+sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200]
 
-comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT6400'
+
+comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT400'
 
 omega_p = 1
 

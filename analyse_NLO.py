@@ -19,17 +19,29 @@ particle = 0
 #sims['NLO__type1_boris_SDC_NZ100_TE1_NT'] = [1,2,4,8,16,32]
 
 
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,8]
 #sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32]
-sims['NLO__type2_boris_SDC_NZ100_TE1_NT'] = [1]
-sims['NLO_bad_type2_boris_SDC_NZ100_TE1_NT'] = [1]
+#sims['NLO__type2_boris_SDC_NZ100_TE1_NT'] = [1,8]
+#sims['NLO_bad_type2_boris_SDC_NZ100_TE1_NT'] = [1,8]
 #sims['NLO_bad_type2_boris_SDC_NZ10000_TE1_NT'] = [1,8,32]
+
+sims['NLO__type2_boris_staggered_NZ200_TE1_NT'] = [1,2,4,8,16,32]
+sims['NLO__type2_boris_synced_NZ200_TE1_NT'] = [1,2,4,8,16,32]
+sims['NLO__type2_boris_SDC_NZ200_TE1_NT'] = [1,2,4,8,16,32]
+
+#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
+#sims['NLO__type2_boris_SDC_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
+
+#sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128]
 
 #sims['NLO__type2_boris_SDC_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
 #sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
 #sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
 
-comp_run = 'NLO__type1_boris_SDC_NZ100_TE1_NT254'
+comp_run = 'NLO__type1_boris_SDC_NZ100_TE1_NT512'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -70,13 +82,12 @@ for key, value in sims.items():
         
         p1Data_dict = pData_list[0]
 
-        mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+        #mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
         
         ## particle position comparison 
         spec1_pos = p1Data_dict['pos'][:,:,2]
         comp_pos = p1Data_comp['pos'][:,:,2]
 
-        print(sim.dt)
         zrel = np.abs(comp_pos[-1,particle] - spec1_pos[-1,particle])/np.abs(comp_pos[-1,particle])
         
         dts.append(sim.dt)

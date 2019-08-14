@@ -64,9 +64,9 @@ Experiment type:
 exptype = 2
 prefix = ''
 
-#schemes = ['boris_SDC']
+schemes = ['boris_SDC']
 schemes = ['boris_synced','boris_staggered']
-steps = [1,2,4,8,16,32]
+steps = [254,512]
 resolutions = [10000]
 
 tend = 1
@@ -140,6 +140,8 @@ analysis_params = type_setup(exptype,analysis_params)
 for scheme in schemes:
     if scheme == 'boris_staggered':
         analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+    else:
+        analysis_params['pre_hook_list'] = []
         
     analysis_params['particleIntegrator'] = scheme
     
