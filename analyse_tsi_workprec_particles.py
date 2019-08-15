@@ -9,16 +9,31 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
-plot = False
+def phase_snap(tstep,beamData1,beamData2,figNo=3):
+    fig = plt.figure(figNo,dpi=150)
+    p_ax = fig.add_subplot(1,1,1)
+    line_p1 = p_ax.plot(beamData1['pos'][tstep,:,2],beamData1['vel'][tstep,:,2],'bo',label='Beam 1, v=1')
+    line_p2 = p_ax.plot(beamData2['pos'][tstep,:,2],beamData2['vel'][tstep,:,2],'ro',label='Beam 2, v=-1')
+    p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
+    p_ax.set_xlim([0.0, 2*pi])
+    p_ax.set_xlabel('$z$')
+    p_ax.set_ylabel('$v_z$')
+    p_ax.set_ylim([-4,4])
+    p_ax.set_title('Two stream instability phase space')
+    p_ax.legend()
+    plt.show()
+    print("hey")
+
+plot = True
 
 start_time = 0
 max_time = 20
 
 sims = {}
 
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400]
+sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [400]
 #sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200]
+#sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200]
 
 
 comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT400'
@@ -94,6 +109,7 @@ for key, value in sims.items():
         tArray_comp = tArray_comp[0::skip_int]
         
         beam1_pos = p1Data_dict['pos'][:,:,2]
+        beam2_pos = p2Data_dict['pos'][:,:,2]
         comp_beam1_pos = p1Data_comp['pos'][:,:,2]
         comp_beam1_pos = comp_beam1_pos[0::skip_int,:]
         
@@ -114,6 +130,9 @@ for key, value in sims.items():
         rhs_evals.append(sim.rhs_eval)
         avg_errors.append(avg_error)
         
+        if plot == True:
+            phase_snap(0,p1Data_dict,p2Data_dict,figNo=3)
+            phase_snap(-1,p1Data_dict,p2Data_dict,figNo=4)
 
     label_order = sim_name[:-6]
 
