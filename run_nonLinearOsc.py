@@ -64,10 +64,12 @@ Experiment type:
 exptype = 2
 prefix = ''
 
-schemes = ['boris_SDC']
-schemes = ['boris_synced','boris_staggered']
-steps = [254,512]
-resolutions = [10000]
+schemes = ['boris_SDC','boris_synced','boris_staggered']
+steps = [1,2,4,8,16,32,64,128,254,512]
+resolutions = [100,1000000]
+
+M = 3
+K = 3
 
 tend = 1
 
@@ -110,8 +112,8 @@ mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
 analysis_params['nodeType'] = 'lobatto'
-analysis_params['M'] = 5
-analysis_params['K'] = 5
+analysis_params['M'] = M
+analysis_params['K'] = K
 
 analysis_params['E_type'] = 'custom'
 analysis_params['custom_external_E'] = nonLinear_ext_E
@@ -137,14 +139,19 @@ data_params['plot_params'] = plot_params
 
 
 analysis_params = type_setup(exptype,analysis_params)
+
 for scheme in schemes:
+    analysis_params['particleIntegrator'] = scheme
+    
     if scheme == 'boris_staggered':
         analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+    elif scheme == 'boris_SDC':
+        analysis_params['pre_hook_list'] = []
+        scheme += '_M' + str(M) + 'K' + str(K)
     else:
         analysis_params['pre_hook_list'] = []
         
-    analysis_params['particleIntegrator'] = scheme
-    
+
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
         dts = []
@@ -157,7 +164,7 @@ for scheme in schemes:
             species_params = [spec1_params]
             loader_params = [loader1_params]
     
-            sim_name = 'NLO_' + prefix + '_' + 'type' + str(exptype) + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_TE' + str(tend) + '_NT' + str(Nt) 
+            sim_name = 'NLO_' + prefix + '_' + 'type' + str(exptype) + '_' + scheme + '_NZ' + str(res) + '_TE' + str(tend) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             ## Numerical solution ##

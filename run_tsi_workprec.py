@@ -65,11 +65,11 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [50,100,200,400,800]
+steps = [500]
 resolutions = [128]
 
 L = 2*pi
-tend = 20
+tend = 50
 
 dx_mag = 0.0001
 dx_mode = 1

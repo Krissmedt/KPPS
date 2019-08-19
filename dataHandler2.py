@@ -151,9 +151,9 @@ class dataHandler2:
             except AttributeError:
                 print('DataHandler: No valid simulation ID given and no controller object' +
                       ' with associated ID found, load failed.')
-        
+
         sim = pk.load(sim_file)
-        pk
+
         if overwrite == True:
             self.controller_obj = sim
             self.set_params(sim.dataSettings)
