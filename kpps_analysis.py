@@ -94,7 +94,11 @@ class kpps_analysis:
         self.solver_post = self.none
         
         self.external_fields = False
-        self.background = self.none
+        self.custom_q_background = self.none
+        self.custom_rho_background = self.none
+        self.custom_E_background = self.none
+        self.custom_B_background = self.none
+        
         self.scatter = self.none
         self.scatter_BC = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
@@ -159,7 +163,7 @@ class kpps_analysis:
                 
             else:
                 pass
-        
+            
             self.fieldIntegrator_methods.append(self.scatter)
             
             
@@ -167,13 +171,15 @@ class kpps_analysis:
         if self.fieldIntegration == True:           
             if self.field_type == 'pic':
                 self.field_solver = self.stringtoMethod(self.field_solver)
+                self.preAnalysis_methods.append(self.calc_background)
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
+                self.preAnalysis_methods.append(self.impose_background)
                 self.preAnalysis_methods.append(self.scatter)
                 self.preAnalysis_methods.append(self.background)
                 self.preAnalysis_methods.append(self.fIntegrator)
                 
-                self.fieldIntegrator_methods.append(self.background) 
                 self.fieldIntegrator_methods.append(self.fIntegrator)
+                
 
 
         if self.external_fields_mesh  == True:
@@ -246,9 +252,7 @@ class kpps_analysis:
 
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
-        fields.q = np.zeros((fields.q.shape),dtype=np.float)
-        fields.E = np.zeros((fields.E.shape),dtype=np.float)
-        fields.B = np.zeros((fields.B.shape),dtype=np.float)
+        fields = self.impose_background(species_list,fields,simulationManager)
         
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
@@ -398,6 +402,19 @@ class kpps_analysis:
         self.static_B[:] = fields.B[:]
         return fields
     
+    def calc_background(self,species_list,fields,controller=None):
+        self.q_bk = np.zeros((fields.q.shape),dtype=np.float)
+        self.rho_bk = np.zeros((fields.rho.shape),dtype=np.float)
+        self.E_bk = np.zeros((fields.E.shape),dtype=np.float)
+        self.B_bk = np.zeros((fields.B.shape),dtype=np.float)
+        
+        self.q_bk = self.custom_q_background(species_list,fields,controller=controller,q_bk=self.q_bk)
+        self.rho_bk = self.custom_rho_background(species_list,fields,controller=controller,rho_bk=self.rho_bk)
+        self.E_bk = self.custom_E_background(species_list,fields,controller=controller,E_bk=self.E_bk)
+        self.B_bk = self.custom_B_background(species_list,fields,controller=controller,B_bk=self.B_bk)
+        
+        return fields
+        
     def impose_static_E(self,species_list,fields,controller=None):
         fields.E += self.static_E
         
@@ -405,6 +422,15 @@ class kpps_analysis:
     
     def impose_static_B(self,species_list,fields,controller=None):
         fields.B += self.static_B
+        
+        return fields
+    
+    
+    def impose_background(self,species_list,fields,controller=None):
+        fields.q = self.q_bk
+        fields.rho = self.rho_bk
+        fields.E = self.E_bk
+        fields.B = self.B_bk
         
         return fields
         
@@ -489,7 +515,7 @@ class kpps_analysis:
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
-            
+
         return self.FDMat
     
         
@@ -688,7 +714,7 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
         self.scatter_BC(species,mesh)
-        mesh.rho = mesh.q/mesh.dv
+        mesh.rho += mesh.q/mesh.dv
         return mesh
             
             

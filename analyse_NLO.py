@@ -8,39 +8,55 @@ import cmath as cm
 from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
+from caseFile_nonLinearOsc import *
 
-def nonLinear_ext_E(species,mesh,controller=None):
-    nq = species.pos.shape[0]
-    for pii in range(0,nq):
-        species.E[pii,2] += -np.power(species.pos[pii,2],3)
-    
-    return species
-
-def nonLinear_mesh_E(species_list,mesh,controller=None):
-    for zi in range(0,mesh.E[2,1,1,:].shape[0]-1):
-        z = mesh.zlimits[0] + zi * mesh.dz
-        mesh.E[2,1,1,zi] += -np.power(z,3)
-
-    static_E = np.zeros(mesh.E.shape)
-    static_E[:] = mesh.E[:]
-
-    return mesh, static_E
-
-def nonLinear_ion_bck(species_list,mesh,controller):
-    pass
 
 sims = {}
 
 particle = 0
 
-
+#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
 
-sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254]
-sims['NLO__type2_boris_synced_NZ100_TE1_NT1'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
+#sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254]
+
+#sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
+#sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
+#sims['NLO__type2_boris_staggered_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_staggered_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
+sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
 comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT1024'
 
 plot_params = {}
@@ -52,6 +68,8 @@ plot_params['xtick.labelsize'] = 8
 plot_params['ytick.labelsize'] = 8
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
+plot_params['legend.loc'] = 'upper right'
+plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
 DH_comp = dataHandler2()
@@ -95,11 +113,11 @@ for key, value in sims.items():
         zrels.append(zrel)
         
     if sim.analysisSettings['particleIntegrator'] == 'boris_SDC':
-        label_order = 'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K'])
+        label_order = 'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K']) + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
     elif sim.analysisSettings['particleIntegrator'] == 'boris_staggered':
-        label_order = 'Staggered Boris'
+        label_order = 'Staggered Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
     elif sim.analysisSettings['particleIntegrator'] == 'boris_synced':
-        label_order = 'Synchronised Boris'
+        label_order = 'Synchronised Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
         
 
     ##Convergence Plot w/ rhs
