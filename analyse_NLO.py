@@ -9,39 +9,39 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 
+def nonLinear_ext_E(species,mesh,controller=None):
+    nq = species.pos.shape[0]
+    for pii in range(0,nq):
+        species.E[pii,2] += -np.power(species.pos[pii,2],3)
+    
+    return species
+
+def nonLinear_mesh_E(species_list,mesh,controller=None):
+    for zi in range(0,mesh.E[2,1,1,:].shape[0]-1):
+        z = mesh.zlimits[0] + zi * mesh.dz
+        mesh.E[2,1,1,zi] += -np.power(z,3)
+
+    static_E = np.zeros(mesh.E.shape)
+    static_E[:] = mesh.E[:]
+
+    return mesh, static_E
+
+def nonLinear_ion_bck(species_list,mesh,controller):
+    pass
+
 sims = {}
 
 particle = 0
 
 
-#sims['NLO__type1_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32]
-#sims['NLO__type1_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32]
-#sims['NLO__type1_boris_SDC_NZ100_TE1_NT'] = [1,2,4,8,16,32]
+#sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
 
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,8]
-#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32]
-#sims['NLO__type2_boris_SDC_NZ100_TE1_NT'] = [1,8]
-#sims['NLO_bad_type2_boris_SDC_NZ100_TE1_NT'] = [1,8]
-#sims['NLO_bad_type2_boris_SDC_NZ10000_TE1_NT'] = [1,8,32]
-
-sims['NLO__type2_boris_staggered_NZ200_TE1_NT'] = [1,2,4,8,16,32]
-sims['NLO__type2_boris_synced_NZ200_TE1_NT'] = [1,2,4,8,16,32]
-sims['NLO__type2_boris_SDC_NZ200_TE1_NT'] = [1,2,4,8,16,32]
-
-#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
-#sims['NLO__type2_boris_SDC_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128]
-
-#sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128]
-
-#sims['NLO__type2_boris_SDC_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
-#sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
-#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32]
-
-comp_run = 'NLO__type1_boris_SDC_NZ100_TE1_NT512'
+sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254]
+sims['NLO__type2_boris_synced_NZ100_TE1_NT1'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT1024'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -56,7 +56,6 @@ plt.rcParams.update(plot_params)
 
 DH_comp = dataHandler2()
 comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
 pDataList_comp = DH_comp.load_p(['pos'],species=['spec1'],sim_name=comp_sim_name)
 p1Data_comp = pDataList_comp[0] 
 
@@ -95,8 +94,13 @@ for key, value in sims.items():
         rhs_evals.append(sim.rhs_eval)
         zrels.append(zrel)
         
-
-    label_order = sim_name[:-6]
+    if sim.analysisSettings['particleIntegrator'] == 'boris_SDC':
+        label_order = 'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K'])
+    elif sim.analysisSettings['particleIntegrator'] == 'boris_staggered':
+        label_order = 'Staggered Boris'
+    elif sim.analysisSettings['particleIntegrator'] == 'boris_synced':
+        label_order = 'Synchronised Boris'
+        
 
     ##Convergence Plot w/ rhs
     #fig_con = plt.figure(DH.figureNo+4)
@@ -137,7 +141,7 @@ ax_rhs.set_xscale('log')
 #ax_rhs.set_xlim(10**3,10**5)
 ax_rhs.set_xlabel('Number of RHS evaluations')
 ax_rhs.set_yscale('log')
-#ax_rhs.set_ylim(10**(-5),10**1)
+ax_rhs.set_ylim(10**(-16),1)
 ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
 
 xRange = ax_rhs.get_xlim()
@@ -157,7 +161,7 @@ ax_dt.set_xscale('log')
 #ax_dt.set_xlim(10**-3,10**-1)
 ax_dt.set_xlabel(r'$\Delta t$')
 ax_dt.set_yscale('log')
-#ax_dt.set_ylim(10**(-7),10**1)
+ax_dt.set_ylim(10**(-16),1)
 ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
 
 xRange = ax_dt.get_xlim()
