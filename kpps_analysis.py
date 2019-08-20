@@ -171,7 +171,6 @@ class kpps_analysis:
         if self.fieldIntegration == True:           
             if self.field_type == 'pic':
                 self.field_solver = self.stringtoMethod(self.field_solver)
-                self.preAnalysis_methods.append(self.calc_background)
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
                 self.preAnalysis_methods.append(self.impose_background)
                 self.preAnalysis_methods.append(self.scatter)
@@ -253,7 +252,7 @@ class kpps_analysis:
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields = self.impose_background(species_list,fields,simulationManager)
-        
+
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
 
@@ -403,21 +402,16 @@ class kpps_analysis:
         return fields
     
     def calc_background(self,species_list,fields,controller=None):
-        self.q_bk = np.zeros((fields.q.shape),dtype=np.float)
-        self.rho_bk = np.zeros((fields.rho.shape),dtype=np.float)
-        self.E_bk = np.zeros((fields.E.shape),dtype=np.float)
-        self.B_bk = np.zeros((fields.B.shape),dtype=np.float)
-        
-        self.q_bk = self.custom_q_background(species_list,fields,controller=controller,q_bk=self.q_bk)
-        self.rho_bk = self.custom_rho_background(species_list,fields,controller=controller,rho_bk=self.rho_bk)
-        self.E_bk = self.custom_E_background(species_list,fields,controller=controller,E_bk=self.E_bk)
-        self.B_bk = self.custom_B_background(species_list,fields,controller=controller,B_bk=self.B_bk)
-        
+        self.custom_q_background(species_list,fields,controller=controller,q_bk=fields.q_bk)
+        self.custom_rho_background(species_list,fields,controller=controller,rho_bk=fields.rho_bk)
+        self.custom_E_background(species_list,fields,controller=controller,E_bk=fields.E_bk)
+        self.custom_B_background(species_list,fields,controller=controller,B_bk=fields.B_bk)
+
         return fields
         
     def impose_static_E(self,species_list,fields,controller=None):
         fields.E += self.static_E
-        
+
         return fields
     
     def impose_static_B(self,species_list,fields,controller=None):
@@ -427,10 +421,10 @@ class kpps_analysis:
     
     
     def impose_background(self,species_list,fields,controller=None):
-        fields.q = self.q_bk
-        fields.rho = self.rho_bk
-        fields.E = self.E_bk
-        fields.B = self.B_bk
+        fields.q[:,:,:] = fields.q_bk[:,:,:]
+        fields.rho[:,:,:] = fields.rho_bk[:,:,:]
+        fields.E[:,:,:,:] = fields.E_bk[:,:,:,:]
+        fields.B[:,:,:,:] = fields.B_bk[:,:,:,:]
         
         return fields
         
@@ -502,7 +496,7 @@ class kpps_analysis:
             
         if controller.ndim == 3:
             self.interior_shape[0] += 1
-            if self.mesh_boundary_y == 'open':
+            if self.mesh_boundary_x == 'open':
                 FDMatrix_adjust_x = self.poisson_M_adjust_3d
                 self.pot_differentiate_x = self.pot_diff_open_x
             
@@ -525,7 +519,6 @@ class kpps_analysis:
                                            self.mi_z0:self.mi_zN])
 
         self.solver_pre(species_list,fields,controller)
-        #phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         
         phi = self.field_solver(self.FDMat,rho*self.unit_scale_poisson,fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
@@ -585,7 +578,7 @@ class kpps_analysis:
     def pot_diff_fixed_z(self,fields):
         ## Differentiate over electric potential for electric field
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
-        
+
         #E-field z-component differentiation
         fields.E[2,:,:,0] = 2*(fields.phi[:,:,0]-fields.phi[:,:,1])
         fields.E[2,:,:,1:n[2]-1] = (fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])

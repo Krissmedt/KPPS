@@ -22,9 +22,10 @@ Experiment type:
 exptype = 3
 prefix = ''
 
-schemes = ['boris_SDC']
-steps = [1]
-resolutions = [10]
+schemes = ['boris_synced']
+steps = [1,2,4,8,16,32,64,128,256,512]
+steps = [512]
+resolutions = [100]
 
 M = 5
 K = 5
@@ -67,6 +68,7 @@ loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 #mesh_params['node_charge'] = -2*ppc*q
 mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
+mLoader_params['BC_function'] = quartic_potential
 
 analysis_params['particleIntegration'] = True
 analysis_params['nodeType'] = 'lobatto'
@@ -83,7 +85,7 @@ analysis_params['rhs_check'] = True
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
-data_params['write_m'] = False
+data_params['write_m'] = True
 
 
 plot_params = {}

@@ -68,6 +68,7 @@ loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 #mesh_params['node_charge'] = -2*ppc*q
 mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
+mLoader_params['BC_function'] = quartic_potential
 
 analysis_params['particleIntegration'] = True
 analysis_params['nodeType'] = 'lobatto'
@@ -187,6 +188,7 @@ ax_dt.plot(xRange,DH.orderLines(8,xRange,yRange),
             ls='dashdot',c='0.1',label='8th Order')
 ax_dt.legend()
 
-
-
 """
+
+
+ 

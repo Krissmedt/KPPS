@@ -9,16 +9,17 @@ import matplotlib.animation as animation
 import random
 from mesh import mesh
 
-k = 3
-res = 15
-interpol_nodes = np.zeros((res,k+1),dtype=np.int)
+res = 11
+z = np.linspace(-1,1,res)
+rho = -3*np.power(z,2)
+E = -np.power(z,3)
+phi = -0.25 * np.power(z,4)
+phi_solve = [-0.25,   -0.106,  -0.0388, -0.0148, -0.01,   -0.01,   -0.01,   -0.0148, -0.0388, -0.106,  -0.25]
 
-for i in range(0,res):
-    min_j = i - np.floor(k/2)
-    max_j = i + np.floor((k+1)/2)
-    
-    if max_j > res:
-        max_j -= res
-        
-    interpol_nodes[i,:] = np.linspace(min_j,max_j,k+1)
-    
+fig = plt.figure(1)
+ax1 = fig.add_subplot(111)
+#ax1.plot(z,rho)
+#ax1.plot(z,E)
+ax1.plot(z,phi)
+ax1.plot(z,phi_solve)
+ 

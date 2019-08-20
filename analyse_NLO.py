@@ -50,12 +50,15 @@ particle = 0
 #sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #sims['NLO__type2_boris_staggered_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
-sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+
+sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [512]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [512]
 
 comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT1024'
 
@@ -99,7 +102,7 @@ for key, value in sims.items():
         
         p1Data_dict = pData_list[0]
 
-        #mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
+        mData_dict = DH.load_m(['phi','E','rho'],sim_name=sim_name)
         
         ## particle position comparison 
         spec1_pos = p1Data_dict['pos'][:,:,2]
@@ -134,6 +137,30 @@ for key, value in sims.items():
     fig_dt = plt.figure(DH.figureNo+2)
     ax_dt = fig_dt.add_subplot(1, 1, 1)
     ax_dt.plot(dts,zrels,label=label_order)
+    
+    
+res = 101
+z = np.linspace(-1,1,res)
+rho = 3*np.power(z,2)
+E = -np.power(z,3)
+phi = -0.25 * np.power(z,4)
+
+fig = plt.figure(10)
+ax1 = fig.add_subplot(111)
+#ax1.plot(z,rho)
+ax1.plot(z,phi)
+ax1.plot(z,mData_dict['phi'][0,1,1,:-1])
+ax1.plot(z,mData_dict['phi'][256,1,1,:-1])
+ax1.plot(z,mData_dict['phi'][-1,1,1,:-1])
+
+fig = plt.figure(11)
+ax2 = fig.add_subplot(111)
+#ax1.plot(z,rho)
+#ax1.plot(z,E)
+#ax1.plot(z,phi)
+ax2.plot(z,mData_dict['E'][0,2,1,1,:-1])
+ax2.plot(z,mData_dict['E'][256,2,1,1,:-1])
+ax2.plot(z,mData_dict['E'][-1,2,1,1,:-1])
 
 """
 ## Convergence plot finish
