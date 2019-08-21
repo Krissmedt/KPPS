@@ -19,13 +19,12 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 3
+exptype = 2
 prefix = ''
 
-schemes = ['boris_synced']
-steps = [1,2,4,8,16,32,64,128,256,512]
-steps = [512]
-resolutions = [100]
+schemes = ['boris_SDC']
+steps = [1,2,3,4,8,16,32,64,128,256]
+resolutions = [1000000]
 
 M = 5
 K = 5
@@ -53,6 +52,7 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [-1,1]
+sim_params['nlo_type'] = exptype
 
 spec1_params['name'] = 'spec1'
 spec1_params['nq'] = 2
@@ -85,7 +85,7 @@ analysis_params['rhs_check'] = True
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
-data_params['write_m'] = True
+data_params['write_m'] = False
 
 
 plot_params = {}

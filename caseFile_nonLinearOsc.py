@@ -25,8 +25,7 @@ def type_setup(exptype,analysis_params):
         analysis_params['gather'] = 'trilinear_gather'
         analysis_params['external_fields'] = False
         analysis_params['external_fields_mesh'] = False
-        analysis_params['preAnalysis_methods'] = ['calc_background','fIntegrator_setup','impose_background','fIntegrator']
-        
+        analysis_params['preAnalysis_methods'] = ['calc_background','fIntegrator_setup','impose_background','fIntegrator',update_background]
         
     return analysis_params
         
@@ -52,15 +51,19 @@ def nonLinear_mesh_E(species_list,mesh,controller=None):
 def nonLinear_ion_bck(species_list,mesh,controller=None,rho_bk=None):
     for zi in range(0,mesh.rho.shape[2]-1):
         z = mesh.zlimits[0] + mesh.dz * zi
-        rho_bk[1,1,zi] = 3*np.power(z,2)
+        rho_bk[1,1,zi] = - 3*np.power(z,2)
     
     mesh.rho_bk = rho_bk
     return rho_bk
 
 def quartic_potential(pos):
-    phi = - 1/4 * np.power(pos[2],4)
+    phi = 1/4 * np.power(pos[2],4)
 
     return phi
+
+def update_background(species_list,mesh,controller=None):
+    mesh.E_bk = mesh.E    
+
 
 def bc_pot(pos):
     phi = 0

@@ -8,6 +8,7 @@ import cmath as cm
 from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
+import h5py as h5
 
 def phase_snap(tstep,beamData1,beamData2,figNo=3):
     fig = plt.figure(figNo,dpi=150)
@@ -23,19 +24,24 @@ def phase_snap(tstep,beamData1,beamData2,figNo=3):
     p_ax.legend()
     plt.show()
 
+analyse = True
 plot = True
+snapPlot = False
+
 
 start_time = 0
-max_time = 50
+max_time = 20
 
 sims = {}
 
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [500]
-#sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200]
+#sims['tsi_TE50_boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
+#sims['tsi_TE50_boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
+#sims['tsi_TE50_boris_SDC_M3K3_NZ128_NQ2560_NT'] = [50,100,200,400,800]
+sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,800,1600,3200]
+sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
+sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
 
-
-comp_run = 'tsi__boris_synced_NZ128_NQ2560_NT500'
+comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT12800'
 
 omega_p = 1
 
@@ -70,137 +76,158 @@ mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
 pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
 p1Data_comp = pDataList_comp[0] 
 
-
-for key, value in sims.items():
-    dts = []
-    Nts = []
-    rhs_evals = []
-    avg_errors = []
-    avg_slopes = []
-    avg_errors_nonlinear = []
+filenames = []
+if analyse == True:
+    for key, value in sims.items():
+        dts = []
+        Nts = []
+        rhs_evals = []
+        avg_errors = []
+        avg_slopes = []
+        avg_errors_nonlinear = []
+        
+        filename = key + "_workprec_pos" + ".h5"
+        filenames.append(filename)
+        file = h5.File(filename,'w')
+        grp = file.create_group('fields')
     
-    for tsteps in value:
-        DH = dataHandler2()
-        sim_name = key + str(tsteps)
-        sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
-
-        ####################### Analysis and Visualisation ############################
-        dt = sim.dt
-        Nt = sim.tSteps
-        
-        start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
-        max_dt = np.int(max_time/(sim.dt*DH.samplePeriod))+1
-        
-        pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
-        
-        p1Data_dict = pData_list[0]
-        p2Data_dict = pData_list[1]
-
-        mData_dict = DH.load_m(['phi','E','rho','PE_sum'],sim_name=sim_name)
-        
-        
-        ## particle position comparison
-        skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-        skip_int = np.int(skip)
-        
-        tArray = p1Data_dict['t'][:]
-        tArray_comp = p1Data_comp['t'][:]
-        tArray_comp = tArray_comp[0::skip_int]
-        
-        beam1_pos = p1Data_dict['pos'][:,:,2]
-        beam2_pos = p2Data_dict['pos'][:,:,2]
-        comp_beam1_pos = p1Data_comp['pos'][:,:,2]
-        comp_beam1_pos = comp_beam1_pos[0::skip_int,:]
-        
-        
-        tArray_slice = tArray[start_dt:max_dt]
-        tArray_comp_slice = tArray_comp[start_dt:max_dt]
-        beam1_pos_slice = beam1_pos[start_dt:max_dt]
-        comp_beam1_pos_slice = comp_beam1_pos[start_dt:max_dt]
-        
-        pos_diff = np.abs(comp_beam1_pos_slice-beam1_pos_slice)
-        rel_pos_diff = pos_diff/np.abs(comp_beam1_pos_slice)
-        final_errors = rel_pos_diff[-1,:]
-        
-        avg_error = np.average(final_errors)
-        
-        dts.append(sim.dt)
-        Nts.append(sim.tSteps)
-        rhs_evals.append(sim.rhs_eval)
-        avg_errors.append(avg_error)
-        
-        if plot == True:
-            phase_snap(0,p1Data_dict,p2Data_dict,figNo=3)
-            phase_snap(int(p1Data_dict['pos'].shape[0]/2),p1Data_dict,p2Data_dict,figNo=4)
-            phase_snap(-1,p1Data_dict,p2Data_dict,figNo=5)
-
-    label_order = sim_name[:-6]
-
-    ##Convergence Plot w/ rhs
-    #fig_con = plt.figure(DH.figureNo+4)
-    #ax_con = fig_con.add_subplot(1, 1, 1)
-    #ax_con.plot(rhs_evals[1:],avg_slope_diff,label=label_order)
+        for tsteps in value:
+            DH = dataHandler2()
+            sim_name = key + str(tsteps)
+            sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
     
-    ##Order Plot w/ rhs
-    fig_rhs = plt.figure(DH.figureNo+1)
-    ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-    ax_rhs.plot(rhs_evals,avg_errors,label=label_order)
+            ####################### Analysis and Visualisation ############################
+            dt = sim.dt
+            Nt = sim.tSteps
+            
+            start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
+            max_dt = np.int(max_time/(sim.dt*DH.samplePeriod))+1
+            
+            pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
+            
+            p1Data_dict = pData_list[0]
+            p2Data_dict = pData_list[1]
     
-    ##Order Plot w/ dt
-    fig_dt = plt.figure(DH.figureNo+2)
-    ax_dt = fig_dt.add_subplot(1, 1, 1)
-    ax_dt.plot(dts,avg_errors,label=label_order)
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres'],sim_name=sim_name)
+            
+            print(sim.analysisSettings['particleIntegrator'])
+            print(sim.simSettings['tEnd'])
+            print(p1Data_dict['KE_sum'][1])
+            print(np.max(p1Data_dict['KE_sum']))
+            
+            ## particle position comparison
+            skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
+            skip_int = np.int(skip)
+            
+            tArray = p1Data_dict['t'][:]
+            tArray_comp = p1Data_comp['t'][:]
+            tArray_comp = tArray_comp[0::skip_int]
+            
+            beam1_pos = p1Data_dict['pos'][:,:,2]
+            beam2_pos = p2Data_dict['pos'][:,:,2]
+            comp_beam1_pos = p1Data_comp['pos'][:,:,2]
+            comp_beam1_pos = comp_beam1_pos[0::skip_int,:]
+            
+            
+            tArray_slice = tArray[start_dt:max_dt]
+            tArray_comp_slice = tArray_comp[start_dt:max_dt]
+            beam1_pos_slice = beam1_pos[start_dt:max_dt]
+            comp_beam1_pos_slice = comp_beam1_pos[start_dt:max_dt]
+            
+            pos_diff = np.abs(comp_beam1_pos_slice-beam1_pos_slice)
+            rel_pos_diff = pos_diff/np.abs(comp_beam1_pos_slice)
+            final_errors = rel_pos_diff[-1,:]
+            
+            avg_error = np.average(final_errors)
+            
+            dts.append(sim.dt)
+            Nts.append(sim.tSteps)
+            rhs_evals.append(sim.rhs_eval)
+            avg_errors.append(avg_error)
+            
+            if snapPlot == True:
+                phase_snap(0,p1Data_dict,p2Data_dict,figNo=3)
+                phase_snap(-1,p1Data_dict,p2Data_dict,figNo=4)
+        
+        file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
+        file.attrs["res"] = str(mData_dict['zres'][0])
+        try:
+            file.attrs["M"] = str(sim.analysisSettings['M'])
+            file.attrs["K"] = str(sim.analysisSettings['K'])
+        except KeyError:
+            pass
+        
+        grp.create_dataset('dts',data=dts)
+        grp.create_dataset('Nts',data=Nts)
+        grp.create_dataset('rhs_evals',data=rhs_evals)
+        grp.create_dataset('errors',data=avg_errors)
+        file.close()
 
-"""
-## Convergence plot finish
-ax_con.set_xscale('log')
-#ax_rhs.set_xlim(10**3,10**5)
-ax_con.set_xlabel('Number of RHS evaluations')
-ax_con.set_yscale('log')
-#ax_rhs.set_ylim(10**(-5),10**1)
-ax_con.set_ylabel('Avg. slope difference')
+if plot == True:
+    if len(filenames) == 0:
+        for key, value in sims.items():
+            filename = key + "_workprec_pos" + ".h5"
+            filenames.append(filename)
+            
 
-xRange = ax_con.get_xlim()
-yRange = ax_con.get_ylim()
+    for filename in filenames:
+        file = h5.File(filename,'r')
+        dts = file["fields/dts"][:]
+        rhs_evals = file["fields/rhs_evals"][:]
+        avg_errors = file["fields/errors"][:]
 
-ax_con.plot(xRange,DH.orderLines(-2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_con.plot(xRange,DH.orderLines(-4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_con.legend()
-"""
+        if file.attrs["integrator"] == "boris_staggered":
+            label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
+        elif file.attrs["integrator"] == "boris_synced":
+            label = "Boris Synced" + ", Nz=" + file.attrs["res"]
+        elif file.attrs["integrator"] == "boris_SDC":
+            label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
+            label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
 
-## Order plot finish
-ax_rhs.set_xscale('log')
-#ax_rhs.set_xlim(10**3,10**5)
-ax_rhs.set_xlabel('Number of RHS evaluations')
-ax_rhs.set_yscale('log')
-#ax_rhs.set_ylim(10**(-5),10**1)
-ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
-
-xRange = ax_rhs.get_xlim()
-yRange = ax_rhs.get_ylim()
-
-ax_rhs.plot(xRange,DH.orderLines(-2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_rhs.legend()
-
-
-## Order plot finish
-ax_dt.set_xscale('log')
-#ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel(r'$\Delta t$')
-ax_dt.set_yscale('log')
-#ax_dt.set_ylim(10**(-7),10**1)
-ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
-
-xRange = ax_dt.get_xlim()
-yRange = ax_dt.get_ylim()
-
-ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_dt.legend()
+        ##Convergence Plot w/ rhs
+        #fig_con = plt.figure(DH.figureNo+4)
+        #ax_con = fig_con.add_subplot(1, 1, 1)
+        #ax_con.plot(rhs_evals[1:],avg_slope_diff,label=label_order)
+        
+        ##Order Plot w/ rhs
+        fig_rhs = plt.figure(10)
+        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
+        ax_rhs.plot(rhs_evals,avg_errors,label=label)
+        
+        ##Order Plot w/ dt
+        fig_dt = plt.figure(11)
+        ax_dt = fig_dt.add_subplot(1, 1, 1)
+        ax_dt.plot(dts,avg_errors,label=label)
+        
+        
+    ax_rhs.set_xscale('log')
+    #ax_rhs.set_xlim(10**3,10**5)
+    ax_rhs.set_xlabel('Number of RHS evaluations')
+    ax_rhs.set_yscale('log')
+    ax_rhs.set_ylim(10**(-6),10)
+    ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
+    
+    xRange = ax_rhs.get_xlim()
+    yRange = ax_rhs.get_ylim()
+    
+    ax_rhs.plot(xRange,DH.orderLines(-2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    ax_rhs.legend()
+    
+    ax_dt.set_xscale('log')
+    #ax_dt.set_xlim(10**-3,10**-1)
+    ax_dt.set_xlabel(r'$\Delta t$')
+    ax_dt.set_yscale('log')
+    ax_dt.set_ylim(10**(-4),10)
+    ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
+    
+    xRange = ax_dt.get_xlim()
+    yRange = ax_dt.get_ylim()
+    
+    ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    ax_dt.legend()

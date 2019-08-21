@@ -77,7 +77,6 @@ class meshLoader:
         mesh.rho_bk = np.zeros((mesh.rho.shape),dtype=np.float)
         mesh.E_bk = np.zeros((mesh.E.shape),dtype=np.float)
         mesh.B_bk = np.zeros((mesh.B.shape),dtype=np.float)
-        print(mesh.E_bk[2,1,1,:])
         
         mesh = self.BC_box(mesh,controller)
         

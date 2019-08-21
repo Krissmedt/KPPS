@@ -53,6 +53,7 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [-1,1]
+sim_params['nlo_type'] = exptype
 
 spec1_params['name'] = 'spec1'
 spec1_params['nq'] = 2
