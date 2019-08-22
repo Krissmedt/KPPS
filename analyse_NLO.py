@@ -10,7 +10,7 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 from caseFile_nonLinearOsc import *
 import h5py as h5
-
+from collections import OrderedDict
 
 sims = {}
 particle = 0
@@ -50,38 +50,54 @@ particle = 0
 #sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #sims['NLO__type2_boris_staggered_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
-sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type2_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type2_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
-sims['NLO__type3_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type3_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 
-#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type2_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+
+#sims['NLO__type3_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+
+#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #
-#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type3_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type3_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type3_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [512]
+#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
 comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT2048'
 
 plot_params = {}
-plot_params['legend.fontsize'] = 8
+plot_params['legend.fontsize'] = 12
 plot_params['figure.figsize'] = (6,4)
 plot_params['axes.labelsize'] = 12
 plot_params['axes.titlesize'] = 12
@@ -148,17 +164,17 @@ if analyse == True:
             label_res = 'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K']) + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
             label_type =  'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K']) + ', Type ' + str(sim.simSettings['nlo_type'])
         elif sim.analysisSettings['particleIntegrator'] == 'boris_staggered':
-            label_res = 'Staggered Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
-            label_type =  'Staggered Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
+            label_res = 'Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
+            label_type =  'Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
         elif sim.analysisSettings['particleIntegrator'] == 'boris_synced':
-            label_res = 'Synchronised Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
-            label_type =  'Synchronised Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
+            label_res = 'Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
+            label_type =  'Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
         
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
         file.attrs["res"] = str(sim.mLoaderSettings['resolution'][2])
         file.attrs["type"] = str(sim.simSettings['nlo_type'])
         file.attrs["label_res"] = label_res
-        file.attrs["label_type"] = label_res
+        file.attrs["label_type"] = label_type
         
         try:
             file.attrs["M"] = str(sim.analysisSettings['M'])
@@ -187,10 +203,13 @@ if plot == True:
         label = file.attrs['label_res']
         nlo_type = file.attrs['type']
             
-        if int(nlo_type) == 2:
-            c = 'b'
-        elif int(nlo_type) == 3:
-            c = 'r'
+        c = None
+        if plot_type == "cross-type":
+            label = file.attrs['label_type']
+            if int(nlo_type) == 2:
+                c = 'blue'
+            elif int(nlo_type) == 3:
+                c = 'red'
         
     
         ##Convergence Plot w/ rhs
@@ -201,12 +220,12 @@ if plot == True:
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(DH.figureNo+1)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,zrels,c,label=None)
+        ax_rhs.plot(rhs_evals,zrels,color=c,label=label)
         
         ##Order Plot w/ dt
         fig_dt = plt.figure(DH.figureNo+2)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,zrels,c,label=label)
+        ax_dt.plot(dts,zrels,color=c,label=label)
     
     
     ## Order plot finish
@@ -229,7 +248,13 @@ if plot == True:
                 ls='dashed',c='0.75',label='4th Order')
     ax_rhs.plot(xRange,DH.orderLines(-8,xRange,yRange),
                 ls='dashdot',c='0.1',label='8th Order')
-    ax_rhs.legend()
+    
+
+    plot_params['legend.loc'] = 'lower left'
+    plt.rcParams.update(plot_params)
+    handles, labels = fig_rhs.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_rhs.legend(by_label.values(), by_label.keys())
     
     
     ## Order plot finish
@@ -249,7 +274,13 @@ if plot == True:
                 ls='dashed',c='0.75',label='4th Order')
     ax_dt.plot(xRange,DH.orderLines(8,xRange,yRange),
                 ls='dashdot',c='0.1',label='8th Order')
-    ax_dt.legend()
+    
+    plot_params['legend.loc'] = 'lower right'
+    plt.rcParams.update(plot_params)
+    
+    handles, labels = fig_dt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_dt.legend(by_label.values(), by_label.keys())
 
 
 

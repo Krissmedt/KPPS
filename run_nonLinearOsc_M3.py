@@ -20,12 +20,12 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 2
+exptype = 3
 prefix = ''
 
-schemes = ['boris_SDC','boris_synced','boris_staggered']
-steps = [1,2,4,8,16,32,64,128,254,512]
-resolutions = [10,100,1000,10000]
+schemes = ['boris_synced']
+steps = [1,2,4,8,16,32,64,128,254,512,1024]
+resolutions = [10,100,1000,10000,100000,1000000]
 
 M = 3
 K = 3

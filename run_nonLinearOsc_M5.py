@@ -19,12 +19,12 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 2
+exptype = 1
 prefix = ''
 
 schemes = ['boris_SDC']
-steps = [1,2,3,4,8,16,32,64,128,256]
-resolutions = [1000000]
+steps = [1,2,4,8,16,32,64,128,256,512,1024,2048]
+resolutions = [1]
 
 M = 5
 K = 5
