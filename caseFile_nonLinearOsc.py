@@ -4,7 +4,7 @@ import numpy as np
 import math
 from mpl_toolkits.mplot3d import Axes3D
 
-def type_setup(exptype,analysis_params):
+def type_setup(exptype,species_params, loader_params,analysis_params):
     if exptype == 1:
         analysis_params['fieldIntegration'] = False
         analysis_params['field_type'] = 'custom'
@@ -27,8 +27,46 @@ def type_setup(exptype,analysis_params):
         analysis_params['external_fields_mesh'] = False
         analysis_params['preAnalysis_methods'] = ['calc_background','fIntegrator_setup','impose_background','fIntegrator',update_background]
         
+    elif expType == 4:
+        analysis_params['field_type'] = 'custom'
+        analysis_params['gather'] = 'trilinear_gather'
+        analysis_params['external_fields'] = False
+        analysis_params['external_fields_mesh'] = False
+        analysis_params['preAnalysis_methods'] = ['trilinear_qScatter','fIntegrator_setup','impose_background','fIntegrator']
+        
+        
     return analysis_params
         
+
+def type_setup_spec(exptype,res,spec1_params,loader1_params,spec2_params,loader2_params):
+    if exptype == 1:
+        species_params = [spec1_params]
+        loader_params = [loader1_params]
+        
+    elif exptype == 2:
+        species_params = [spec1_params]
+        loader_params = [loader1_params]
+        
+    elif exptype == 3:
+        species_params = [spec1_params]
+        loader_params = [loader1_params]
+        
+    elif exptype == 4:  
+    spec2_params['name'] = 'spec2'
+    spec2_params['nq'] = res*20
+    spec2_params['q'] = -1
+    spec2_params['mq'] = 1
+    
+    
+    loader1_params['load_type'] = 'direct'
+    loader1_params['speciestoLoad'] = [1]
+    loader1_params['pos'] = np.array([[0,0,0.5],[0,0,0.75]])
+    loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
+        
+        species_params = [spec1_params,spec2_params]
+        loader_params = [loader1_params,loader2_params]
+    
+    return species_params, loader_params
         
 def nonLinear_ext_E(species,mesh,controller=None):
     nq = species.pos.shape[0]
