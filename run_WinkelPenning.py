@@ -6,17 +6,20 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2 as DH
 
 
-simulate = True
-sim_no = 0
+simulate =  True
+plot = True
+prefix = ""
 
-schemes = {'lobatto':'boris_SDC','boris':'boris_synced'}
+schemes = {'boris_SDC'}
+#schemes = {'boris':'boris_synced'}
 
 M = 5
-iterations = [1,2,4]
+iterations = [4]
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
+tend = 16
 
 x_plot_range = [-1,1]
 runs = 10
@@ -24,8 +27,14 @@ runs = 10
 omega_dt = np.logspace(x_plot_range[0],x_plot_range[1],runs)
 omega_dt = np.flip(omega_dt)
 dt = omega_dt/omegaB
-dt = np.array([0.02,0.01,0.005])
-omega_dt= dt*omegaB
+tsteps = tend/dt
+tsteps = np.floor(tend/dt)
+dt = tend/tsteps
+omega_dt = omegaB*dt 
+
+#dt = np.array([0.02,0.01,0.005])
+#dt = np.array([0.25,0.125,0.125/2,0.125/4,0.125/8,0.125/16])
+#omega_dt= dt*omegaB
 
 sim_params = {}
 species_params = {}
@@ -35,7 +44,7 @@ data_params = {}
 
 
 sim_params['t0'] = 0
-sim_params['tEnd'] = 1
+sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 3
 sim_params['xlimits'] = [0,20]
@@ -58,7 +67,7 @@ H = mq/2 * np.diag(H[0])
 
 analysis_params['particleIntegration'] = True
 analysis_params['M'] = M
-analysis_params['K'] = 3
+analysis_params['nodeType'] = 'lobatto'
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'coulomb'
 analysis_params['external_fields'] = True
@@ -71,7 +80,7 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 analysis_params['hooks'] = ['energy_calc_penning']
 analysis_params['H'] = H
 
-analysis_params['centreMass_check'] = True
+analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
 analysis_params['rhs_check'] = True
 
@@ -105,6 +114,8 @@ loader_params = [ploader_params]
 run_times_inner = np.zeros((dt.shape[0],len(iterations)),dtype=np.float)
 run_times = []
 
+
+
 ## Analytical solution ##
 x0 = ploader_params['pos']
 v0 = ploader_params['vel']
@@ -116,14 +127,6 @@ Rplus = x0[0,0] - Rminus
 Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
 Iplus = x0[0,1] - Iminus
 
-tsteps = floor(sim_params['tEnd']/dt[-1]) +1
-xAnalyt = np.zeros(tsteps,dtype=np.float)
-yAnalyt = np.zeros(tsteps,dtype=np.float)
-zAnalyt = np.zeros(tsteps,dtype=np.float)
-
-vxAnalyt = np.zeros(tsteps,dtype=np.float)
-vyAnalyt = np.zeros(tsteps,dtype=np.float)
-vzAnalyt = np.zeros(tsteps,dtype=np.float)
 exactEnergy = []
 
 xRel = np.zeros(len(dt),dtype=np.float)
@@ -132,28 +135,23 @@ zRel = np.zeros(len(dt),dtype=np.float)
 dataArray = np.zeros((len(dt),3),dtype=np.float) 
 rhs_evals = np.zeros(len(dt),dtype=np.float)
 
-t = 0
-for ts in range(0,tsteps):
-    xAnalyt[ts] = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
-    yAnalyt[ts] = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
-    zAnalyt[ts] = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
-    
-    vxAnalyt[ts] = Rplus*-omegaPlus*sin(omegaPlus*t) + Rminus*-omegaMinus*sin(omegaMinus*t) + Iplus*omegaPlus*cos(omegaPlus*t) + Iminus*omegaMinus*cos(omegaMinus*t)
-    vyAnalyt[ts] = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
-    vzAnalyt[ts] = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
-    
-    if ts%data_params['samplePeriod'] == 0:
-        u = np.array([xAnalyt[ts],vxAnalyt[ts],yAnalyt[ts],vyAnalyt[ts],zAnalyt[ts],vzAnalyt[ts]])
-        exactEnergy.append(u.transpose() @ H @ u)
+t = tend
+xAnalyt = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
+yAnalyt = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
+zAnalyt = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
 
-    
-    t += dt[-1]
+vxAnalyt = Rplus*-omegaPlus*sin(omegaPlus*t) + Rminus*-omegaMinus*sin(omegaMinus*t) + Iplus*omegaPlus*cos(omegaPlus*t) + Iminus*omegaMinus*cos(omegaMinus*t)
+vyAnalyt = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
+vzAnalyt = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
+
+u = np.array([xAnalyt,vxAnalyt,yAnalyt,vyAnalyt,zAnalyt,vzAnalyt])
+exactEnergy.append(u.transpose() @ H @ u)
+
 
 
 ## Numerical solution ##
-for key, value in schemes.items():
-    analysis_params['particleIntegrator'] = value
-    analysis_params['nodeType'] = key
+for scheme in schemes:
+    analysis_params['particleIntegrator'] = scheme
     
     j = 0
     for K in iterations:
@@ -172,7 +170,17 @@ for key, value in schemes.items():
             xOne = [xMod,yMod,zMod]
             vHalf = v_half_dt
             
-            sim_params['simID'] = "penning" + "_" + value + "_K" + str(K) + "_NT" + str(Nt)
+            if scheme == 'boris_staggered':
+                analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+            elif scheme == 'boris_SDC':
+                analysis_params['pre_hook_list'] = []
+                scheme += '_M' + str(M) + 'K' + str(K)
+            else:
+                analysis_params['pre_hook_list'] = []
+            
+            sim_name = 'penning_' + prefix + '_' + scheme + '_TE' + str(tend) + '_NT' + str(Nt) 
+            sim_params['simID'] = sim_name
+            
             finalTs = floor(sim_params['tEnd']/dt[i])
             model = dict(simSettings=sim_params,
                          speciesSettings=species_params,
@@ -188,9 +196,7 @@ for key, value in schemes.items():
                 s_name = dHandler.controller_obj.simID
             elif simulate == False:
                 dHandler = DH()
-                s_name = sim_params['simID'] + '(' + str(sim_no) + ')'
-                if sim_no == 0:
-                    s_name = sim_params['simID']
+                s_name = sim_params['simID']
 
             sim, garbage = dHandler.load_sim(sim_name=s_name,overwrite=True)
             rhs_evals[i] = sim.rhs_eval
@@ -206,28 +212,38 @@ for key, value in schemes.items():
             
             hArray = data_dict['energy']
             
-            xRel[i] = abs(xArray[-1] - xAnalyt[-1])/abs(xAnalyt[-1])
-            yRel[i] = abs(yArray[-1] - yAnalyt[-1])/abs(yAnalyt[-1])
-            zRel[i] = abs(zArray[-1] - zAnalyt[-1])/abs(zAnalyt[-1])
+            xRel[i] = abs(xArray[-1] - xAnalyt)/abs(xAnalyt)
+            yRel[i] = abs(yArray[-1] - yAnalyt)/abs(yAnalyt)
+            zRel[i] = abs(zArray[-1] - zAnalyt)/abs(zAnalyt)
             
             run_times_inner[i,j] = sim.runTime
             
-            sim_no += 1
             
         j += 1
         
-        exactEnergy = np.array(exactEnergy)
-        energyError = abs(hArray[1:]-exactEnergy[1:])
-        energyConvergence = energyError - energyError[0]
+        if scheme != 'boris_SDC':
+            break
         
-        for i in range(0,len(energyConvergence)-1):
-            energyConvergence[i] = energyConvergence[i+1]-energyConvergence[i]
+    
+    run_times.append(run_times_inner)
+        
+
+if plot == True:
+    if len(filenames) == 0:
+        for key, value in sims.items():
+            filename = key[:-3] + "_workprec" + ".h5"
+            filenames.append(filename)
             
 
-        label_order = key + "-" + value + ", M=" + str(M) + ", K=" + str(K)
-        label_traj = label_order + ", dt=" + str(dt[-1])
-        
-        
+    for filename in filenames:
+        file = h5.File(filename,'r')
+        dts = file["fields/dts"][:]
+        rhs_evals = file["fields/rhs_evals"][:]
+        zrels = file["fields/errors"][:]
+        label = file.attrs['label_res']
+        nlo_type = file.attrs['type']
+
+
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(dHandler.figureNo+1)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
@@ -239,17 +255,8 @@ for key, value in schemes.items():
         ax_dt = fig_dt.add_subplot(1, 1, 1)
         ax_dt.plot(omega_dt,xRel,label=label_order)
         
-        
-        ##Energy Plot
-        fig2 = plt.figure(dHandler.figureNo+3)
-        ax2 = fig2.add_subplot(1, 1, 1)
-        ax2.scatter(tArray[1:],hArray[1:],label=label_order)
-        
-        if key == 'boris':
-            break
-    
-    run_times.append(run_times_inner)
-        
+
+
 
 ## Order plot finish
 ax_rhs.set_xscale('log')
@@ -291,13 +298,6 @@ ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
 ax_dt.legend()
 
 
-
-## Energy plot finish
-ax2.set_xlim(0,sim_params['tEnd'])
-ax2.set_xlabel('$t$')
-ax2.set_ylim(0,10**4)
-ax2.set_ylabel('$\Delta E$')
-ax2.legend()
 
 print(run_times[0])
 
