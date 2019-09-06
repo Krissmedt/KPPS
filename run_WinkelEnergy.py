@@ -6,36 +6,28 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2 as DH
 import h5py as h5
 
-analyse = False
-simulate =  False
+analyse = True
+simulate =  True
 plot = True
-prefix = ""
+prefix = "energy"
+
+points_to_plot = 100
 
 schemes = {'boris_SDC','boris_synced'}
 #schemes = {'boris':'boris_synced'}
 
-M = 5
-iterations = [1,2,4,8]
+M = 3
+iterations = [3]
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
-tend = 16
 
-x_plot_range = [-1,1]
-runs = 10
-
-omega_dt = np.logspace(x_plot_range[0],x_plot_range[1],runs)
-omega_dt = np.flip(omega_dt,0)
-dt = omega_dt/omegaB
-tsteps = tend/dt
-tsteps = np.floor(tend/dt)
-dt = tend/tsteps
-omega_dt = omegaB*dt 
-
-#dt = np.array([0.02,0.01,0.005])
-#dt = np.array([0.25,0.125,0.125/2,0.125/4,0.125/8,0.125/16])
-#omega_dt= dt*omegaB
+tend = 10
+Nt = 1000
+#omega_dt = 0.25
+#omega_dt = np.flip(omega_dt,0)
+#dt = omega_dt/omegaB
 
 sim_params = {}
 species_params = {}
@@ -46,6 +38,8 @@ data_params = {}
 
 sim_params['t0'] = 0
 sim_params['tEnd'] = tend
+#sim_params['dt'] = dt
+sim_params['tSteps'] = Nt
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 3
 sim_params['xlimits'] = [0,20]
@@ -112,10 +106,6 @@ data_params['plot_params'] = plot_params
 species_params = [species_params]
 loader_params = [ploader_params]
 
-run_times_inner = np.zeros((dt.shape[0],len(iterations)),dtype=np.float)
-run_times = []
-
-
 
 ## Analytical solution ##
 x0 = ploader_params['pos']
@@ -128,13 +118,6 @@ Rplus = x0[0,0] - Rminus
 Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
 Iplus = x0[0,1] - Iminus
 
-exactEnergy = []
-
-xRel = np.zeros(len(dt),dtype=np.float)
-yRel = np.zeros(len(dt),dtype=np.float)
-zRel = np.zeros(len(dt),dtype=np.float)
-dataArray = np.zeros((len(dt),3),dtype=np.float) 
-
 t = tend
 xAnalyt = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
 yAnalyt = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
@@ -145,7 +128,7 @@ vyAnalyt = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus
 vzAnalyt = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
 
 u = np.array([xAnalyt,vxAnalyt,yAnalyt,vyAnalyt,zAnalyt,vzAnalyt])
-exactEnergy.append(u.transpose() @ H @ u)
+exactEnergy = u.transpose() @ H @ u
 
 
 
@@ -158,79 +141,54 @@ for scheme in schemes:
         
         if scheme == 'boris_staggered':
             integrator = 'boris'
-            analysis_params['pre_hook_list'] = ['ES_vel_rewind']
         elif scheme == 'boris_SDC':
-            analysis_params['pre_hook_list'] = []
             integrator = 'boris_' + 'M' + str(M) + 'K' + str(K)
         elif scheme == 'boris_synced':
             integrator = 'boris'
-            analysis_params['pre_hook_list'] = []
             
-        sim_name = 'penning_' + prefix + '_' + integrator + '_TE' + str(tend)
-        filename = sim_name + "_workprec" + ".h5"
+        sim_name = 'penning_' + prefix + '_' + integrator
+        filename = sim_name + ".h5"
         filenames.append(filename)
 
         
         if analyse == True:
-            Nts = []
-            rhs_evals = []
-            
             file = h5.File(filename,'w')
             grp = file.create_group('fields')
-            for i in range(0,len(dt)):
-                sim_params['dt'] = dt[i]
-                Nt = np.int(sim_params['tEnd']/dt[i])
-                
-                xMod = Rplus*cos(omegaPlus*dt[i]) + Rminus*cos(omegaMinus*dt[i]) + Iplus*sin(omegaPlus*dt[i]) + Iminus*sin(omegaMinus*dt[i])
-                yMod = Iplus*cos(omegaPlus*dt[i]) + Iminus*cos(omegaMinus*dt[i]) - Rplus*sin(omegaPlus*dt[i]) - Rminus*sin(omegaMinus*dt[i])
-                zMod = x0[0,2] * cos(omegaTilde * dt[i]) + v0[0,2]/omegaTilde * sin(omegaTilde*dt[i])
-                
-                
-                v_half_dt = [(xMod-x0[0,0])/(dt[i]),(yMod-x0[0,1])/(dt[i]),(zMod-x0[0,2])/(dt[i])]
+        
+            sim_params['simID'] = sim_name
             
-                xOne = [xMod,yMod,zMod]
-                vHalf = v_half_dt
-                
-    
-                sim_params['simID'] = sim_name + "_Nt" + str(Nt)
-                
-                finalTs = floor(sim_params['tEnd']/dt[i])
-                model = dict(simSettings=sim_params,
-                             speciesSettings=species_params,
-                             pLoaderSettings=loader_params,
-                             analysisSettings=analysis_params,
-                             dataSettings=data_params)
-                
-                kppsObject = kpps(**model)
-                
-                
-                if simulate == True:
-                    dHandler = kppsObject.run()
-                    s_name = dHandler.controller_obj.simID
-                elif simulate == False:
-                    dHandler = DH()
-                    s_name = sim_params['simID']
-    
-                sim, garbage = dHandler.load_sim(sim_name=s_name,overwrite=True)
-                
-                Nts.append(Nt)
-                rhs_evals.append(sim.rhs_eval)
-                
-                var_list = ['pos','energy']
-                data_list = dHandler.load_p(var_list,sim_name=s_name)
-                data_dict = data_list[0]
-                
-                tArray = data_dict['t']
-                xArray = data_dict['pos'][:,0,0]
-                yArray = data_dict['pos'][:,0,1]
-                zArray = data_dict['pos'][:,0,2]
-                
-                hArray = data_dict['energy']
-                
-                xRel[i] = abs(xArray[-1] - xAnalyt)/abs(xAnalyt)
-                yRel[i] = abs(yArray[-1] - yAnalyt)/abs(yAnalyt)
-                zRel[i] = abs(zArray[-1] - zAnalyt)/abs(zAnalyt)
-                
+            model = dict(simSettings=sim_params,
+                         speciesSettings=species_params,
+                         pLoaderSettings=loader_params,
+                         analysisSettings=analysis_params,
+                         dataSettings=data_params)
+            
+            kppsObject = kpps(**model)
+            
+            
+            if simulate == True:
+                dHandler = kppsObject.run()
+                s_name = dHandler.controller_obj.simID
+            elif simulate == False:
+                dHandler = DH()
+                s_name = sim_params['simID']
+
+            sim, garbage = dHandler.load_sim(sim_name=s_name,overwrite=True)
+
+
+            var_list = ['pos','energy']
+            data_list = dHandler.load_p(var_list,sim_name=s_name)
+            data_dict = data_list[0]
+            
+            tArray = data_dict['t']
+            hArray = data_dict['energy']
+            
+            skip = np.int((sim_params['tSteps']/data_params['samplePeriod'])/points_to_plot)
+            
+            tRed = tArray[0::skip]
+            hRed = hArray[0::skip]
+
+            
             if sim.analysisSettings['particleIntegrator'] == 'boris_SDC':
                 label_res = 'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K'])
                 
@@ -249,13 +207,11 @@ for scheme in schemes:
             except KeyError:
                 pass
                 
-            grp.create_dataset('dts',data=dt)
-            grp.create_dataset('Nts',data=Nts)
-            grp.create_dataset('rhs_evals',data=rhs_evals)
-            grp.create_dataset('errors',data=xRel)
+            grp.create_dataset('t',data=tRed)
+            grp.create_dataset('energy',data=hRed)
             
             file.close()            
-            
+                
         if scheme  == 'boris_staggered':
             break
         elif scheme == 'boris_synced':
@@ -267,65 +223,20 @@ if plot == True:
     
     for filename in filenames:
         file = h5.File(filename,'r')
-        dts = file["fields/dts"][:]
-        omega_dts = dts*file.attrs['omegaB']
-        rhs_evals = file["fields/rhs_evals"][:]
-        xRel = file["fields/errors"][:]
+        t = file["fields/t"][:]
+        H = file["fields/energy"][:]
         label = file.attrs['label_res']
 
 
-        ##Order Plot w/ rhs
-        fig_rhs = plt.figure(1)
-        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,xRel,label=label)
-
+        ## Energy plot
+        fig1 = plt.figure(1)
+        ax1 = fig1.add_subplot(1, 1, 1)
+        ax1.scatter(t,H,label=label)
+        ax1.set_xlim(0,sim_params['tEnd'])
+        ax1.set_xlabel('$t$')
+        ax1.set_ylim(0,10**4)
+        ax1.set_ylabel('$\Delta E$')
+        ax1.legend()
         
-        ##Order Plot w/ dt
-        fig_dt = plt.figure(2)
-        ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(omega_dts,xRel,label=label)
-        
-
-
-
-    ## Order plot finish
-    ax_rhs.set_xscale('log')
-    #ax_rhs.set_xlim(10**3,10**5)
-    ax_rhs.set_xlabel('Number of RHS evaluations')
-    ax_rhs.set_yscale('log')
-    #ax_rhs.set_ylim(10**(-5),10**1)
-    ax_rhs.set_ylabel('$\Delta x^{(rel)}$')
-    
-    xRange = ax_rhs.get_xlim()
-    yRange = ax_rhs.get_ylim()
-    
-    ax_rhs.plot(xRange,dHandler.orderLines(-2,xRange,yRange),
-                ls='dotted',c='0.25',label='2nd Order')
-    ax_rhs.plot(xRange,dHandler.orderLines(-4,xRange,yRange),
-                ls='dashed',c='0.75',label='4th Order')
-    ax_rhs.plot(xRange,dHandler.orderLines(-8,xRange,yRange),
-                ls='dashdot',c='0.1',label='8th Order')
-    ax_rhs.legend()
-    
-    
-    ## Order plot finish
-    ax_dt.set_xscale('log')
-    #ax_dt.set_xlim(10**-3,10**-1)
-    ax_dt.set_xlabel('$\omega_B \Delta t$')
-    ax_dt.set_yscale('log')
-    #ax_dt.set_ylim(10**(-7),10**1)
-    ax_dt.set_ylabel('$\Delta x^{(rel)}$')
-    
-    xRange = ax_dt.get_xlim()
-    yRange = ax_dt.get_ylim()
-    
-    ax_dt.plot(xRange,dHandler.orderLines(2,xRange,yRange),
-                ls='dotted',c='0.25',label='2nd Order')
-    ax_dt.plot(xRange,dHandler.orderLines(4,xRange,yRange),
-                ls='dashed',c='0.75',label='4th Order')
-    ax_dt.plot(xRange,dHandler.orderLines(8,xRange,yRange),
-                ls='dashdot',c='0.1',label='8th Order')
-    ax_dt.legend()
-
     plt.show()
 
