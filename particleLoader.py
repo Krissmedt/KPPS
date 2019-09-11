@@ -61,6 +61,7 @@ class particleLoader:
     ## Loader run loop
     def run(self,species_list,controller,**kwargs):
         for index in self.speciestoLoad:
+            print("Loading species {}...".format(index+1))
             self.load_type(species_list[index],**kwargs)
             self.enforce_dimensionality(species_list[index],controller)
             

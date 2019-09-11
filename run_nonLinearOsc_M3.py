@@ -20,15 +20,15 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 3
+exptype = 4
 prefix = ''
 
-schemes = ['boris_synced']
-steps = [1,2,4,8,16,32,64,128,254,512,1024]
-resolutions = [10,100,1000,10000,100000,1000000]
+schemes = ['boris_SDC']
+steps = [1024]
+resolutions = [100]
 
-M = 3
-K = 3
+M = 4
+K = 4
 
 tend = 1
 
@@ -41,7 +41,7 @@ ppc = 20
 sim_params = {}
 spec1_params = {}
 loader1_params = {}
-beam2_params = {}
+spec2_params = {}
 loader2_params = {}
 mesh_params = {}
 mLoader_params = {}
@@ -57,8 +57,6 @@ sim_params['nlo_type'] = exptype
 
 spec1_params['name'] = 'spec1'
 spec1_params['nq'] = 2
-spec1_params['q'] = 1
-spec1_params['mq'] = 1
 
 
 loader1_params['load_type'] = 'direct'
@@ -124,8 +122,7 @@ for scheme in schemes:
             dt = tend/Nt
             dts.append(dt)
 
-            species_params = [spec1_params]
-            loader_params = [loader1_params]
+            species_params, loader_params = type_setup_spec(exptype,res,ppc,spec1_params,loader1_params,spec2_params,loader2_params)
     
             sim_name = 'NLO_' + prefix + '_' + 'type' + str(exptype) + '_' + scheme + '_NZ' + str(res) + '_TE' + str(tend) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name

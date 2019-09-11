@@ -57,8 +57,10 @@ def bc_pot(pos):
     #phi = pos[2]**2
     return phi
 
-def ion_bck(species_list,mesh,controller):
+def ion_bck(species_list,mesh,controller=None,rho_bk=None):
     threshold = 1e-10
-    mesh.rho[1,1,:-1] += mesh.node_charge/mesh.dz
-    mesh.rho[np.abs(mesh.rho) < threshold] = 0
-
+    rho_bk[1,1,:-1] += mesh.node_charge/mesh.dz
+    rho_bk[np.abs(rho_bk) < threshold] = 0
+    
+    mesh.rho_bk = rho_bk
+    return rho_bk

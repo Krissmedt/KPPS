@@ -45,6 +45,7 @@ class meshLoader:
         self.load_type = self.stringtoMethod(self.load_type)
         
     def run(self,mesh,controller):
+        print("Loading mesh...")
         self.set_mesh_inputs(mesh,controller)
         self.load_type(mesh,controller)
             

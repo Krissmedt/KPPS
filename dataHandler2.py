@@ -141,6 +141,7 @@ class dataHandler2:
 ######################### Post-Run Functionality ##############################
         
     def post(self,species_list,fields,controller):
+        print("Running data post-processing...")
         for method in self.postOps:
             method(species_list,fields,controller)
             
@@ -354,9 +355,9 @@ class dataHandler2:
     
         except (AttributeError, TypeError, IndexError):
                 try: 
-                    self.plot_limits[0,:] = self.controller_obj.caseSettings['xlimits']
-                    self.plot_limits[1,:] = self.controller_obj.caseSettings['ylimits']
-                    self.plot_limits[2,:] = self.controller_obj.caseSettings['zlimits']
+                    self.plot_limits[0,:] = self.controller_obj.xlimits
+                    self.plot_limits[1,:] = self.controller_obj.ylimits
+                    self.plot_limits[2,:] = self.controller_obj.zlimits
                 except (AttributeError, KeyError):
                     print("DataHandler: Plot limit input not recognised, defaulting to 1x1x1")
                     self.plot_limits = np.array([[0,1],[0,1],[0,1]])

@@ -172,11 +172,10 @@ class kpps_analysis:
             if self.field_type == 'pic':
                 self.field_solver = self.stringtoMethod(self.field_solver)
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
+                self.preAnalysis_methods.append(self.calc_background)
                 self.preAnalysis_methods.append(self.impose_background)
                 self.preAnalysis_methods.append(self.scatter)
-                self.preAnalysis_methods.append(self.background)
                 self.preAnalysis_methods.append(self.fIntegrator)
-                
                 self.fieldIntegrator_methods.append(self.fIntegrator)
                 
 
@@ -226,7 +225,9 @@ class kpps_analysis:
             
         if self.residual_check == True:
             self.hooks.append(self.display_residuals)
-            
+        
+        self.scatter_BC = self.stringtoMethod(self.scatter_BC)
+        
         self.poisson_M_adjust_1d = self.stringtoMethod(self.poisson_M_adjust_1d)
         self.poisson_M_adjust_2d = self.stringtoMethod(self.poisson_M_adjust_2d)
         self.poisson_M_adjust_3d = self.stringtoMethod(self.poisson_M_adjust_3d)
@@ -271,6 +272,7 @@ class kpps_analysis:
     
 
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
+        #print(fields.E[2,1,1,:])
         for species in species_list:
             for method in self.particleIntegrator_methods:
                 method(species,fields,simulationManager)
@@ -285,6 +287,7 @@ class kpps_analysis:
     
     
     def run_preAnalyser(self,species_list,mesh,**kwargs):
+        print("Running pre-processing...")
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
             
@@ -299,6 +302,7 @@ class kpps_analysis:
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
+        print("Running post-processing...")
         for species in species_list:
             for method in self.postAnalysis_methods:
                 method(species_list,fields,simulationManager)
@@ -528,7 +532,7 @@ class kpps_analysis:
                    self.mi_z0:self.mi_zN] = phi
 
         self.solver_post(species_list,fields,controller)
-
+        #print(fields.rho[1,1,:])
         for nd in range(0,controller.ndim):
             self.pot_diff_list[nd](fields)
 
@@ -627,7 +631,6 @@ class kpps_analysis:
     
     
     def trilinear_gather(self,species,mesh):
-        #print(mesh.E[2,1,1,:])
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
             li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -690,7 +693,6 @@ class kpps_analysis:
     def trilinear_qScatter(self,species_list,mesh,controller):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         
-
         for species in species_list:
             for pii in range(0,species.nq):
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -706,7 +708,7 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
-        self.scatter_BC(species,mesh)
+        self.scatter_BC(species,mesh,controller)
         mesh.rho += mesh.q/mesh.dv
         return mesh
             
@@ -1186,7 +1188,7 @@ class kpps_analysis:
         self.FDMat = sps.csr_matrix(FDMat_exp)
         self.solver_post = self.mirrored_boundary_z
 
-    def scatter_periodicBC_1d(self,species,mesh):
+    def scatter_periodicBC_1d(self,species,mesh,controller):
         mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
@@ -1204,6 +1206,13 @@ class kpps_analysis:
         mesh.q[:,:,-2] = mesh.q[:,:,0]
         mesh.E[:,:,:,-2] = mesh.E[:,:,:,0]
         mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
+        
+    def half_volume_BC_z(self,species,mesh,controller):
+        mesh.q[:,:,0] = mesh.q[:,:,0]*2
+        mesh.q[:,:,-2] = mesh.q[:,:,-2]*2
+        mesh.rho[:,:,0] = mesh.rho[:,:,0]*2
+        mesh.rho[:,:,-2] = mesh.rho[:,:,-2]*2
+        
         
 ################################ Hook methods #################################
     def ES_vel_rewind(self,species_list,mesh,controller=None):

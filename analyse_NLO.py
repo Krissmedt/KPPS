@@ -50,19 +50,19 @@ particle = 0
 #sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #sims['NLO__type2_boris_staggered_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
-sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-sims['NLO__type3_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-sims['NLO__type3_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+#sims['NLO__type3_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
 #sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 #sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
@@ -78,21 +78,33 @@ sims['NLO__type3_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,5
 #sims['NLO__type3_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 #sims['NLO__type3_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 
-#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#
-#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type3_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type3_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type3_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+
+#sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+
+#sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
 
 comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT2048'
 
@@ -109,7 +121,7 @@ plot_params['legend.loc'] = 'upper right'
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
-analyse = True
+analyse = False
 plot = True
 plot_type = 'cross-type'
 
@@ -210,6 +222,8 @@ if plot == True:
                 c = 'blue'
             elif int(nlo_type) == 3:
                 c = 'red'
+            elif int(nlo_type) == 4:
+                c = 'green'
         
     
         ##Convergence Plot w/ rhs
