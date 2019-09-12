@@ -9,49 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
-
-def type_setup(exptype,analysis_params):
-    if exptype == 1:
-        analysis_params['fieldIntegration'] = False
-        analysis_params['field_type'] = 'custom'
-        analysis_params['gather'] = 'none'
-        analysis_params['external_fields'] = True
-        analysis_params['external_fields_mesh'] = False
-        
-    elif exptype == 2:
-        analysis_params['fieldIntegration'] = True
-        analysis_params['field_type'] = 'custom'
-        analysis_params['gather'] = 'trilinear_gather'
-        analysis_params['external_fields'] = False
-        analysis_params['external_fields_mesh'] = True
-        
-    elif exptype == 3:
-        analysis_params['background'] = nonLinear_ion_bck
-        
-    return analysis_params
-        
-        
-def nonLinear_ext_E(species,mesh,controller=None):
-    nq = species.pos.shape[0]
-    for pii in range(0,nq):
-        species.E[pii,2] += -np.power(species.pos[pii,2],3)
-    
-    return species
-
-
-def nonLinear_mesh_E(species_list,mesh,controller=None):
-    for zi in range(0,mesh.E[2,1,1,:].shape[0]-1):
-        z = mesh.zlimits[0] + zi * mesh.dz
-        mesh.E[2,1,1,zi] += -np.power(z,3)
-
-    static_E = np.zeros(mesh.E.shape)
-    static_E[:] = mesh.E[:]
-
-    return mesh, static_E
-
-def nonLinear_ion_bck(species_list,mesh,controller):
-    pass
-
+from caseFile_nonLinearOsc import *
 
 """
 Experiment type:
@@ -61,15 +19,15 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 2
+exptype = 1
 prefix = ''
 
-schemes = ['boris_SDC','boris_synced','boris_staggered']
-steps = [1,2,4,8,16,32,64,128,254,512]
-resolutions = [100,1000000]
+schemes = ['boris_SDC']
+steps = [1,2,4,8,16,32,64,128,256,512,1024,2048]
+resolutions = [1]
 
-M = 3
-K = 3
+M = 5
+K = 5
 
 tend = 1
 
@@ -94,6 +52,7 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [-1,1]
+sim_params['nlo_type'] = exptype
 
 spec1_params['name'] = 'spec1'
 spec1_params['nq'] = 2
@@ -109,6 +68,7 @@ loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 #mesh_params['node_charge'] = -2*ppc*q
 mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
+mLoader_params['BC_function'] = quartic_potential
 
 analysis_params['particleIntegration'] = True
 analysis_params['nodeType'] = 'lobatto'
@@ -125,6 +85,8 @@ analysis_params['rhs_check'] = True
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
+data_params['write_m'] = False
+
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8

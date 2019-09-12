@@ -9,8 +9,7 @@ from dataHandler2 import dataHandler2 as DH
 simulate = True
 sim_no = 0
 
-#schemes = {'lobatto':'boris_SDC','legendre':'boris_SDC','boris':'boris_synced'}
-schemes = {'lobatto':'boris_SDC','boris':'boris_synced','boris_half':'boris_synced_half'}
+schemes = {'lobatto':'boris_SDC','boris':'boris_synced'}
 
 M = 5
 iterations = [1,5]

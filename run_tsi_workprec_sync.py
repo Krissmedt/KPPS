@@ -9,6 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from caseFile_twoStream1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
+import cmath as cm
 
 def update_line(num, xdata,ydata, line):
     line.set_data(xdata[num,:],ydata[num,:])
@@ -65,11 +66,11 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [50,100,200,400,800,1600]
-resolutions = [128]
+steps = [50,100,200,400]
+resolutions = [10,100]
 
 L = 2*pi
-tend = 50
+tend = 20
 
 dx_mag = 0.0001
 dx_mode = 1
@@ -79,8 +80,7 @@ dv_mag = 0
 dv_mode = 1
 
 a = -1
-omega = 1
-max_gRate = omega/2
+omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 ppc = 20
@@ -89,6 +89,18 @@ ppc = 20
 prefix = 'TE'+str(tend)
 simulate = True
 plot = False
+
+############################ Linear Analysis ##################################
+k2 = dx_mode**2
+v2 = v**2
+
+roots = [None,None,None,None]
+roots[0] = cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+roots[1] = cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+roots[2] = -cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+
+real_slope = roots[1].imag
 
 ############################ Setup and Run ####################################
 sim_params = {}
@@ -125,14 +137,14 @@ analysis_params['centreMass_check'] = False
 
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'pic'
-analysis_params['background'] = ion_bck
+analysis_params['custom_rho_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 5
+data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 
@@ -159,7 +171,7 @@ for Nt in steps:
         #ppc = nq/res
         nq = ppc*res
         
-        q = omega**2 * L / (nq*a*1)
+        q = omega_p**2 * L / (nq*a*1)
         
         beam1_params['nq'] = np.int(nq)
         beam1_params['mq'] = -q
@@ -179,7 +191,7 @@ for Nt in steps:
         species_params = [beam1_params,beam2_params]
         loader_params = [loader1_params,loader2_params]
 
-        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
+        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##
@@ -231,7 +243,21 @@ for Nt in steps:
         phi_data = mData_dict['phi'][:,1,1,:-1]
         PE_data = mData_dict['PE_sum']
         
-        fps = 1/sim.dt
+        ## Growth rate phi plot setup
+        tA = 7.5
+        tB = 17.5
+        
+        NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
+        NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
+        
+        max_phi_data = np.amax(np.abs(phi_data),axis=1)
+        max_phi_data_log = np.log(max_phi_data)
+        
+        g_slope = (max_phi_data_log[2:] - max_phi_data_log[1:-1])/dt
+        growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
+        growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+        
+        linear_g_error = abs(real_slope - growth_fit[0])/real_slope
         
         uniform_dist = particle_pos_init(ppc,res,L,0,dx_mode)
         uni_time_evol = np.zeros((DH.samples+1,floor(nq)),dtype=np.float)
@@ -250,18 +276,7 @@ for Nt in steps:
                     
         dx_evol = p1_data - uni_time_evol
         
-        if plot == True:
-            ## Perturbation animation setup
-            fig4 = plt.figure(DH.figureNo+7,dpi=150)
-            pert_ax = fig4.add_subplot(1,1,1)
-            line_perturb = pert_ax.plot(uni_time_evol[0,0:1],dx_evol[0,0:1],'bo')[0]
-            pert_ax.set_xlim([0.0, L])
-            pert_ax.set_xlabel('$z$')
-            pert_ax.set_ylabel('$dz$')
-            pert_ax.set_ylim([-0.001,0.001])
-            pert_ax.set_title('Two stream instability perturbation, Nt=' + str(Nt) +', Nz=' + str(res+1))
-            pert_ax.legend()
-            
+        if plot == True:       
             ## Phase animation setup
             fig = plt.figure(DH.figureNo+4,dpi=150)
             p_ax = fig.add_subplot(1,1,1)
@@ -309,12 +324,34 @@ for Nt in steps:
             for b in range(0,n_bins):
                 hist_bins.append(min_vel+b*hist_dv)
             
+            ## Perturbation animation setup
+            fig4 = plt.figure(DH.figureNo+7,dpi=150)
+            pert_ax = fig4.add_subplot(1,1,1)
+            line_perturb = pert_ax.plot(uni_time_evol[0,0:1],dx_evol[0,0:1],'bo')[0]
+            pert_ax.set_xlim([0.0, L])
+            pert_ax.set_xlabel('$z$')
+            pert_ax.set_ylabel('$dz$')
+            pert_ax.set_title('Two stream instability perturbation, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            pert_ax.legend()
+            
+            
+            ## Growth rate plot
+            fig5 = plt.figure(DH.figureNo+8,dpi=150)
+            growth_ax = fig5.add_subplot(1,1,1)
+            growth_ax.plot(tArray,max_phi_data_log,'blue',label="$\phi$ growth")
+            growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="slope")
+            growth_ax.set_xlabel('$t$')
+            growth_ax.set_ylabel('log $\phi_{max}$')
+            #growth_ax.set_ylim([-0.001,0.001])
+            growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            growth_ax.legend()
             
             # Setting data/line lists:
             xdata = [Z,Z]
             ydata = [rho_data,phi_data]
             lines = [rho_line,phi_line]
-            
+
+            fps = 1/(sim.dt*DH.samplePeriod)
             # Creating the Animation object
             perturb_ani = animation.FuncAnimation(fig4, update_line, DH.samples, 
                                                fargs=(uni_time_evol,dx_evol,line_perturb),
@@ -329,7 +366,7 @@ for Nt in steps:
                                                fargs=(xdata,ydata,lines,PE_data),
                                                interval=1000/fps)
             
-            hist_ani = animation.FuncAnimation(fig3, update_hist, Nt, 
+            hist_ani = animation.FuncAnimation(fig3, update_hist, DH.samples, 
                                                fargs=(hist_data,hist_ax,hist_bins,
                                                       hist_xmin,hist_xmax,hist_ymax),
                                                interval=1000/fps)

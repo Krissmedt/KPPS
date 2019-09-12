@@ -20,6 +20,8 @@ class dataHandler2:
         self.vtkFoldername = "./vtk"
         
         self.write = True
+        self.write_p = True
+        self.write_m = True
         self.write_vtk = False
         self.trajectory_plotting = False
         self.time_plotting = False
@@ -88,7 +90,10 @@ class dataHandler2:
         self.dataFoldername = self.controller_obj.simID
         
         if self.write == True:
-            self.runOps.append(self.dumper)
+            if self.write_p == True:
+                self.runOps.append(self.p_dumper)
+            if self.write_m == True:
+                self.runOps.append(self.m_dumper)
             self.dataFoldername = self.mkDataDir(self.dataFoldername)
         
         if self.write_vtk == True:
@@ -105,17 +110,20 @@ class dataHandler2:
         self.controller_obj.simID = self.dataFoldername  
             
         
-    def dumper(self,species_list,fields,simulationManager):
+    def p_dumper(self,species_list,fields,simulationManager):
         for species in species_list:
             p_filename = self.dataFoldername + "/p_" + species.name + "_t" + str(simulationManager.ts)
             p_file = io.open(p_filename,mode='wb')
             pk.dump(species,p_file)
             p_file.close()
-    
+            
+            
+    def m_dumper(self,species_list,fields,simulationManager):
         m_filename = self.dataFoldername + "/m_t" + str(simulationManager.ts)
         m_file = io.open(m_filename,mode='wb')
         pk.dump(fields,m_file)
         m_file.close()
+        
     
     def vtk_dumper(self,species_list,fields,simulationManager):
         ts = simulationManager.ts
@@ -133,6 +141,7 @@ class dataHandler2:
 ######################### Post-Run Functionality ##############################
         
     def post(self,species_list,fields,controller):
+        print("Running data post-processing...")
         for method in self.postOps:
             method(species_list,fields,controller)
             
@@ -346,9 +355,9 @@ class dataHandler2:
     
         except (AttributeError, TypeError, IndexError):
                 try: 
-                    self.plot_limits[0,:] = self.controller_obj.caseSettings['xlimits']
-                    self.plot_limits[1,:] = self.controller_obj.caseSettings['ylimits']
-                    self.plot_limits[2,:] = self.controller_obj.caseSettings['zlimits']
+                    self.plot_limits[0,:] = self.controller_obj.xlimits
+                    self.plot_limits[1,:] = self.controller_obj.ylimits
+                    self.plot_limits[2,:] = self.controller_obj.zlimits
                 except (AttributeError, KeyError):
                     print("DataHandler: Plot limit input not recognised, defaulting to 1x1x1")
                     self.plot_limits = np.array([[0,1],[0,1],[0,1]])

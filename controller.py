@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from math import floor
 import numpy as np
+import time
 
 ## Class
 class controller:
@@ -19,9 +20,9 @@ class controller:
 
         self.percentBar = False
         
-        self.xlimits = np.array([0,1],dtype=np.float)
-        self.ylimits = np.array([0,1],dtype=np.float)
-        self.zlimits = np.array([0,1],dtype=np.float)
+        self.xlimits = np.array([-1,1],dtype=np.float)
+        self.ylimits = np.array([-1,1],dtype=np.float)
+        self.zlimits = np.array([-1,1],dtype=np.float)
         
         self.speciesSettings = {}
         self.meshSettings = {}
@@ -102,7 +103,8 @@ class controller:
         
 
     def inputPrint(self):
-        print("Simulation will now run from t = " + str(self.t0)
+        print("Simulation '" + self.simID
+                + "' will now run from t = " + str(self.t0)
                 + " to t = " + str(self.tEnd) + " in " 
                 + str(self.tSteps) + " time-steps. Time-step size is " 
                 + str(self.dt) + ".")    
@@ -111,5 +113,6 @@ class controller:
         if self.t >= self.percentCounter:
             print("Simulation progress: " 
                   + str(int(self.t/self.percentTime)) + "%" 
-                  + " - " + str(self.ts) + "/" + str(self.tSteps))
+                  + " - " + str(self.ts) + "/" + str(self.tSteps)
+                  + " - at " + time.strftime("%d/%m/%y  %H:%M:%S",time.localtime()))
             self.percentCounter += self.percentTime

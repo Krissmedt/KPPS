@@ -45,3 +45,8 @@ class mesh:
         self.PE = np.zeros((self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
         self.PE_sum = 0
         self.B = np.zeros((3,self.xres+1,self.yres+1,self.zres+1),dtype=np.float)
+        
+        self.q_bk = np.zeros((self.q.shape),dtype=np.float)
+        self.rho_bk = np.zeros((self.rho.shape),dtype=np.float)
+        self.E_bk = np.zeros((self.E.shape),dtype=np.float)
+        self.B_bk = np.zeros((self.B.shape),dtype=np.float)

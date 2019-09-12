@@ -94,7 +94,11 @@ class kpps_analysis:
         self.solver_post = self.none
         
         self.external_fields = False
-        self.background = self.none
+        self.custom_q_background = self.none
+        self.custom_rho_background = self.none
+        self.custom_E_background = self.none
+        self.custom_B_background = self.none
+        
         self.scatter = self.none
         self.scatter_BC = self.none
         self.fIntegrator_setup = self.poisson_cube2nd_setup
@@ -159,7 +163,7 @@ class kpps_analysis:
                 
             else:
                 pass
-        
+            
             self.fieldIntegrator_methods.append(self.scatter)
             
             
@@ -168,12 +172,12 @@ class kpps_analysis:
             if self.field_type == 'pic':
                 self.field_solver = self.stringtoMethod(self.field_solver)
                 self.preAnalysis_methods.append(self.fIntegrator_setup)
+                self.preAnalysis_methods.append(self.calc_background)
+                self.preAnalysis_methods.append(self.impose_background)
                 self.preAnalysis_methods.append(self.scatter)
-                self.preAnalysis_methods.append(self.background)
                 self.preAnalysis_methods.append(self.fIntegrator)
-                
-                self.fieldIntegrator_methods.append(self.background) 
                 self.fieldIntegrator_methods.append(self.fIntegrator)
+                
 
 
         if self.external_fields_mesh  == True:
@@ -221,7 +225,9 @@ class kpps_analysis:
             
         if self.residual_check == True:
             self.hooks.append(self.display_residuals)
-            
+        
+        self.scatter_BC = self.stringtoMethod(self.scatter_BC)
+        
         self.poisson_M_adjust_1d = self.stringtoMethod(self.poisson_M_adjust_1d)
         self.poisson_M_adjust_2d = self.stringtoMethod(self.poisson_M_adjust_2d)
         self.poisson_M_adjust_3d = self.stringtoMethod(self.poisson_M_adjust_3d)
@@ -246,10 +252,8 @@ class kpps_analysis:
 
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
-        fields.q = np.zeros((fields.q.shape),dtype=np.float)
-        fields.E = np.zeros((fields.E.shape),dtype=np.float)
-        fields.B = np.zeros((fields.B.shape),dtype=np.float)
-        
+        fields = self.impose_background(species_list,fields,simulationManager)
+
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
 
@@ -268,6 +272,7 @@ class kpps_analysis:
     
 
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
+        #print(fields.E[2,1,1,:])
         for species in species_list:
             for method in self.particleIntegrator_methods:
                 method(species,fields,simulationManager)
@@ -282,6 +287,7 @@ class kpps_analysis:
     
     
     def run_preAnalyser(self,species_list,mesh,**kwargs):
+        print("Running pre-processing...")
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
             
@@ -296,6 +302,7 @@ class kpps_analysis:
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
+        print("Running post-processing...")
         for species in species_list:
             for method in self.postAnalysis_methods:
                 method(species_list,fields,simulationManager)
@@ -398,13 +405,30 @@ class kpps_analysis:
         self.static_B[:] = fields.B[:]
         return fields
     
+    def calc_background(self,species_list,fields,controller=None):
+        self.custom_q_background(species_list,fields,controller=controller,q_bk=fields.q_bk)
+        self.custom_rho_background(species_list,fields,controller=controller,rho_bk=fields.rho_bk)
+        self.custom_E_background(species_list,fields,controller=controller,E_bk=fields.E_bk)
+        self.custom_B_background(species_list,fields,controller=controller,B_bk=fields.B_bk)
+
+        return fields
+        
     def impose_static_E(self,species_list,fields,controller=None):
         fields.E += self.static_E
-        
+
         return fields
     
     def impose_static_B(self,species_list,fields,controller=None):
         fields.B += self.static_B
+        
+        return fields
+    
+    
+    def impose_background(self,species_list,fields,controller=None):
+        fields.q[:,:,:] = fields.q_bk[:,:,:]
+        fields.rho[:,:,:] = fields.rho_bk[:,:,:]
+        fields.E[:,:,:,:] = fields.E_bk[:,:,:,:]
+        fields.B[:,:,:,:] = fields.B_bk[:,:,:,:]
         
         return fields
         
@@ -476,7 +500,7 @@ class kpps_analysis:
             
         if controller.ndim == 3:
             self.interior_shape[0] += 1
-            if self.mesh_boundary_y == 'open':
+            if self.mesh_boundary_x == 'open':
                 FDMatrix_adjust_x = self.poisson_M_adjust_3d
                 self.pot_differentiate_x = self.pot_diff_open_x
             
@@ -489,7 +513,7 @@ class kpps_analysis:
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
-            
+
         return self.FDMat
     
         
@@ -499,7 +523,6 @@ class kpps_analysis:
                                            self.mi_z0:self.mi_zN])
 
         self.solver_pre(species_list,fields,controller)
-        #phi = sps.linalg.spsolve(self.FDMat,-rho*self.unit_scale_poisson - fields.BC_vector)
         
         phi = self.field_solver(self.FDMat,rho*self.unit_scale_poisson,fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
@@ -509,7 +532,7 @@ class kpps_analysis:
                    self.mi_z0:self.mi_zN] = phi
 
         self.solver_post(species_list,fields,controller)
-
+        #print(fields.rho[1,1,:])
         for nd in range(0,controller.ndim):
             self.pot_diff_list[nd](fields)
 
@@ -539,7 +562,7 @@ class kpps_analysis:
         fields.E[0,0,:,:] = 2*(fields.phi[0,:,:]-fields.phi[1,:,:])
         fields.E[0,1:n[0]-1,:,:] = (fields.phi[0:n[0]-2,:,:] - fields.phi[2:n[0],:,:])
         fields.E[0,n[0]-1,:,:] = 2*(fields.phi[n[0]-2,:,:]-fields.phi[n[0]-1,:,:])
-        fields.E[0,:,:,:]/(2*fields.dx)
+        fields.E[0,:,:,:] =  fields.E[0,:,:,:]/(2*fields.dx)
 
         return fields
     
@@ -551,7 +574,7 @@ class kpps_analysis:
         fields.E[1,:,0,:] = 2*(fields.phi[:,0,:]-fields.phi[:,1,:])
         fields.E[1,:,1:n[1]-1,:] = (fields.phi[:,0:n[1]-2,:] - fields.phi[:,2:n[1],:])
         fields.E[1,:,n[1]-1,:] = 2*(fields.phi[:,n[1]-2,:]-fields.phi[:,n[1]-1,:])
-        fields.E[1,:,:,:]/(2*fields.dy)
+        fields.E[1,:,:,:] = fields.E[1,:,:,:]/(2*fields.dy)
         
         return fields
     
@@ -559,13 +582,13 @@ class kpps_analysis:
     def pot_diff_fixed_z(self,fields):
         ## Differentiate over electric potential for electric field
         n = np.shape(fields.phi[0:-1,0:-1,0:-1])
-        
+
         #E-field z-component differentiation
         fields.E[2,:,:,0] = 2*(fields.phi[:,:,0]-fields.phi[:,:,1])
         fields.E[2,:,:,1:n[2]-1] = (fields.phi[:,:,0:n[2]-2] - fields.phi[:,:,2:n[2]])
         fields.E[2,:,:,n[2]-1] = 2*(fields.phi[:,:,n[2]-2]-fields.phi[:,:,n[2]-1])
-        fields.E[2,:,:,:]/(2*fields.dz)
-        
+        fields.E[2,:,:,:] = fields.E[2,:,:,:]/(2*fields.dz)
+
         return fields
     
     
@@ -608,7 +631,6 @@ class kpps_analysis:
     
     
     def trilinear_gather(self,species,mesh):
-        #print(mesh.E[2,1,1,:])
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
             li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -671,7 +693,6 @@ class kpps_analysis:
     def trilinear_qScatter(self,species_list,mesh,controller):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         
-
         for species in species_list:
             for pii in range(0,species.nq):
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -687,8 +708,8 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
-        self.scatter_BC(species,mesh)
-        mesh.rho = mesh.q/mesh.dv
+        self.scatter_BC(species,mesh,controller)
+        mesh.rho += mesh.q/mesh.dv
         return mesh
             
             
@@ -1167,7 +1188,7 @@ class kpps_analysis:
         self.FDMat = sps.csr_matrix(FDMat_exp)
         self.solver_post = self.mirrored_boundary_z
 
-    def scatter_periodicBC_1d(self,species,mesh):
+    def scatter_periodicBC_1d(self,species,mesh,controller):
         mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
@@ -1185,6 +1206,13 @@ class kpps_analysis:
         mesh.q[:,:,-2] = mesh.q[:,:,0]
         mesh.E[:,:,:,-2] = mesh.E[:,:,:,0]
         mesh.B[:,:,:,-2] = mesh.B[:,:,:,0]
+        
+    def half_volume_BC_z(self,species,mesh,controller):
+        mesh.q[:,:,0] = mesh.q[:,:,0]*2
+        mesh.q[:,:,-2] = mesh.q[:,:,-2]*2
+        mesh.rho[:,:,0] = mesh.rho[:,:,0]*2
+        mesh.rho[:,:,-2] = mesh.rho[:,:,-2]*2
+        
         
 ################################ Hook methods #################################
     def ES_vel_rewind(self,species_list,mesh,controller=None):

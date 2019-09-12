@@ -56,7 +56,10 @@ class kpps:
         
         ## Load required modules
         sim = controller(**self.simSettings)
-      
+        sim.inputPrint()
+        
+        print("Setting up...")
+        
         species_list = []
         for setting in self.speciesSettings:
             species = species_class(**setting)
@@ -80,14 +83,13 @@ class kpps:
         ## Main time loop
         for loader in pLoader_list:
             loader.run(species_list,sim)
-            
+        
         mLoader.run(fields,sim)
 
         analyser.run_preAnalyser(species_list,fields,controller=sim)
 
         dHandler.run_setup()
         dHandler.run(species_list,fields,sim)
-        sim.inputPrint()
         
         tRun = time.time()
         for ts in range(1,sim.tSteps+1):

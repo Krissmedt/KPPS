@@ -45,6 +45,7 @@ class meshLoader:
         self.load_type = self.stringtoMethod(self.load_type)
         
     def run(self,mesh,controller):
+        print("Loading mesh...")
         self.set_mesh_inputs(mesh,controller)
         self.load_type(mesh,controller)
             
@@ -72,6 +73,12 @@ class meshLoader:
         
         mesh.phi = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
         mesh.BC_vector = np.zeros((mesh.xres+2,mesh.yres+2,mesh.zres+2),dtype=np.float)
+        
+        mesh.q_bk = np.zeros((mesh.q.shape),dtype=np.float)
+        mesh.rho_bk = np.zeros((mesh.rho.shape),dtype=np.float)
+        mesh.E_bk = np.zeros((mesh.E.shape),dtype=np.float)
+        mesh.B_bk = np.zeros((mesh.B.shape),dtype=np.float)
+        
         mesh = self.BC_box(mesh,controller)
         
         if self.store_node_pos == True:
@@ -96,9 +103,9 @@ class meshLoader:
                 zn = mesh.zlimits[1]
                 mesh.phi[xi,yi,0] = self.BC_function(np.array([x,y,z0]))
                 mesh.phi[xi,yi,-2] = self.BC_function(np.array([x,y,zn]))
-                
-        mesh.BC_vector[:,:,1] += mesh.phi[:,:,1]/mesh.dz**2
-        mesh.BC_vector[:,:,-2] += mesh.phi[:,:,-2]/mesh.dz**2    
+
+        mesh.BC_vector[:,:,1] += mesh.phi[:,:,0]/mesh.dz**2
+        mesh.BC_vector[:,:,-3] += mesh.phi[:,:,-2]/mesh.dz**2    
         
         if controller.ndim >= 2:
             for zi in range(0,mesh.zres+1):
@@ -111,8 +118,8 @@ class meshLoader:
                     mesh.phi[xi,0,zi] = self.BC_function(np.array([x,y0,z]))
                     mesh.phi[xi,-2,zi] = self.BC_function(np.array([x,yn,z]))
                     
-            mesh.BC_vector[:,1,:] += mesh.phi[:,1,:]/mesh.dy**2
-            mesh.BC_vector[:,-2,:] += mesh.phi[:,-2,:]/mesh.dy**2
+            mesh.BC_vector[:,1,:] += mesh.phi[:,0,:]/mesh.dy**2
+            mesh.BC_vector[:,-3,:] += mesh.phi[:,-2,:]/mesh.dy**2
         
         if controller.ndim == 3:
             for zi in range(0,mesh.zres+1):
@@ -125,12 +132,12 @@ class meshLoader:
                     mesh.phi[0,yi,zi] = self.BC_function(np.array([x0,y,z]))
                     mesh.phi[-2,yi,zi] = self.BC_function(np.array([xn,y,z]))
                     
-            mesh.BC_vector[1,:,:] += mesh.phi[1,:,:]/mesh.dx**2
-            mesh.BC_vector[-2,:,:] += mesh.phi[-2,:,:]/mesh.dx**2
-                
+            mesh.BC_vector[1,:,:] += mesh.phi[0,:,:]/mesh.dx**2
+            mesh.BC_vector[-3,:,:] += mesh.phi[-2,:,:]/mesh.dx**2
+        
         mesh.BC_vector = mesh.BC_vector * self.BC_scaling                
         mesh.BC_vector = self.meshtoVector(mesh.BC_vector[1:-2,1:-2,1:-2])
-        
+
         return mesh
 
     
