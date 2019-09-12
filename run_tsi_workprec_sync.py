@@ -66,8 +66,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [200]
-resolutions = [128]
+steps = [50,100,200,400]
+resolutions = [10,100]
 
 L = 2*pi
 tend = 20
@@ -87,8 +87,8 @@ ppc = 20
 #nq = 1280
 
 prefix = 'TE'+str(tend)
-simulate = False
-plot = True
+simulate = True
+plot = False
 
 ############################ Linear Analysis ##################################
 k2 = dx_mode**2
@@ -144,7 +144,7 @@ analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 5
+data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 
@@ -191,7 +191,7 @@ for Nt in steps:
         species_params = [beam1_params,beam2_params]
         loader_params = [loader1_params,loader2_params]
 
-        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
+        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##
@@ -244,16 +244,20 @@ for Nt in steps:
         PE_data = mData_dict['PE_sum']
         
         ## Growth rate phi plot setup
+        tA = 7.5
+        tB = 17.5
+        
+        NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
+        NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
+        
         max_phi_data = np.amax(np.abs(phi_data),axis=1)
         max_phi_data_log = np.log(max_phi_data)
         
         g_slope = (max_phi_data_log[2:] - max_phi_data_log[1:-1])/dt
-        avg_slope = np.average(g_slope)
-
-        errors = g_slope - real_slope
-        avg_error = np.average(np.abs(errors))
-        avg_error = avg_error/real_slope
-
+        growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
+        growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+        
+        linear_g_error = abs(real_slope - growth_fit[0])/real_slope
         
         uniform_dist = particle_pos_init(ppc,res,L,0,dx_mode)
         uni_time_evol = np.zeros((DH.samples+1,floor(nq)),dtype=np.float)
@@ -335,8 +339,7 @@ for Nt in steps:
             fig5 = plt.figure(DH.figureNo+8,dpi=150)
             growth_ax = fig5.add_subplot(1,1,1)
             growth_ax.plot(tArray,max_phi_data_log,'blue',label="$\phi$ growth")
-            growth_ax2 = growth_ax.twinx()
-            growth_ax2.plot(tArray[1:-1]+sim.dt/2,g_slope,'orange',label="slope")
+            growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="slope")
             growth_ax.set_xlabel('$t$')
             growth_ax.set_ylabel('log $\phi_{max}$')
             #growth_ax.set_ylim([-0.001,0.001])

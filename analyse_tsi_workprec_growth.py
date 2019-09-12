@@ -14,19 +14,20 @@ plot = False
 start_time = 10
 max_time = 17.5
 
+
 sims = {}
 
+sims['tsi_TE20_boris_SDC_M3K3_NZ10_PPC20_NT'] = [50,100,200,400]
+sims['tsi_TE20_boris_SDC_M3K3_NZ100_PPC20_NT'] = [50,100,200,400]
 
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi__boris_SDC_M5K1_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K3_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
-#sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-#sims['tsi_long_boris_SDC_M3K3_NZ1024_NQ20480_NT'] = [50,100,200,400,800,1600]
+sims['tsi_TE20_boris_synced_NZ10_ppc20_NT'] = [50,100,200,400]
+sims['tsi_TE20_boris_synced_NZ100_ppc20_NT'] = [50,100,200]
 
-comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT6400'
 
+comp_run = 'tsi_TE20_boris_synced_NZ100_ppc20_NT400'
+
+
+################################ Linear analysis ##############################
 omega_p = 1
 
 k = 1
@@ -42,6 +43,8 @@ roots[2] = -cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
 roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
 
 real_slope = roots[1].imag
+
+############################### Setup #########################################
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -60,15 +63,13 @@ mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
 start_dt = np.int(start_time/(comp_sim.dt*DH_comp.samplePeriod))
 max_steps = np.int(max_time/(comp_sim.dt*DH_comp.samplePeriod))+1
 
-tArray_comp = mData_comp['t'][0:max_steps]
-tArray_comp_spec = tArray_comp[start_dt:]
+tArray_comp = mData_comp['t']
 
 phi_comp_data = mData_comp['phi'][:,1,1,:-1]
-max_phi_comp = np.amax(np.abs(phi_comp_data[0:max_steps]),axis=1)
-max_phi_comp_log = np.log(max_phi_comp[start_dt:])
-
-comp_slope = (max_phi_comp_log[1:] - max_phi_comp_log[0:-1])/comp_sim.dt
-avg_comp_slope = np.average(comp_slope)
+max_phi_comp = np.amax(np.abs(phi_comp_data),axis=1)
+max_phi_comp_log = np.log(max_phi_comp)
+comp_growth_fit = np.polyfit(tArray_comp[start_dt:max_steps],
+                             max_phi_comp_log[start_dt:max_steps],1)
 
 
 for key, value in sims.items():
@@ -91,6 +92,8 @@ for key, value in sims.items():
         
         start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
         max_steps = np.int(max_time/(sim.dt*DH.samplePeriod))+1
+        NA = start_dt
+        NB = max_steps
         
         pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
         
@@ -99,44 +102,26 @@ for key, value in sims.items():
 
         mData_dict = DH.load_m(['phi','E','rho','PE_sum'],sim_name=sim_name)
         
-        tArray = mData_dict['t'][0:max_steps]
-        tArray_spec = tArray[start_dt:]
-        
+        tArray = mData_dict['t']
         phi_data = mData_dict['phi'][:,1,1,:-1]
         PE_data = mData_dict['PE_sum']
         
-        
         ## Growth rate phi plot setup
-        max_phi_data = np.amax(np.abs(phi_data[0:max_steps]),axis=1)
-        max_phi_data_log = np.log(max_phi_data[start_dt:])
-        
-        g_slope = (max_phi_data_log[1:] - max_phi_data_log[0:-1])/dt
-        avg_slope = np.average(g_slope)
+        max_phi_data = np.amax(np.abs(phi_data),axis=1)
+        max_phi_data_log = np.log(max_phi_data)
 
-        errors = g_slope - real_slope
-        avg_error = np.average(np.abs(errors))
-        avg_error = avg_error/real_slope
+        growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
+        growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
         
-        skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-        skip_int = np.int(skip)
-        max_phi_comp_spec = max_phi_comp_log[0::skip_int]
-        tArray_comp_slice = tArray_comp_spec[0::skip_int]
-        comp_slope_spec = (max_phi_comp_spec[1:] - max_phi_comp_spec[0:-1])/sim.dt
-        #comp_slope_spec = comp_slope[0::skip_int]
-        
-        errors_nonlinear = g_slope - comp_slope_spec
-        avg_error_nonlinear = np.average(np.abs(errors_nonlinear))
-        avg_error_nonlinear = avg_error_nonlinear/np.average(comp_slope_spec)
-        
-        #avg_error = np.abs(real_slope-avg_slope)/real_slope
-        #avg_error_nonlinear = np.abs(avg_slope - avg_comp_slope)/avg_comp_slope
+        error_linear = abs(real_slope - growth_fit[0])/real_slope
+        error_nl = abs(comp_growth_fit[0] - growth_fit[0])/comp_growth_fit[0]
         
         dts.append(sim.dt)
         Nts.append(sim.tSteps)
         rhs_evals.append(sim.rhs_eval)
-        avg_slopes.append(avg_slope)
-        avg_errors.append(avg_error)
-        avg_errors_nonlinear.append(avg_error_nonlinear)
+        avg_slopes.append(growth_fit[0])
+        avg_errors.append(error_linear)
+        avg_errors_nonlinear.append(error_nl)
         
         if plot == True:
             fig = plt.figure(DH.figureNo+3)
@@ -151,8 +136,6 @@ for key, value in sims.items():
             gphi_ax.set_title('Linear Instability Growth')
             #gphi_ax.legend()
         
-            print(avg_error)
-            print(sim.rhs_eval)
         
     label_order = sim_name[:-6]
     
@@ -181,7 +164,7 @@ ax_con.set_xscale('log')
 ax_con.set_xlabel('Number of RHS evaluations')
 ax_con.set_yscale('log')
 #ax_rhs.set_ylim(10**(-5),10**1)
-ax_con.set_ylabel('Avg. slope difference')
+ax_con.set_ylabel('Slope difference')
 
 xRange = ax_con.get_xlim()
 yRange = ax_con.get_ylim()
@@ -199,7 +182,7 @@ ax_rhs.set_xscale('log')
 ax_rhs.set_xlabel('Number of RHS evaluations')
 ax_rhs.set_yscale('log')
 #ax_rhs.set_ylim(10**(-5),10**1)
-ax_rhs.set_ylabel('Avg. relative slope error')
+ax_rhs.set_ylabel('Relative slope error')
 
 xRange = ax_rhs.get_xlim()
 yRange = ax_rhs.get_ylim()
@@ -217,7 +200,7 @@ ax_dt.set_xscale('log')
 ax_dt.set_xlabel(r'$\Delta t$')
 ax_dt.set_yscale('log')
 #ax_dt.set_ylim(10**(-7),10**1)
-ax_dt.set_ylabel('Avg. relative slope error')
+ax_dt.set_ylabel('Relative slope error')
 
 xRange = ax_dt.get_xlim()
 yRange = ax_dt.get_ylim()
