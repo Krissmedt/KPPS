@@ -134,7 +134,7 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_synced'
+analysis_params['particleIntegrator'] = 'boris_staggered'
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -146,6 +146,7 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
+analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
@@ -161,11 +162,6 @@ plot_params['ytick.labelsize'] = 8
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
-
-if analysis_params['particleIntegrator'] == 'boris_staggered':
-    analysis_params['pre_hook_list'] = ['ES_vel_rewind']
-else:
-    analysis_params['pre_hook_list'] = []   
     
 for Nt in steps:
     sim_params['tSteps'] = Nt

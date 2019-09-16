@@ -1295,8 +1295,8 @@ class kpps_analysis:
         return species
             
     def field_energy(self,species_list,fields,**kwargs):
-        fields.PE = 0.5*fields.rho*fields.phi
-        fields.PE_sum = np.sum(fields.PE[:-1,:-1,:-1])
+        fields.PE = fields.q*fields.phi
+        fields.PE_sum = np.sum(fields.PE[:-2,:-2,:-2])
         
         return fields
         

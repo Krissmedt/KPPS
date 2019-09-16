@@ -30,18 +30,15 @@ snapPlot = False
 
 
 start_time = 0
-max_time = 20
+max_time = 0.1
 
 sims = {}
 
-#sims['tsi_TE50_boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi_TE50_boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi_TE50_boris_SDC_M3K3_NZ128_NQ2560_NT'] = [50,100,200,400,800]
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,800,1600,3200]
-sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
+sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [1,2,4,8,16]
+sims['tsi_short_boris_staggered_NZ100_PPC20_NT'] = [1,2,4,8,16]
+sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [1,2,4,8,16]
 
-comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT12800'
+comp_run = 'tsi_short_boris_SDC_M5K5_NZ100_PPC20_NT32'
 
 omega_p = 1
 
@@ -109,11 +106,7 @@ if analyse == True:
             p2Data_dict = pData_list[1]
     
             mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres'],sim_name=sim_name)
-            
-            print(sim.analysisSettings['particleIntegrator'])
-            print(sim.simSettings['tEnd'])
-            print(p1Data_dict['KE_sum'][1])
-            print(np.max(p1Data_dict['KE_sum']))
+
             
             ## particle position comparison
             skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
@@ -204,7 +197,7 @@ if plot == True:
     #ax_rhs.set_xlim(10**3,10**5)
     ax_rhs.set_xlabel('Number of RHS evaluations')
     ax_rhs.set_yscale('log')
-    ax_rhs.set_ylim(10**(-6),10)
+    ax_rhs.set_ylim(10**(-12),10)
     ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_rhs.get_xlim()
@@ -220,7 +213,7 @@ if plot == True:
     #ax_dt.set_xlim(10**-3,10**-1)
     ax_dt.set_xlabel(r'$\Delta t$')
     ax_dt.set_yscale('log')
-    ax_dt.set_ylim(10**(-4),10)
+    ax_dt.set_ylim(10**(-12),10)
     ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_dt.get_xlim()
