@@ -15,33 +15,6 @@ from collections import OrderedDict
 sims = {}
 particle = 0
 
-#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-
-
-#sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-
-#sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254]
-
-#sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-
-#sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 
 #sims['NLO__type2_boris_staggered_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
 #sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
@@ -57,20 +30,6 @@ particle = 0
 #sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 #sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type3_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-#sims['NLO__type2_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type2_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-
 #sims['NLO__type3_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 #sims['NLO__type3_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
 #sims['NLO__type3_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
@@ -85,28 +44,37 @@ particle = 0
 #sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 #sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type3_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type4_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-#sims['NLO__type4_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-comp_run = 'NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT2048'
+#sims['NLO__type4_boris_staggered_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_staggered_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_staggered_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_staggered_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64]
+
+sims['NLO__type4_boris_SDC_M3K3_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64]
+
+#sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+
+#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_synced_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type4_boris_staggered_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+
+comp_run = 'NLO__type4_boris_SDC_M5K5_NZ100_TE0.1_NT128'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -121,16 +89,17 @@ plot_params['legend.loc'] = 'upper right'
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
-analyse = False
+analyse = True
 plot = True
 plot_type = ''
+data_root = "../data/"
 
-
-
+data_params = {}
+data_params['dataRootFolder'] = data_root
 
 filenames = []
 if analyse == True:
-    DH_comp = dataHandler2()
+    DH_comp = dataHandler2(**data_params)
     comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
     pDataList_comp = DH_comp.load_p(['pos'],species=['spec1'],sim_name=comp_sim_name)
     p1Data_comp = pDataList_comp[0] 
@@ -146,7 +115,7 @@ if analyse == True:
         grp = file.create_group('fields')
         
         for tsteps in value:
-            DH = dataHandler2()
+            DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
     

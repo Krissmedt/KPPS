@@ -66,8 +66,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1,2,4,8,16]
-resolutions = [100]
+steps = [1,2,4]
+resolutions = [10]
 
 L = 2*pi
 tend = 0.1
@@ -148,6 +148,7 @@ analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 
+data_params['dataRootFolder'] = "../data/" 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
@@ -209,7 +210,7 @@ for Nt in steps:
             sim = DH.controller_obj
             sim_name = sim.simID
         else:
-            DH = dataHandler2()
+            DH = dataHandler2(**data_params)
             sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
         
         

@@ -66,8 +66,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1,2,4,8,16]
-resolutions = [100]
+steps = [1,2,4]
+resolutions = [10]
 iterations = [3]
 
 L = 2*pi
@@ -118,7 +118,7 @@ data_params = {}
 
 sim_params['t0'] = 0
 sim_params['tEnd'] = tend
-sim_params['percentBar'] = True
+sim_params['percentBar'] = False
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
 
@@ -147,10 +147,12 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
+analysis_params['pre_hook_list'] = []   
 
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
+data_params['dataRootFolder'] = "../data/" 
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -163,10 +165,6 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
 
-if analysis_params['particleIntegrator'] == 'boris_staggered':
-    analysis_params['pre_hook_list'] = ['ES_vel_rewind']
-else:
-    analysis_params['pre_hook_list'] = []   
     
 for Nt in steps:
     sim_params['tSteps'] = Nt
@@ -216,7 +214,7 @@ for Nt in steps:
                 sim = DH.controller_obj
                 sim_name = sim.simID
             else:
-                DH = dataHandler2()
+                DH = dataHandler2(**data_params)
                 sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
             
             

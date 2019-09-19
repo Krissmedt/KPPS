@@ -66,7 +66,7 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [32]
+steps = [1]
 resolutions = [100]
 iterations = [5]
 
@@ -153,6 +153,7 @@ analysis_params['pre_hook_list'] = []
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
+data_params['dataRootFolder'] = "../data/" 
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8

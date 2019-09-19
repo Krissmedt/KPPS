@@ -28,17 +28,21 @@ analyse = True
 plot = True
 snapPlot = False
 
-
+data_root = "../data/"
 start_time = 0
 max_time = 0.1
 
 sims = {}
 
-sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [1,2,4,8,16]
-sims['tsi_short_boris_staggered_NZ100_PPC20_NT'] = [1,2,4,8,16]
-sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [1,2,4,8,16]
+#sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [2,4,8,16,32,64]
+sims['tsi_short_boris_staggered_NZ10_PPC20_NT'] = [1,2,4]
+#sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [2,4,8,16,32,64]
 
-comp_run = 'tsi_short_boris_SDC_M5K5_NZ100_PPC20_NT32'
+#sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [1,2,4,8,16]
+#sims['tsi_short_boris_staggered_NZ100_PPC20_NT'] = [1,2,4,8,16]
+#sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [1,2,4,8,16]
+
+comp_run = 'tsi_short_boris_staggered_NZ10_PPC20_NT4'
 
 omega_p = 1
 
@@ -56,6 +60,9 @@ roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
 
 real_slope = roots[1].imag
 
+data_params = {}
+data_params['dataRootFolder'] = data_root
+
 plot_params = {}
 plot_params['legend.fontsize'] = 8
 plot_params['figure.figsize'] = (6,4)
@@ -67,7 +74,7 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 plt.rcParams.update(plot_params)
 
-DH_comp = dataHandler2()
+DH_comp = dataHandler2(**data_params)
 comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
 mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
 pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
@@ -85,11 +92,11 @@ if analyse == True:
         
         filename = key + "_workprec_pos" + ".h5"
         filenames.append(filename)
-        file = h5.File(filename,'w')
+        file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
     
         for tsteps in value:
-            DH = dataHandler2()
+            DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
     
@@ -111,6 +118,7 @@ if analyse == True:
             ## particle position comparison
             skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
             skip_int = np.int(skip)
+            skip_p = np.int(p1Data_comp['pos'].shape[1]/p1Data_dict['pos'].shape[1])
             
             tArray = p1Data_dict['t'][:]
             tArray_comp = p1Data_comp['t'][:]
@@ -124,15 +132,15 @@ if analyse == True:
             
             tArray_slice = tArray[start_dt:max_dt]
             tArray_comp_slice = tArray_comp[start_dt:max_dt]
+
             beam1_pos_slice = beam1_pos[start_dt:max_dt]
             comp_beam1_pos_slice = comp_beam1_pos[start_dt:max_dt]
             
             pos_diff = np.abs(comp_beam1_pos_slice-beam1_pos_slice)
             rel_pos_diff = pos_diff/np.abs(comp_beam1_pos_slice)
-            final_errors = rel_pos_diff[-1,:]
+            final_errors = rel_pos_diff[max_dt-1,:]
             
             avg_error = np.average(final_errors)
-            
             dts.append(sim.dt)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)

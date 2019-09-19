@@ -18,6 +18,7 @@ from math import sqrt, fsum, pi
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
 import time
+import copy as cp
 
 ## Class
 class kpps_analysis:
@@ -121,7 +122,7 @@ class kpps_analysis:
         self.unit_scale_poisson = 1
         
         ## Iterate through keyword arguments and store all in object (self)
-        self.params = kwargs
+        self.params = cp.deepcopy(kwargs)
         for key, value in self.params.items():
             setattr(self,key,value)
             
@@ -205,10 +206,10 @@ class kpps_analysis:
         # Load hook methods
         if self.rhs_check == True:
             self.preAnalysis_methods.append(self.rhs_tally)
-        
+
         for hook in self.pre_hook_list:
             self.preAnalysis_methods.append(hook)
-        
+
         
         if 'penningEnergy' in self.params:
             self.preAnalysis_methods.append(self.energy_calc_penning)
@@ -232,6 +233,8 @@ class kpps_analysis:
         self.poisson_M_adjust_2d = self.stringtoMethod(self.poisson_M_adjust_2d)
         self.poisson_M_adjust_3d = self.stringtoMethod(self.poisson_M_adjust_3d)
         
+        print(self.fieldGather_methods)
+
         self.setup_OpsList(self.preAnalysis_methods)
         self.setup_OpsList(self.fieldIntegrator_methods)
         self.setup_OpsList(self.fieldGather_methods)
@@ -272,7 +275,6 @@ class kpps_analysis:
     
 
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
-        #print(fields.E[2,1,1,:])
         for species in species_list:
             for method in self.particleIntegrator_methods:
                 method(species,fields,simulationManager)
@@ -290,7 +292,7 @@ class kpps_analysis:
         print("Running pre-processing...")
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
-            
+        
         for method in self.preAnalysis_methods:
             method(species_list, mesh,**kwargs)
             
@@ -1217,7 +1219,7 @@ class kpps_analysis:
 ################################ Hook methods #################################
     def ES_vel_rewind(self,species_list,mesh,controller=None):
         dt = controller.dt
-        
+        print("hey")
         for species in species_list:
             self.fieldGather(species,mesh)
             species.vel = species.vel - species.E * species.q * dt/2
