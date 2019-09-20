@@ -10,13 +10,14 @@ class particleLoader:
     def __init__(self,**kwargs):
         
         
-        self.speciestoLoad = []
+        self.speciestoLoad = [0]
         
         ## Default values
         self.custom_case = self.custom_case_ph  #Assign custom case method to this
         
         ## Default species values
         self.load_type = 'custom_case'
+        self.clean_load = True
         self.dx = 1
         self.dv = 10
 
@@ -62,39 +63,49 @@ class particleLoader:
     def run(self,species_list,controller,**kwargs):
         for index in self.speciestoLoad:
             print("Loading species {}...".format(index+1))
-            self.load_type(species_list[index],**kwargs)
+            if self.clean_load == True:
+                self.reset_species(species_list[index])
+            self.load_type(species_list[index],controller,**kwargs)
             self.enforce_dimensionality(species_list[index],controller)
             
     ## Species methods
-    def direct(self,species,**kwargs):
+    def direct(self,species,controller,**kwargs):
         nPos = self.pos.shape[0]
         if nPos <= species.nq:
             species.pos[:nPos,:] = self.pos
         elif nPos > species.nq:
-            print("CaseHandler: More positions than particles specified, ignoring excess entries.")
+            print("Particle Loader: More positions than particles specified, ignoring excess entries.")
             species.pos = self.pos[:species.nq,:]
         
         nVel = self.vel.shape[0]
         if nVel <= species.nq:
             species.vel[:nVel,:] = self.vel
         elif nVel > species.nq:
-            print("CaseHandler: More velocities than particles specified, ignoring excess entries.")
+            print("Particle Loader: More velocities than particles specified, ignoring excess entries.")
             species.vel = self.vel[:species.nq,:]
         
         #print(species.pos)
                 
-    def clouds(self,species,**kwargs):
+    def clouds(self,species,controller,**kwargs):
         ppc = math.floor(species.nq/self.pos.shape[0])
         for xi in range(0,len(self.pos)):
             species.pos[xi*ppc:(xi+1)*ppc,:] = self.pos[xi] + self.random(ppc,self.dx)
             species.vel[xi*ppc:(xi+1)*ppc,:] = self.vel[xi] + self.random(ppc,self.dv)
      
-    def evenPos(self,species):
+    def evenPos(self,species,controller):
         return species
     
-    def randDis(self,species):
+    def randDis(self,species,controller):
         species.pos = self.pos[0] + self.random(species.nq,self.dx)
         species.vel = self.vel[0] + self.random(species.nq,self.dv)
+        
+    def random(self,rows,deviance):
+        output = np.zeros((rows,3),dtype=np.float)
+        for j in range(0,3):
+            for i in range(0,rows):
+                output[i,j] = np.random.uniform(-deviance,deviance)
+        
+        return output
         
     def enforce_dimensionality(self,species,controller):
         if controller.ndim == 2:
@@ -115,6 +126,13 @@ class particleLoader:
             except AttributeError:
                 pass    
             
+    def reset_species(self,species):
+        species.E = np.zeros((species.nq,3),dtype=np.float) 
+        species.B = np.zeros((species.nq,3),dtype=np.float) 
+        species.F = np.zeros((species.nq,3),dtype=np.float) 
+        species.vel = np.zeros((species.nq,3),dtype=np.float)
+        species.pos = np.zeros((species.nq,3),dtype=np.float)
+            
     def custom_case_ph(self,species_list):
         print('No custom case method specified, particle loader will do nothing.')        
     
@@ -126,4 +144,5 @@ class particleLoader:
             pass
         
         return front
+
             

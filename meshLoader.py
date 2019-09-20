@@ -13,6 +13,7 @@ class meshLoader:
         self.load_type = 'custom'
         self.custom = self.custom_ph
         
+        self.grid_input = None
         self.mesh_res = np.array([2,2,2],dtype=np.int)
         self.mesh_dh = None
         self.store_node_pos = False
@@ -151,34 +152,46 @@ class meshLoader:
             mesh.xlimits = controller.xlimits
             mesh.ylimits = controller.ylimits
             mesh.zlimits = controller.zlimits
-            
+
         except AssertionError:
             print("Mesh Loader: One of the input box-edge limits is not positive " +
-                  "in length. Reverting to default 1x1x1 cube.")
-            mesh.xlimits = np.array([0,1])
-            mesh.ylimits = np.array([0,1])
-            mesh.zlimits = np.array([0,1])
+                  "in length. Reverting to default 2x2x2 cube centered on origin.")
+            mesh.xlimits = np.array([-1,1])
+            mesh.ylimits = np.array([-1,1])
+            mesh.zlimits = np.array([-1,1])
             
-        try: 
-            dh = np.zeros(3,dtype=np.float)
-            dh[:] = self.mesh_dh
-            self.mesh_dh = dh
-        except TypeError:
-            res = np.zeros(3,dtype=np.int)
-            res[:] = self.mesh_res
-            self.mesh_res = res
-    
-        try:
+        if self.grid_input == 'cell_count' or self.mesh_dh == None:
+            try:
+                res = np.zeros(3,dtype=np.int)
+                res[:] = self.mesh_res
+                self.mesh_res = res
+                
+                dx = (mesh.xlimits[1] - mesh.xlimits[0])/self.mesh_res[0]
+                dy = (mesh.ylimits[1] - mesh.ylimits[0])/self.mesh_res[1]
+                dz = (mesh.zlimits[1] - mesh.zlimits[0])/self.mesh_res[2]
+                self.mesh_dh = np.array([dx,dy,dz])
+                self.grid_input = 'cell_count'
+                
+            except:
+                print("Exception in handling mesh resolution input, trying by cell length.")
+                self.grid_iput = 'cell_length'
+            
+                
+        if self.grid_input == 'cell_length':
+            try:
+                type_test = 1/self.mesh_dh
+            except:
+                print("Exception in handling mesh resolution input, defaulting to 2x2x2 resolution.")
+                self.mesh_dh = (mesh.xlimits[1] - mesh.xlimits[0])/2
+                self.mesh_dh = (mesh.ylimits[1] - mesh.ylimits[0])/2
+                self.mesh_dh = (mesh.ylimits[1] - mesh.ylimits[0])/2
+
             xres = (mesh.xlimits[1] - mesh.xlimits[0])/self.mesh_dh[0]
             yres = (mesh.ylimits[1] - mesh.ylimits[0])/self.mesh_dh[1]
             zres = (mesh.zlimits[1] - mesh.zlimits[0])/self.mesh_dh[2]
             self.mesh_res = np.array([xres,yres,zres],dtype=np.int)
-        except ValueError:
-            dx = (mesh.xlimits[1] - mesh.xlimits[0])/self.mesh_res[0]
-            dy = (mesh.ylimits[1] - mesh.ylimits[0])/self.mesh_res[1]
-            dz = (mesh.zlimits[1] - mesh.zlimits[0])/self.mesh_res[2]
-            self.mesh_dh = np.array([dx,dy,dz])   
-            
+            self.grid_iput = 'cell_length'
+                
         self.cell_volume = np.prod(self.mesh_dh[0:])
         
         if controller.ndim == 2:

@@ -479,12 +479,13 @@ class kpps_analysis:
         diag = [1/fields.dz**2,k[controller.ndim-1],1/fields.dz**2]
         Dk = sps.diags(diag,offsets=[-1,0,1],shape=(nz,nz))
         self.FDMat = Dk
+
         FDMatrix_adjust_z(species_list,fields,controller)
         self.pot_diff_list.append(self.pot_differentiate_z)
         
         if controller.ndim >= 2:
-            self.interior_shape[1] += 1
             if self.mesh_boundary_y == 'open':
+                self.interior_shape[1] += 1
                 FDMatrix_adjust_y = self.poisson_M_adjust_2d
                 self.pot_differentiate_y = self.pot_diff_open_y
             
@@ -499,12 +500,12 @@ class kpps_analysis:
             self.pot_diff_list.append(self.pot_differentiate_y)
             
         if controller.ndim == 3:
-            self.interior_shape[0] += 1
             if self.mesh_boundary_x == 'open':
+                self.interior_shape[0] += 1
                 FDMatrix_adjust_x = self.poisson_M_adjust_3d
                 self.pot_differentiate_x = self.pot_diff_open_x
             
-            nx = self.interior_shape[1]
+            nx = self.interior_shape[0]
             J = sps.identity(nz*ny)
             diag = sps.diags([1],shape=(nx,nx))
             off_diag = sps.diags([1,1],offsets=[-1,1],shape=(nx,nx))
@@ -513,7 +514,7 @@ class kpps_analysis:
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
-
+        print(self.FDMat.shape)
         return self.FDMat
     
         

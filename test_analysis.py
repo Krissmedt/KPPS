@@ -9,45 +9,54 @@ import copy as cp
 from kpps_analysis import kpps_analysis
 from species import species
 from mesh import mesh
-from simulationManager import simulationManager
-from caseHandler import caseHandler
+from controller import controller
+from meshLoader import meshLoader
+from particleLoader import particleLoader
 
-class Test_units:
+class Test_units_analysis:
     def setup(self):
         species_params = {}
-        case_params = {}
+        pLoader_params = {}
+        mLoader_params = {}
         sim_params = {}
+        
+        sim_params['xlimits'] = [-2,2]
+        sim_params['ylimits'] = [-2,2]
+        sim_params['zlimits'] = [-2,2]
+        self.sim = controller(**sim_params)
         
         species_params['nq'] = 8
         species_params['mq'] = 1
         species_params['q'] = 8
-        self.spec_params = species_params
+        self.p = species(**species_params)
         
-        case_params['particle_init'] = 'direct'
-        case_params['vel'] = np.zeros((8,3),dtype=np.float)
-        case_params['pos'] = np.array([[1,1,1],[1,-1,1],[1,-1,-1],[1,1,-1],
+        pLoader_params['load_type'] = 'direct'
+        pLoader_params['vel'] = np.zeros((8,3),dtype=np.float)
+        pLoader_params['pos'] = np.array([[1,1,1],[1,-1,1],[1,-1,-1],[1,1,-1],
                                       [-1,-1,-1],[-1,1,-1],[-1,1,1],[-1,-1,1]])
+        self.pLoader_params = pLoader_params
+        self.pLoader = particleLoader(**pLoader_params)
         
-        case_params['mesh_init'] = 'box'
-        case_params['xlimits'] = [-2,2]
-        case_params['ylimits'] = [-2,2]
-        case_params['zlimits'] = [-2,2]
-        case_params['resolution'] = [2]
-        case_params['store_node_pos'] = True
-        
-        self.case_params = case_params
-        
-        self.sim = simulationManager()
+        mLoader_params['load_type'] = 'box'
+        mLoader_params['resolution'] = [2]
+        mLoader_params['store_node_pos'] = True
+        self.mLoader_params = mLoader_params
+        self.mLoader = meshLoader(**mLoader_params)
+        self.m = mesh()
+
         self.kpa = kpps_analysis()
         
+        
     def test_trilinearScatter(self):
-        p = species(**self.spec_params)
-        m = mesh()
+        p = cp.copy(self.p)
+        m = cp.copy(self.m)
+        
+        self.pLoader.run([p],self.sim)
+        self.mLoader.run(m,self.sim)
         
         # Simple test - '8 particles, 8 cells, 1 cube'
-        case = caseHandler(species=p,mesh=m,**self.case_params)
         assert m.q[0,0,0] == 0
-        self.kpa.trilinear_qScatter(p,m,self.sim)
+        self.kpa.trilinear_qScatter([p],m,self.sim)
         assert m.q[0,0,0] == 1.
         assert m.q[1,0,0] == 2.
         assert m.q[1,1,0] == 4.
@@ -59,13 +68,16 @@ class Test_units:
         p.nq = 20
         p.q = 1
         
-        case2_params = cp.copy(self.case_params)
-        case2_params['particle_init'] = 'random'
-        case2_params['pos'] =  np.array([[0,0,0]])
-        case2_params['dx'] = 2
+        pLoader_params = cp.copy(self.pLoader_params)
+        pLoader_params['load_type'] = 'randDis'
+        pLoader_params['pos'] =  np.array([[0,0,0]])
+        pLoader_params['dx'] = 2
 
-        case2 = caseHandler(species=p,mesh=m,**case2_params)
-        self.kpa.trilinear_qScatter(p,m,self.sim)
+        pLoader = particleLoader(**pLoader_params)
+        pLoader.run([p],self.sim)
+        self.mLoader.run(m,self.sim)
+        
+        self.kpa.trilinear_qScatter([p],m,self.sim)
         charge_sum = np.sum(m.q)
 
         assert 19.99 <= charge_sum <= 20.01
@@ -74,24 +86,26 @@ class Test_units:
         p.nq = 4
         p.q = 1
 
-        case3_params = cp.copy(self.case_params)
-        case3_params['particle_init'] = 'direct'
-        case3_params['pos'] =  np.array([[0.5,0.5,0],[1.5,0.5,0],
+        pLoader_params = cp.copy(self.pLoader_params)
+        pLoader_params['load_type'] = 'direct'
+        pLoader_params['pos'] =  np.array([[0.5,0.5,0],[1.5,0.5,0],
                                         [0.5,1.5,0],[1.5,1.5,0]])
 
-        case3 = caseHandler(species=p,mesh=m,**case3_params)
-
-        self.kpa.trilinear_qScatter(p,m,self.sim)
+        pLoader = particleLoader(**pLoader_params)
+        pLoader.run([p],self.sim)
+        self.mLoader.run(m,self.sim)
+        self.kpa.trilinear_qScatter([p],m,self.sim)
 
         assert m.q[:,:,2].all() == np.zeros((3,3)).all() 
         assert m.q[:,:,0].all() == np.zeros((3,3)).all() 
-        assert m.q[1:,1:,1].all() == np.array([[1,1],[1,1]]).all()
         assert np.sum(m.q[:,:,1]) == p.nq*p.q
         
+        
     def test_trilinearGather(self):
-        p = species(**self.spec_params)
-        m = mesh()
-        case = caseHandler(species=p,mesh=m,**self.case_params)
+        p = cp.copy(self.p)
+        m = cp.copy(self.m)
+        self.pLoader.run([p],self.sim)
+        self.mLoader.run(m,self.sim)
         
         m.E[0,:,:,:] = 1
         m.E[1,:,:,:] = 2
@@ -110,31 +124,40 @@ class Test_units:
         p.pos = np.array([[1,1,-1.5],[1,1,-0.5],
                           [1,1,0.5],[1,1,1.5]],dtype=np.float)
         self.kpa.trilinear_gather(p,m)
+
         linearIncrease = np.array([1.25,1.75,2.25,2.75])
         assert p.E[:,0].all() == linearIncrease.all()
         assert p.E[:,1].all() == linearIncrease.all()
         assert p.E[:,2].all() == linearIncrease.all()
         
-    def test_poisson(self):
+        
+    def test_poisson_setup_fixed(self):
         p = species()
         m = mesh()
         
-        case_params = cp.copy(self.case_params)
-        case_params['res'] = [4,6,8]
-        case_params['limits'] = [-1,1]
-        case = caseHandler(species=p,mesh=m,**case_params)
+        sim_params = {}
+        sim_params['xlimits'] = [-1,1]
+        sim_params['ylimits'] = [-1,1]
+        sim_params['zlimits'] = [-1,1]
+        sim = controller(**sim_params)
+        
+        
+        mLoader_params = cp.copy(self.mLoader_params)
+        mLoader_params['res'] = [4,6,8]
+        mLoader = meshLoader(**mLoader_params)
+        mLoader.run(m,sim)
 
         kpa = kpps_analysis()
-        self.sim.ndim = 1
-        Dk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        sim.ndim = 1
+        Dk = kpa.poisson_cube2nd_setup(p,m,sim)
         Dk = Dk.toarray()
         
-        self.sim.ndim = 2
-        Ek= kpa.poisson_cube2nd_setup(p,m,self.sim)
+        sim.ndim = 2
+        Ek= kpa.poisson_cube2nd_setup(p,m,sim)
         Ek = Ek.toarray()
         
-        self.sim.ndim = 3
-        Fk = kpa.poisson_cube2nd_setup(p,m,self.sim)
+        sim.ndim = 3
+        Fk = kpa.poisson_cube2nd_setup(p,m,sim)
         Fk = Fk.toarray()
 
         #Test all FDM matrices are the correct size
@@ -162,26 +185,20 @@ class Test_units:
         
         return Dk,Ek,Fk
         
+        
     def test_toMethods(self):
         kpa = kpps_analysis()
         
-        mesh = np.zeros((3,3,3),dtype=np.float)
-        mesh[0,0,0] = 1
-        mesh[1,0,0] = 2
-        mesh[1,1,0] = 3
-        mesh[1,1,1] = 4
-        mesh[-1,-1,-2] = 5
-        x = kpa.meshtoVector(mesh)
+        m = np.zeros((3,3,3),dtype=np.float)
+        m[0,0,0] = 1
+        m[1,0,0] = 2
+        m[1,1,0] = 3
+        m[1,1,1] = 4
+        m[-1,-1,-2] = 5
+        x = kpa.meshtoVector(m)
         
         assert x[0] == 1
         assert x[9] == 2
         assert x[12] == 3
         assert x[13] == 4
         assert x[25] == 5
-        
-        
-tu = Test_units()
-tu.setup()
-Dk,Ek,Fk = tu.test_poisson()
-tu.test_trilinearScatter()
-tu.test_trilinearGather()
