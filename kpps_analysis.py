@@ -232,8 +232,6 @@ class kpps_analysis:
         self.poisson_M_adjust_1d = self.stringtoMethod(self.poisson_M_adjust_1d)
         self.poisson_M_adjust_2d = self.stringtoMethod(self.poisson_M_adjust_2d)
         self.poisson_M_adjust_3d = self.stringtoMethod(self.poisson_M_adjust_3d)
-        
-        print(self.fieldGather_methods)
 
         self.setup_OpsList(self.preAnalysis_methods)
         self.setup_OpsList(self.fieldIntegrator_methods)
@@ -256,8 +254,8 @@ class kpps_analysis:
 ########################### Main Run Loops ####################################
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields = self.impose_background(species_list,fields,simulationManager)
-
         for method in self.fieldIntegrator_methods:
+            #print(method)
             method(species_list,fields,simulationManager)
 
         return species_list
@@ -269,7 +267,8 @@ class kpps_analysis:
         species.B = np.zeros((len(species.B),3),dtype=np.float)
 
         for method in self.fieldGather_methods:
-                method(species,fields)
+            #print(method)
+            method(species,fields)
 
         return species
     
@@ -277,12 +276,16 @@ class kpps_analysis:
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
         for species in species_list:
             for method in self.particleIntegrator_methods:
+                #print(method)
                 method(species,fields,simulationManager)
-    
+
+        print("Pos1 = " + str(species_list[0].pos[0:3,2]))
+        print("")
         return species_list
     
     def runHooks(self,species_list,fields,**kwargs):
         for method in self.hooks:
+            #print(method)
             method(species_list,fields,**kwargs)
             
         return species_list, fields
@@ -294,19 +297,23 @@ class kpps_analysis:
             self.check_boundCross(species,mesh,**kwargs)
         
         for method in self.preAnalysis_methods:
+            #print(method)
             method(species_list, mesh,**kwargs)
             
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
-
+            
+        print(species_list[0].pos[0:5,2])
+        print("")
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
         print("Running post-processing...")
         for species in species_list:
             for method in self.postAnalysis_methods:
+                #print(method)
                 method(species_list,fields,simulationManager)
         
         return species_list, fields
@@ -534,7 +541,7 @@ class kpps_analysis:
                    self.mi_z0:self.mi_zN] = phi
 
         self.solver_post(species_list,fields,controller)
-        #print(fields.rho[1,1,:])
+
         for nd in range(0,controller.ndim):
             self.pot_diff_list[nd](fields)
 
@@ -769,32 +776,35 @@ class kpps_analysis:
     
     
     def boris_staggered(self,species,mesh,simulationParameters,**kwargs):
-        #print(species.vel)
+        #print(species.E[0:3,2])
         dt = simulationParameters.dt
         alpha = species.a
 
         self.fieldGather(species,mesh)
-        
+        print(species.E[0:3,2])
         species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
         species.pos = species.pos + simulationParameters.dt * species.vel
         self.check_boundCross(species,mesh,**kwargs)
+        #print(species.E[0:3,2])
         return species
     
     
     def boris_synced(self,species,mesh,simulationParameters,**kwargs):
+        #print(species.E[0:3,2])
         dt = simulationParameters.dt
         alpha = species.a
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh,species.E))
+        print(species.E[0:3,2])
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
         self.check_boundCross(species,mesh,**kwargs)
         
         E_old = species.E
         self.fieldGather(species,mesh)
         E_new = species.E
-        
+
         species.E_half = (E_old+E_new)/2
         
         species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
-
+        #print(species.E[0:3,2])
         return species
         
     
@@ -1040,9 +1050,9 @@ class kpps_analysis:
         F = species.toVector(F)
         return F
     
-    def lorentz_std(self,species,fields,E_half):
-        self.fieldGather(species,fields)
-        F = species.a*(E_half + np.cross(species.vel,species.B))
+    def lorentz_std(self,species,fields):
+        F = species.a*(species.E + np.cross(species.vel,species.B))
+
         return F
     
     
@@ -1219,12 +1229,10 @@ class kpps_analysis:
 ################################ Hook methods #################################
     def ES_vel_rewind(self,species_list,mesh,controller=None):
         dt = controller.dt
-        print("hey")
         for species in species_list:
             self.fieldGather(species,mesh)
-            species.vel = species.vel - species.E * species.q * dt/2
-
-        
+            species.vel = species.vel - species.E * species.a * dt/2
+ 
         
     def calc_residuals_avg(self,species,k,m,x,xn,xQuad,v,vn,vQuad):
         species.x_con[k-1,m] = np.average(np.abs(xn[:,m+1] - x[:,m+1]))

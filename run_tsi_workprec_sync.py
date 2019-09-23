@@ -66,11 +66,11 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1,2,4]
-resolutions = [100]
+steps = [5]
+resolutions = [10]
 
 L = 2*pi
-tend = 0.1
+tend = 1
 
 dx_mag = 0.0001
 dx_mode = 1
@@ -83,11 +83,10 @@ a = -1
 omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
-ppc = 20
-#nq = 1280
+#ppc = 20
+nq = 200
 
 prefix = 'TE'+str(tend)
-prefix = 'short'
 simulate = True
 plot = False
 
@@ -172,8 +171,8 @@ for Nt in steps:
     sim_params['tSteps'] = Nt
     dt = tend/Nt
     for res in resolutions:
-        #ppc = nq/res
-        nq = ppc*res
+        ppc = nq/res
+        #nq = ppc*res
         
         q = omega_p**2 * L / (nq*a*1)
         
@@ -195,7 +194,7 @@ for Nt in steps:
         species_params = [beam1_params,beam2_params]
         loader_params = [loader1_params,loader2_params]
 
-        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
+        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

@@ -28,21 +28,26 @@ analyse = True
 plot = True
 snapPlot = False
 
+h5_suffix = ''
 data_root = "../data/"
 start_time = 0
-max_time = 0.1
+max_time = 1
 
 sims = {}
 
-#sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [2,4,8,16,32,64]
-sims['tsi_short_boris_staggered_NZ10_PPC20_NT'] = [1,2,4]
-#sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [2,4,8,16,32,64]
 
-#sims['tsi_short_boris_synced_NZ100_PPC20_NT'] = [1,2,4,8,16]
-#sims['tsi_short_boris_staggered_NZ100_PPC20_NT'] = [1,2,4,8,16]
-#sims['tsi_short_boris_SDC_M3K3_NZ100_PPC20_NT'] = [1,2,4,8,16]
+#sims['tsi_TE1_boris_staggered_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 
-comp_run = 'tsi_short_boris_staggered_NZ10_PPC20_NT4'
+sims['tsi_TE1_boris_synced_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+sims['tsi_TE1_boris_synced_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_synced_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_synced_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+
+
+comp_run = 'tsi_TE1_boris_synced_NZ1000_NQ20000_NT1024'
 
 omega_p = 1
 
@@ -64,8 +69,8 @@ data_params = {}
 data_params['dataRootFolder'] = data_root
 
 plot_params = {}
-plot_params['legend.fontsize'] = 8
-plot_params['figure.figsize'] = (6,4)
+plot_params['legend.fontsize'] = 10
+plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 12
 plot_params['axes.titlesize'] = 12
 plot_params['xtick.labelsize'] = 8
@@ -74,14 +79,14 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 plt.rcParams.update(plot_params)
 
-DH_comp = dataHandler2(**data_params)
-comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
-pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
-p1Data_comp = pDataList_comp[0] 
-
 filenames = []
 if analyse == True:
+    DH_comp = dataHandler2(**data_params)
+    comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
+    mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
+    pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
+    p1Data_comp = pDataList_comp[0] 
+
     for key, value in sims.items():
         dts = []
         Nts = []
@@ -90,7 +95,7 @@ if analyse == True:
         avg_slopes = []
         avg_errors_nonlinear = []
         
-        filename = key + "_workprec_pos" + ".h5"
+        filename = key + "_workprec_pos" + h5_suffix + ".h5"
         filenames.append(filename)
         file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
@@ -165,14 +170,15 @@ if analyse == True:
         file.close()
 
 if plot == True:
+    plt.rcParams.update(plot_params)
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key + "_workprec_pos" + ".h5"
+            filename = key + "_workprec_pos" + h5_suffix + ".h5"
             filenames.append(filename)
             
 
     for filename in filenames:
-        file = h5.File(filename,'r')
+        file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         avg_errors = file["fields/errors"][:]
@@ -199,6 +205,8 @@ if plot == True:
         fig_dt = plt.figure(11)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
         ax_dt.plot(dts,avg_errors,label=label)
+        
+    file.close()
         
         
     ax_rhs.set_xscale('log')
@@ -227,6 +235,8 @@ if plot == True:
     xRange = ax_dt.get_xlim()
     yRange = ax_dt.get_ylim()
     
+    ax_dt.plot(xRange,DH.orderLines(1,xRange,yRange),
+                ls='-.',c='0.1',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
                 ls='dotted',c='0.25',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
