@@ -200,6 +200,14 @@ class kpps_analysis:
             if self.particleIntegrator == 'boris_SDC':
                 self.preAnalysis_methods.append(self.collSetup)
             
+            if self.particleIntegrator == 'boris_staggered':
+                self.particleInt1 = self.none
+                self.particleInt2 = self.boris_staggered
+                
+            if self.particleIntegrator == 'boris_synced':
+                self.particleInt1 = self.boris_synced_pos
+                self.particleInt2 = self.boris_synced_vel
+                
             self.fieldGather_methods.append(self.gather)
                 
 
@@ -252,10 +260,23 @@ class kpps_analysis:
             pass
 
 ########################### Main Run Loops ####################################
+    def run_Integrator(self,species_list,fields,controller,**kwargs):
+        for species in species_list:
+            self.particleInt1(species,fields,controller)
+        
+        fields = self.impose_background(species_list,fields,controller)
+        self.trilinear_qScatter(species_list,fields,controller)
+        self.poisson_cube2nd(species_list,fields,controller)
+        
+        for species in species_list:
+            self.particleInt2(species,fields,controller)
+
+        return species_list  
+    
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields = self.impose_background(species_list,fields,simulationManager)
         for method in self.fieldIntegrator_methods:
-            #print(method)
+            print(method)
             method(species_list,fields,simulationManager)
 
         return species_list
@@ -276,11 +297,11 @@ class kpps_analysis:
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
         for species in species_list:
             for method in self.particleIntegrator_methods:
-                #print(method)
+                print(method)
                 method(species,fields,simulationManager)
 
-        print("Pos1 = " + str(species_list[0].pos[0:3,2]))
-        print("")
+        #print("Pos1 = " + str(species_list[0].pos[0:3,2]))
+        #print("")
         return species_list
     
     def runHooks(self,species_list,fields,**kwargs):
@@ -305,8 +326,6 @@ class kpps_analysis:
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
             
-        print(species_list[0].pos[0:5,2])
-        print("")
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
@@ -654,7 +673,7 @@ class kpps_analysis:
                               w[5]*mesh.E[:,i+1,j,k+1] +
                               w[6]*mesh.E[:,i+1,j+1,k] + 
                               w[7]*mesh.E[:,i+1,j+1,k+1])
-            
+
         return species
     
     
@@ -701,7 +720,6 @@ class kpps_analysis:
     
     def trilinear_qScatter(self,species_list,mesh,controller):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
-        
         for species in species_list:
             for pii in range(0,species.nq):
                 li = self.cell_index(species.pos[pii],O,mesh.dh)
@@ -775,25 +793,46 @@ class kpps_analysis:
         return vel_new
     
     
-    def boris_staggered(self,species,mesh,simulationParameters,**kwargs):
+    def boris_staggered(self,species,mesh,controller,**kwargs):
         #print(species.E[0:3,2])
-        dt = simulationParameters.dt
+        dt = controller.dt
         alpha = species.a
 
         self.fieldGather(species,mesh)
-        print(species.E[0:3,2])
         species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
-        species.pos = species.pos + simulationParameters.dt * species.vel
+        species.pos = species.pos + controller.dt * species.vel
         self.check_boundCross(species,mesh,**kwargs)
+
+        return species
+
+    def boris_synced_pos(self,species,mesh,controller,**kwargs):
+        #print(species.E[0:3,2])
+        dt = controller.dt
+        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
+        self.check_boundCross(species,mesh,**kwargs)
+
+        return species
+    
+    def boris_synced_vel(self,species,mesh,controller,**kwargs):
+        #print(species.E[0:3,2])
+        dt = controller.dt
+        alpha = species.a
+
+        E_old = species.E
+        self.fieldGather(species,mesh)
+        E_new = species.E
+
+        species.E_half = (E_old+E_new)/2
+        
+        species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
         #print(species.E[0:3,2])
         return species
     
-    
-    def boris_synced(self,species,mesh,simulationParameters,**kwargs):
+    def boris_synced(self,species,mesh,controller,**kwargs):
         #print(species.E[0:3,2])
-        dt = simulationParameters.dt
+        dt = controller.dt
         alpha = species.a
-        print(species.E[0:3,2])
+
         species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
         self.check_boundCross(species,mesh,**kwargs)
         
@@ -892,7 +931,133 @@ class kpps_analysis:
             species.v_res = np.zeros((K,M))
         
 
-    def boris_SDC(self, species,fields, simulationManager,**kwargs):
+
+    def boris_SDC_pos(self, species,fields, simulationManager,**kwargs):
+        M = self.M
+        K = self.K
+        
+        #Remap collocation weights from [0,1] to [tn,tn+1]
+        #nodes = (t-dt) + self.nodes * dt
+        weights =  self.coll_params['weights']
+
+        Qmat =  self.coll_params['Qmat']
+        Smat =  self.coll_params['Smat']
+
+        dm =  self.coll_params['dm']
+
+        SX =  self.coll_params['SX'] 
+
+        SQ =  self.coll_params['SQ']
+
+        
+        x0 =  self.coll_params['x0']
+        v0 =  self.coll_params['v0']
+        
+        xn =  self.coll_params['xn']
+        vn =  self.coll_params['vn']
+        
+        F = self.coll_params['Fn']
+        Fn = self.coll_params['F']
+        
+        #Populate node solutions with x0, v0, F0
+        x0[:,0] = self.toVector(species.pos)
+        v0[:,0] = self.toVector(species.vel)
+        F[:,0] = self.toVector(species.F)
+        En_m0 = species.E
+
+        for m in range(1,M+1):
+            x0[:,m] = x0[:,0]
+            v0[:,m] = v0[:,0]
+            F[:,m] = F[:,0]
+            
+        x = np.copy(x0)
+        v = np.copy(v0)
+        
+        xn[:,:] = x[:,:]
+        vn[:,:] = v[:,:]
+        Fn[:,:] = F[:,:]
+
+        #print()
+        #print(simulationManager.ts)
+        for k in range(1,K+1):
+            #print("k = " + str(k))
+            En_m = En_m0 #reset electric field values for new sweep
+
+            for m in range(self.ssi,M):
+                #print("m = " + str(m))
+                #Determine next node (m+1) positions
+                sumSQ = 0
+                for l in range(1,M+1):
+                    sumSQ += SQ[m+1,l]*F[:,l]
+                
+                sumSX = 0
+                for l in range(1,m+1):
+                    sumSX += SX[m+1,l]*(Fn[:,l] - F[:,l])
+
+                xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
+                          
+                ### POSITION UPDATE FOR NODE m/SWEEP k ###
+                xn[:,m+1] = xQuad + sumSX 
+                
+                ##########################################
+                
+                sumS = 0
+                for l in range(1,M+1):
+                    sumS += Smat[m+1,l] * F[:,l]
+                
+                vQuad = vn[:,m] + sumS
+                
+                ck_dm = -1/2 * (F[:,m+1]
+                        +F[:,m]) + 1/dm[m] * sumS
+                
+                ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
+                species.pos = self.toMatrix(xn[:,m+1],3)
+                self.check_boundCross(species,fields,**kwargs)
+                
+                
+#    def boris_SDC_vel(self, species,fields, simulationManager,**kwargs):
+#        M = self.M
+#        K = self.K
+#        for k in range(1,K+1):
+#            for m in range(self.ssi,M):
+#                self.fieldGather(species,fields)
+#                ###########################################
+#                
+#                #Sample the electric field at the half-step positions (yields form Nx3)
+#                half_E = (En_m+species.E)/2
+#                En_m = species.E              #Save m+1 value as next node's m value
+#                
+#                #Resort all other 3d vectors to shape Nx3 for use in Boris function
+#                v_oldNode = self.toMatrix(vn[:,m])
+#                ck_dm = self.toMatrix(ck_dm)
+#                
+#                ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
+#                v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
+#                vn[:,m+1] = self.toVector(v_new)
+#                ##########################################
+#                
+#                self.calc_residuals(species,k,m,x,xn,xQuad,v,vn,vQuad)
+#                
+#                ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
+#                species.vel = species.toMatrix(vn[:,m+1])
+#                species.F = species.a*(species.E + np.cross(species.vel,species.B))
+#                Fn[:,m+1] = species.toVector(species.F)
+#                #########################################
+#                
+#            F[:,:] = Fn[:,:]
+#            x[:,:] = xn[:,:]
+#            v[:,:] = vn[:,:]
+#            
+#                
+#
+#        vel = v[:,-1]
+#        species.vel = species.toMatrix(vel)
+#
+#        return species
+                
+                
+
+    def boris_SDC(self, species,fields, controller,**kwargs):
         M = self.M
         K = self.K
         
