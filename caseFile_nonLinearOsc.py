@@ -35,7 +35,6 @@ def type_setup(exptype,analysis_params):
         analysis_params['scatter_BC'] = 'half_volume_BC_z'
         analysis_params['preAnalysis_methods'] = [type4_pre,'trilinear_qScatter','fIntegrator_setup','fIntegrator',update_background,type4_post]
         
-        
     return analysis_params
         
 
@@ -59,7 +58,7 @@ def type_setup_spec(exptype,res,ppc,spec1_params,loader1_params,spec2_params,loa
         
         y_range = np.linspace(0,-1,num=np.int(nq/2))
         x_range2 = np.power(-y_range,1/3)
-        x_range1 = np.flip(-x_range2)
+        x_range1 = np.flip(-x_range2,0)
         x_range = np.append(x_range1[:-1],x_range2)
         
         nq = x_range.shape[0]

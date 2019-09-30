@@ -28,20 +28,26 @@ analyse = True
 plot = True
 snapPlot = False
 
-
+h5_suffix = ''
+data_root = "../data/"
 start_time = 0
-max_time = 20
+max_time = 1
 
 sims = {}
 
-#sims['tsi_TE50_boris_synced_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi_TE50_boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600]
-#sims['tsi_TE50_boris_SDC_M3K3_NZ128_NQ2560_NT'] = [50,100,200,400,800]
-sims['tsi__boris_synced_NZ128_NQ2560_NT'] = [50,100,200,800,1600,3200]
-sims['tsi__boris_staggered_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200]
-sims['tsi__boris_SDC_M5K5_NZ128_NQ2560_NT'] = [50,100,200,400,800,1600,3200,6400]
 
-comp_run = 'tsi__boris_SDC_M5K5_NZ128_NQ2560_NT12800'
+#sims['tsi_TE1_boris_staggered_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_staggered_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+
+sims['tsi_TE1_boris_synced_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+sims['tsi_TE1_boris_synced_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_synced_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_synced_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+
+
+comp_run = 'tsi_TE1_boris_synced_NZ1000_NQ20000_NT1024'
 
 omega_p = 1
 
@@ -59,9 +65,12 @@ roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
 
 real_slope = roots[1].imag
 
+data_params = {}
+data_params['dataRootFolder'] = data_root
+
 plot_params = {}
-plot_params['legend.fontsize'] = 8
-plot_params['figure.figsize'] = (6,4)
+plot_params['legend.fontsize'] = 10
+plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 12
 plot_params['axes.titlesize'] = 12
 plot_params['xtick.labelsize'] = 8
@@ -70,14 +79,14 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 plt.rcParams.update(plot_params)
 
-DH_comp = dataHandler2()
-comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
-pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
-p1Data_comp = pDataList_comp[0] 
-
 filenames = []
 if analyse == True:
+    DH_comp = dataHandler2(**data_params)
+    comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
+    mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
+    pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
+    p1Data_comp = pDataList_comp[0] 
+
     for key, value in sims.items():
         dts = []
         Nts = []
@@ -86,13 +95,13 @@ if analyse == True:
         avg_slopes = []
         avg_errors_nonlinear = []
         
-        filename = key + "_workprec_pos" + ".h5"
+        filename = key + "_workprec_pos" + h5_suffix + ".h5"
         filenames.append(filename)
-        file = h5.File(filename,'w')
+        file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
     
         for tsteps in value:
-            DH = dataHandler2()
+            DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
     
@@ -109,15 +118,12 @@ if analyse == True:
             p2Data_dict = pData_list[1]
     
             mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres'],sim_name=sim_name)
-            
-            print(sim.analysisSettings['particleIntegrator'])
-            print(sim.simSettings['tEnd'])
-            print(p1Data_dict['KE_sum'][1])
-            print(np.max(p1Data_dict['KE_sum']))
+
             
             ## particle position comparison
             skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
             skip_int = np.int(skip)
+            skip_p = np.int(p1Data_comp['pos'].shape[1]/p1Data_dict['pos'].shape[1])
             
             tArray = p1Data_dict['t'][:]
             tArray_comp = p1Data_comp['t'][:]
@@ -131,15 +137,15 @@ if analyse == True:
             
             tArray_slice = tArray[start_dt:max_dt]
             tArray_comp_slice = tArray_comp[start_dt:max_dt]
+
             beam1_pos_slice = beam1_pos[start_dt:max_dt]
             comp_beam1_pos_slice = comp_beam1_pos[start_dt:max_dt]
             
             pos_diff = np.abs(comp_beam1_pos_slice-beam1_pos_slice)
             rel_pos_diff = pos_diff/np.abs(comp_beam1_pos_slice)
-            final_errors = rel_pos_diff[-1,:]
+            final_errors = rel_pos_diff[max_dt-1,:]
             
             avg_error = np.average(final_errors)
-            
             dts.append(sim.dt)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)
@@ -164,14 +170,15 @@ if analyse == True:
         file.close()
 
 if plot == True:
+    plt.rcParams.update(plot_params)
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key + "_workprec_pos" + ".h5"
+            filename = key + "_workprec_pos" + h5_suffix + ".h5"
             filenames.append(filename)
             
 
     for filename in filenames:
-        file = h5.File(filename,'r')
+        file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         avg_errors = file["fields/errors"][:]
@@ -199,12 +206,14 @@ if plot == True:
         ax_dt = fig_dt.add_subplot(1, 1, 1)
         ax_dt.plot(dts,avg_errors,label=label)
         
+    file.close()
+        
         
     ax_rhs.set_xscale('log')
     #ax_rhs.set_xlim(10**3,10**5)
     ax_rhs.set_xlabel('Number of RHS evaluations')
     ax_rhs.set_yscale('log')
-    ax_rhs.set_ylim(10**(-6),10)
+    ax_rhs.set_ylim(10**(-12),10)
     ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_rhs.get_xlim()
@@ -220,12 +229,14 @@ if plot == True:
     #ax_dt.set_xlim(10**-3,10**-1)
     ax_dt.set_xlabel(r'$\Delta t$')
     ax_dt.set_yscale('log')
-    ax_dt.set_ylim(10**(-4),10)
+    ax_dt.set_ylim(10**(-12),10)
     ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_dt.get_xlim()
     yRange = ax_dt.get_ylim()
     
+    ax_dt.plot(xRange,DH.orderLines(1,xRange,yRange),
+                ls='-.',c='0.1',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
                 ls='dotted',c='0.25',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),

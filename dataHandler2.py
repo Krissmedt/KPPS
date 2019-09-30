@@ -16,6 +16,7 @@ class dataHandler2:
         
         self.samplePeriod = 1
         self.dataPath = 'relative'
+        self.dataRootFolder = "./"
         self.dataFoldername = "./"
         self.vtkFoldername = "./vtk"
         
@@ -87,7 +88,7 @@ class dataHandler2:
         self.controller_check()
         self.sampling_setup()
             
-        self.dataFoldername = self.controller_obj.simID
+        self.dataFoldername = self.dataRootFolder + self.controller_obj.simID
         
         if self.write == True:
             if self.write_p == True:
@@ -152,10 +153,10 @@ class dataHandler2:
             
     def load_sim(self,sim_name=None,overwrite=False):
         try:
-            sim_file = io.open("./" + sim_name + "/sim",mode='rb')
+            sim_file = io.open(self.dataRootFolder + sim_name + "/sim",mode='rb')
         except TypeError:
             try:
-                sim_file = io.open("./" + str(self.controller_obj.simID) + "/sim",mode='rb')
+                sim_file = io.open(self.dataRootFolder + str(self.controller_obj.simID) + "/sim",mode='rb')
                 sim_name = str(self.controller_obj.simID)
             except AttributeError:
                 print('DataHandler: No valid simulation ID given and no controller object' +
@@ -192,7 +193,7 @@ class dataHandler2:
         
         return_dict['t'] = []
         for ti in range(0,self.samples+1,skip):
-            data_file = io.open("./" + str(sim_name) + "/" + dataType + "_t" 
+            data_file = io.open(self.dataRootFolder + str(sim_name) + "/" + dataType + "_t" 
                                 + str(self.samplePeriod*ti),mode='rb')
             dataObject = pk.load(data_file)
             data_file.close()

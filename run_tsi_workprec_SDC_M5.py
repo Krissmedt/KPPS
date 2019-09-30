@@ -66,9 +66,9 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1,2,4]
-resolutions = [10]
-iterations = [3]
+steps = [1]
+resolutions = [100]
+iterations = [5]
 
 L = 2*pi
 tend = 0.1
@@ -87,12 +87,13 @@ omega_p = 1
 ppc = 20
 #nq = 1280
 
-prefix = 'TE'+str(tend)
+#prefix = 'TE'+str(tend)
 prefix = 'short'
 simulate = True
 plot = False
 
 slow_factor = 100
+
 ############################ Linear Analysis ##################################
 k2 = dx_mode**2
 v2 = v**2
@@ -118,7 +119,7 @@ data_params = {}
 
 sim_params['t0'] = 0
 sim_params['tEnd'] = tend
-sim_params['percentBar'] = False
+sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
 
@@ -135,7 +136,7 @@ mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_SDC'
-analysis_params['M'] = 3
+analysis_params['M'] = 5
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -195,7 +196,7 @@ for Nt in steps:
             species_params = [beam1_params,beam2_params]
             loader_params = [loader1_params,loader2_params]
     
-            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
+            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M5K' + str(K) + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             ## Numerical solution ##
@@ -214,14 +215,15 @@ for Nt in steps:
                 sim = DH.controller_obj
                 sim_name = sim.simID
             else:
-                DH = dataHandler2(**data_params)
+                DH = dataHandler2()
                 sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
             
             
-            ####################### Analysis and Visualisation ###########################            
-            if plot == True:       
+            ####################### Analysis and Visualisation ############################
+            
+            if plot == True:   
                 pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
-                
+            
                 p1Data_dict = pData_list[0]
                 p2Data_dict = pData_list[1]
                 
@@ -278,9 +280,7 @@ for Nt in steps:
                             uni_time_evol[ti,pii] = 0 + overshoot % L
                             
                 dx_evol = p1_data - uni_time_evol
-
-                
-                
+            
                 ## Phase animation setup
                 fig = plt.figure(DH.figureNo+4,dpi=150)
                 p_ax = fig.add_subplot(1,1,1)
@@ -355,7 +355,7 @@ for Nt in steps:
                 ydata = [rho_data,phi_data]
                 lines = [rho_line,phi_line]
     
-                fps = 1/(sim.dt*DH.samplePeriod)
+                fps = 1/(sim.dt*DH.samplePeriod)/slow_factor
                 # Creating the Animation object
                 perturb_ani = animation.FuncAnimation(fig4, update_line, DH.samples, 
                                                    fargs=(uni_time_evol,dx_evol,line_perturb),
