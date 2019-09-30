@@ -8,8 +8,12 @@ import cmath as cm
 from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
+import h5py as h5
 
-plot = False
+analyse = True
+plot = True
+snapPlot = False
+compare_linear = True
 
 start_time = 10
 max_time = 17.5
@@ -17,14 +21,14 @@ max_time = 17.5
 
 sims = {}
 
-sims['tsi_TE20_boris_SDC_M3K3_NZ10_PPC20_NT'] = [50,100,200,400]
+#sims['tsi_TE20_boris_SDC_M3K3_NZ10_PPC20_NT'] = [50,100,200,400]
 sims['tsi_TE20_boris_SDC_M3K3_NZ100_PPC20_NT'] = [50,100,200,400]
 
-sims['tsi_TE20_boris_synced_NZ10_ppc20_NT'] = [50,100,200,400]
-sims['tsi_TE20_boris_synced_NZ100_ppc20_NT'] = [50,100,200]
+#sims['tsi_TE20_boris_synced_NZ10_PPC20_NT'] = [50,100,200,400]
+sims['tsi_TE20_boris_synced_NZ100_PPC20_NT'] = [50,100,200]
 
 
-comp_run = 'tsi_TE20_boris_synced_NZ100_ppc20_NT400'
+comp_run = 'tsi_TE20_boris_SDC_M3K5_NZ100_PPC20_NT800'
 
 
 ################################ Linear analysis ##############################
@@ -71,142 +75,165 @@ max_phi_comp_log = np.log(max_phi_comp)
 comp_growth_fit = np.polyfit(tArray_comp[start_dt:max_steps],
                              max_phi_comp_log[start_dt:max_steps],1)
 
-
-for key, value in sims.items():
-    dts = []
-    Nts = []
-    rhs_evals = []
-    avg_errors = []
-    avg_slopes = []
-    avg_errors_nonlinear = []
+filenames = []
+if analyse == True:
+    for key, value in sims.items():
+        dts = []
+        Nts = []
+        rhs_evals = []
+        avg_slopes = []
+        avg_errors = []
+        avg_errors_nonlinear = []
+        
+        filename = key + "_workprec_growth" + ".h5"
+        filenames.append(filename)
+        file = h5.File(filename,'w')
+        grp = file.create_group('fields')
+        
+        for tsteps in value:
+            DH = dataHandler2()
+            sim_name = key + str(tsteps)
+            sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
+            print(sim.runTime)
     
-    for tsteps in value:
-        DH = dataHandler2()
-        sim_name = key + str(tsteps)
-        sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
-        print(sim.runTime)
-
-        ####################### Analysis and Visualisation ############################
-        dt = sim.dt
-        Nt = sim.tSteps
-        
-        start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
-        max_steps = np.int(max_time/(sim.dt*DH.samplePeriod))+1
-        NA = start_dt
-        NB = max_steps
-        
-        pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
-        
-        p1Data_dict = pData_list[0]
-        p2Data_dict = pData_list[1]
-
-        mData_dict = DH.load_m(['phi','E','rho','PE_sum'],sim_name=sim_name)
-        
-        tArray = mData_dict['t']
-        phi_data = mData_dict['phi'][:,1,1,:-1]
-        PE_data = mData_dict['PE_sum']
-        
-        ## Growth rate phi plot setup
-        max_phi_data = np.amax(np.abs(phi_data),axis=1)
-        max_phi_data_log = np.log(max_phi_data)
-
-        growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
-        growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
-        
-        error_linear = abs(real_slope - growth_fit[0])/real_slope
-        error_nl = abs(comp_growth_fit[0] - growth_fit[0])/comp_growth_fit[0]
-        
-        dts.append(sim.dt)
-        Nts.append(sim.tSteps)
-        rhs_evals.append(sim.rhs_eval)
-        avg_slopes.append(growth_fit[0])
-        avg_errors.append(error_linear)
-        avg_errors_nonlinear.append(error_nl)
-        
-        if plot == True:
-            fig = plt.figure(DH.figureNo+3)
-            gphi_ax = fig.add_subplot(1,1,1)
-            line_gphi = gphi_ax.plot(tArray,max_phi_data_log,label=sim_name)
-            text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
-                                     verticalalignment='bottom',fontsize=8)
-            #g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
-            gphi_ax.set_xlabel('$t$')
-            gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
-            #g_ax.set_ylim([0,2])
-            gphi_ax.set_title('Linear Instability Growth')
-            #gphi_ax.legend()
-        
-        
-    label_order = sim_name[:-6]
+            ####################### Analysis and Visualisation ############################
+            dt = sim.dt
+            Nt = sim.tSteps
+            
+            start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
+            max_steps = np.int(max_time/(sim.dt*DH.samplePeriod))+1
+            NA = start_dt
+            NB = max_steps
+            
+            pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
+            
+            p1Data_dict = pData_list[0]
+            p2Data_dict = pData_list[1]
     
-    avg_slopes = np.array(avg_slopes)
-    avg_slope_diff = np.abs(avg_slopes[0:-1]-avg_slopes[1:])/avg_slopes[0]
-    ##Convergence Plot w/ rhs
-    fig_con = plt.figure(DH.figureNo+4)
-    ax_con = fig_con.add_subplot(1, 1, 1)
-    ax_con.plot(rhs_evals[1:],avg_slope_diff,label=label_order)
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres'],sim_name=sim_name)
+            
+            tArray = mData_dict['t']
+            phi_data = mData_dict['phi'][:,1,1,:-1]
+            PE_data = mData_dict['PE_sum']
+            
+            ## Growth rate phi plot setup
+            max_phi_data = np.amax(np.abs(phi_data),axis=1)
+            max_phi_data_log = np.log(max_phi_data)
     
-    ##Order Plot w/ rhs
-    fig_rhs = plt.figure(DH.figureNo+1)
-    ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-    #ax_rhs.plot(rhs_evals,avg_errors,label=label_order+'vsLinear')
-    ax_rhs.plot(rhs_evals,avg_errors_nonlinear,label=label_order)
+            growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
+            growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+            
+            error_linear = abs(real_slope - growth_fit[0])/real_slope
+            error_nl = abs(comp_growth_fit[0] - growth_fit[0])/comp_growth_fit[0]
+            
+            dts.append(sim.dt)
+            Nts.append(sim.tSteps)
+            rhs_evals.append(sim.rhs_eval)
+            avg_slopes.append(growth_fit[0])
+            avg_errors.append(error_linear)
+            avg_errors_nonlinear.append(error_nl)
+            
+            if snapPlot == True:
+                fig = plt.figure(DH.figureNo+3)
+                gphi_ax = fig.add_subplot(1,1,1)
+                line_gphi = gphi_ax.plot(tArray,max_phi_data_log,label=sim_name)
+                text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
+                                         verticalalignment='bottom',fontsize=8)
+                #g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
+                gphi_ax.set_xlabel('$t$')
+                gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
+                #g_ax.set_ylim([0,2])
+                gphi_ax.set_title('Linear Instability Growth')
+                #gphi_ax.legend()
+            
+            
+        file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
+        file.attrs["res"] = str(mData_dict['zres'][0])
+        try:
+            file.attrs["M"] = str(3)
+            file.attrs["K"] = str(3)
+        except KeyError:
+            pass
+        
+        grp.create_dataset('dts',data=dts)
+        grp.create_dataset('Nts',data=Nts)
+        grp.create_dataset('rhs_evals',data=rhs_evals)
+        grp.create_dataset('errors',data=avg_errors)
+        grp.create_dataset('errors_nonlinear',data=avg_errors_nonlinear)
+        file.close()
     
-    ##Order Plot w/ dt
-    fig_dt = plt.figure(DH.figureNo+2)
-    ax_dt = fig_dt.add_subplot(1, 1, 1)
-    #ax_dt.plot(dts,avg_errors,label=label_order+'vsLinear')
-    ax_dt.plot(dts,avg_errors_nonlinear,label=label_order)
+    
+    
+if plot == True:
+    if len(filenames) == 0:
+        for key, value in sims.items():
+            filename = key + "_workprec_pos" + ".h5"
+            filenames.append(filename)
+            
 
-## Convergence plot finish
-ax_con.set_xscale('log')
-#ax_rhs.set_xlim(10**3,10**5)
-ax_con.set_xlabel('Number of RHS evaluations')
-ax_con.set_yscale('log')
-#ax_rhs.set_ylim(10**(-5),10**1)
-ax_con.set_ylabel('Slope difference')
+    for filename in filenames:
+        file = h5.File(filename,'r')
+        dts = file["fields/dts"][:]
+        rhs_evals = file["fields/rhs_evals"][:]
+        avg_errors = file["fields/errors"][:]
+        avg_errors_nonlinear = file["fields/errors_nonlinear"][:]
+        
+        if file.attrs["integrator"] == "boris_staggered":
+            label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
+        elif file.attrs["integrator"] == "boris_synced":
+            label = "Boris Synced" + ", Nz=" + file.attrs["res"]
+        elif file.attrs["integrator"] == "boris_SDC":
+            label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
+            label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
 
-xRange = ax_con.get_xlim()
-yRange = ax_con.get_ylim()
-
-ax_con.plot(xRange,DH.orderLines(-2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_con.plot(xRange,DH.orderLines(-4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_con.legend()
-
-
-## Order plot finish
-ax_rhs.set_xscale('log')
-#ax_rhs.set_xlim(10**3,10**5)
-ax_rhs.set_xlabel('Number of RHS evaluations')
-ax_rhs.set_yscale('log')
-#ax_rhs.set_ylim(10**(-5),10**1)
-ax_rhs.set_ylabel('Relative slope error')
-
-xRange = ax_rhs.get_xlim()
-yRange = ax_rhs.get_ylim()
-
-ax_rhs.plot(xRange,DH.orderLines(-2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_rhs.legend()
-
-
-## Order plot finish
-ax_dt.set_xscale('log')
-#ax_dt.set_xlim(10**-3,10**-1)
-ax_dt.set_xlabel(r'$\Delta t$')
-ax_dt.set_yscale('log')
-#ax_dt.set_ylim(10**(-7),10**1)
-ax_dt.set_ylabel('Relative slope error')
-
-xRange = ax_dt.get_xlim()
-yRange = ax_dt.get_ylim()
-
-ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
-            ls='dotted',c='0.25',label='2nd Order')
-ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
-            ls='dashed',c='0.75',label='4th Order')
-ax_dt.legend()
+        ##Convergence Plot w/ rhs
+        #fig_con = plt.figure(DH.figureNo+4)
+        #ax_con = fig_con.add_subplot(1, 1, 1)
+        #ax_con.plot(rhs_evals[1:],avg_slope_diff,label=label_order)
+        
+        ##Order Plot w/ rhs
+        fig_rhs = plt.figure(10)
+        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
+        ax_rhs.plot(rhs_evals,avg_errors_nonlinear,label=label)
+        if compare_linear == True:
+            ax_rhs.plot(rhs_evals,avg_errors,label=label)
+            
+        ##Order Plot w/ dt
+        fig_dt = plt.figure(11)
+        ax_dt = fig_dt.add_subplot(1, 1, 1)
+        ax_dt.plot(dts,avg_errors_nonlinear,label=label)
+        if compare_linear == True:
+            ax_dt.plot(dts,avg_errors,label=label)
+        
+        
+    ax_rhs.set_xscale('log')
+    #ax_rhs.set_xlim(10**3,10**5)
+    ax_rhs.set_xlabel('Number of RHS evaluations')
+    ax_rhs.set_yscale('log')
+    ax_rhs.set_ylim(10**(-6),10)
+    ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
+    
+    xRange = ax_rhs.get_xlim()
+    yRange = ax_rhs.get_ylim()
+    
+    ax_rhs.plot(xRange,DH.orderLines(-2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    ax_rhs.legend()
+    
+    ax_dt.set_xscale('log')
+    #ax_dt.set_xlim(10**-3,10**-1)
+    ax_dt.set_xlabel(r'$\Delta t$')
+    ax_dt.set_yscale('log')
+    ax_dt.set_ylim(10**(-4),10)
+    ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
+    
+    xRange = ax_dt.get_xlim()
+    yRange = ax_dt.get_ylim()
+    
+    ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    ax_dt.legend()

@@ -64,6 +64,14 @@ class meshLoader:
         mesh.yres = self.mesh_res[1]
         mesh.zres = self.mesh_res[2]
         
+        xlim = mesh.xlimits
+        ylim = mesh.ylimits
+        zlim = mesh.zlimits
+        
+        mesh.x, mesh.y, mesh.z = np.mgrid[xlim[0]:xlim[1]+mesh.dx:(mesh.xres+2)*1j, 
+                                          ylim[0]:ylim[1]+mesh.dy:(mesh.xres+2)*1j, 
+                                          zlim[0]:zlim[1]+mesh.dz:(mesh.xres+2)*1j]
+        
         mesh.cells = np.prod(mesh.res)
         mesh.nn = np.prod(mesh.res+1)
         
@@ -156,6 +164,7 @@ class meshLoader:
         except AssertionError:
             print("Mesh Loader: One of the input box-edge limits is not positive " +
                   "in length. Reverting to default 2x2x2 cube centered on origin.")
+
             mesh.xlimits = np.array([-1,1])
             mesh.ylimits = np.array([-1,1])
             mesh.zlimits = np.array([-1,1])
