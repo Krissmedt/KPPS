@@ -14,6 +14,7 @@ interchanging sequence like [1x,1y,1z,2x,2y,2z,...,Nx,Ny,Nz].
 ## Dependencies
 import numpy as np
 import scipy.sparse as sps
+import scipy.interpolate as scint
 from math import sqrt, fsum, pi
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
@@ -276,7 +277,6 @@ class kpps_analysis:
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields = self.impose_background(species_list,fields,simulationManager)
         for method in self.fieldIntegrator_methods:
-            print(method)
             method(species_list,fields,simulationManager)
 
         return species_list
@@ -297,7 +297,6 @@ class kpps_analysis:
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
         for species in species_list:
             for method in self.particleIntegrator_methods:
-                print(method)
                 method(species,fields,simulationManager)
 
         #print("Pos1 = " + str(species_list[0].pos[0:3,2]))
@@ -734,6 +733,16 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
+        
+        self.scatter_BC(species,mesh,controller)
+        mesh.rho += mesh.q/mesh.dv
+        return mesh
+    
+    
+    def griddata_qScatter(self,species_list,mesh,controller):
+        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        for species in species_list:
+            mesh.q += griddata(species.pos,species.q,(mesh),method='linear')
         
         self.scatter_BC(species,mesh,controller)
         mesh.rho += mesh.q/mesh.dv
