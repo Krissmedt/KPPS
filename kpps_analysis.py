@@ -262,15 +262,14 @@ class kpps_analysis:
 
 ########################### Main Run Loops ####################################
     def run_Integrator(self,species_list,fields,controller,**kwargs):
-        for species in species_list:
-            self.particleInt1(species,fields,controller)
+        self.particleInt1(species_list,fields,controller)
         
-        fields = self.impose_background(species_list,fields,controller)
-        self.trilinear_qScatter(species_list,fields,controller)
-        self.poisson_cube2nd(species_list,fields,controller)
+#        fields = self.impose_background(species_list,fields,controller)
+#        self.trilinear_qScatter(species_list,fields,controller)
+#        self.poisson_cube2nd(species_list,fields,controller)
+        self.run_fieldIntegrator(species_list,fields,controller)
         
-        for species in species_list:
-            self.particleInt2(species,fields,controller)
+        self.particleInt2(species_list,fields,controller)
 
         return species_list  
     
@@ -295,9 +294,8 @@ class kpps_analysis:
     
 
     def run_particleIntegrator(self,species_list,fields,simulationManager,**kwargs):
-        for species in species_list:
-            for method in self.particleIntegrator_methods:
-                method(species,fields,simulationManager)
+        for method in self.particleIntegrator_methods:
+            method(species_list,fields,simulationManager)
 
         #print("Pos1 = " + str(species_list[0].pos[0:3,2]))
         #print("")
@@ -541,7 +539,7 @@ class kpps_analysis:
             Fk = sps.kron(diag,Ek) + sps.kron(off_diag,J/fields.dx**2)
             self.FDMat = Fk
             self.pot_diff_list.append(self.pot_differentiate_x)
-        print(self.FDMat.shape)
+
         return self.FDMat
     
         
@@ -741,10 +739,14 @@ class kpps_analysis:
     
     
     def griddata_qScatter(self,species_list,mesh,controller):
-        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        ## Not working, establishes convex hull around particles and only
+        ## interpolates to mesh nodes within hull.
+        ## Doesn't appear cumulative either or to spread charge over a cell.
         for species in species_list:
-            mesh.q += griddata(species.pos,species.q,(mesh),method='linear')
-        
+            mesh.q += scint.griddata(species.pos,species.vals_at_p(species.q),
+                                     (mesh.x,mesh.y,mesh.z),
+                                     method='linear',fill_value=0)
+
         self.scatter_BC(species,mesh,controller)
         mesh.rho += mesh.q/mesh.dv
         return mesh
@@ -775,6 +777,7 @@ class kpps_analysis:
     
 ######################## Particle Analysis Methods ############################
     def boris(self, vel, E, B, dt, alpha, ck=0):
+        print(vel[0,2])
         """
         Applies Boris' trick for given velocity, electric and magnetic 
         field for vector data in the shape (N x 3), i.e. particles as rows 
@@ -803,58 +806,64 @@ class kpps_analysis:
         return vel_new
     
     
-    def boris_staggered(self,species,mesh,controller,**kwargs):
-        #print(species.E[0:3,2])
+    def boris_staggered(self,species_list,mesh,controller,**kwargs):
         dt = controller.dt
-        alpha = species.a
-
-        self.fieldGather(species,mesh)
-        species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
-        species.pos = species.pos + controller.dt * species.vel
-        self.check_boundCross(species,mesh,**kwargs)
-
-        return species
-
-    def boris_synced_pos(self,species,mesh,controller,**kwargs):
-        #print(species.E[0:3,2])
-        dt = controller.dt
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
-        self.check_boundCross(species,mesh,**kwargs)
-
-        return species
+        self.run_fieldIntegrator(species_list,mesh,controller)
+        for species in species_list:
+            alpha = species.a
     
-    def boris_synced_vel(self,species,mesh,controller,**kwargs):
-        #print(species.E[0:3,2])
+            self.fieldGather(species,mesh)
+            species.vel = self.boris(species.vel,species.E,species.B,dt,alpha)
+            species.pos = species.pos + controller.dt * species.vel
+            self.check_boundCross(species,mesh,**kwargs)
+
+        return species_list
+
+    def boris_synced_pos(self,species_list,mesh,controller,**kwargs):
         dt = controller.dt
-        alpha = species.a
-
-        E_old = species.E
-        self.fieldGather(species,mesh)
-        E_new = species.E
-
-        species.E_half = (E_old+E_new)/2
         
-        species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
-        #print(species.E[0:3,2])
-        return species
+        for species in species_list:
+            species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
+            self.check_boundCross(species,mesh,**kwargs)
+
+        return species_list
     
-    def boris_synced(self,species,mesh,controller,**kwargs):
-        #print(species.E[0:3,2])
+    def boris_synced_vel(self,species_list,mesh,controller,**kwargs):
         dt = controller.dt
-        alpha = species.a
-
-        species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
-        self.check_boundCross(species,mesh,**kwargs)
         
-        E_old = species.E
-        self.fieldGather(species,mesh)
-        E_new = species.E
+        for species in species_list:
+            alpha = species.a
+    
+            E_old = species.E
+            self.fieldGather(species,mesh)
+            E_new = species.E
+    
+            species.E_half = (E_old+E_new)/2
+            
+            species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
 
-        species.E_half = (E_old+E_new)/2
-        
-        species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
-        #print(species.E[0:3,2])
-        return species
+        return species_list
+    
+    def boris_synced(self,species_list,mesh,controller,**kwargs):
+        dt = controller.dt
+        for species in species_list:
+            alpha = species.a
+    
+            species.pos = species.pos + dt * (species.vel + dt/2 * self.lorentz_std(species,mesh))
+            self.check_boundCross(species,mesh,**kwargs)
+            
+        self.run_fieldIntegrator(species_list,mesh,controller)
+            
+        for species in species_list:
+            E_old = species.E
+            self.fieldGather(species,mesh)
+            E_new = species.E
+    
+            species.E_half = (E_old+E_new)/2
+            
+            species.vel = self.boris(species.vel,species.E_half,species.B,dt,alpha)
+
+        return species_list
         
     
     def collSetup(self,species_list,fields,controller=None,**kwargs):
@@ -942,7 +951,7 @@ class kpps_analysis:
         
 
 
-    def boris_SDC_pos(self, species,fields, simulationManager,**kwargs):
+    def boris_SDC_pos(self, species_list,fields, simulationManager,**kwargs):
         M = self.M
         K = self.K
         
@@ -1025,129 +1034,11 @@ class kpps_analysis:
                 self.check_boundCross(species,fields,**kwargs)
                 
                 
-#    def boris_SDC_vel(self, species,fields, simulationManager,**kwargs):
-#        M = self.M
-#        K = self.K
-#        for k in range(1,K+1):
-#            for m in range(self.ssi,M):
-#                self.fieldGather(species,fields)
-#                ###########################################
-#                
-#                #Sample the electric field at the half-step positions (yields form Nx3)
-#                half_E = (En_m+species.E)/2
-#                En_m = species.E              #Save m+1 value as next node's m value
-#                
-#                #Resort all other 3d vectors to shape Nx3 for use in Boris function
-#                v_oldNode = self.toMatrix(vn[:,m])
-#                ck_dm = self.toMatrix(ck_dm)
-#                
-#                ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
-#                v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,ck_dm)
-#                vn[:,m+1] = self.toVector(v_new)
-#                ##########################################
-#                
-#                self.calc_residuals(species,k,m,x,xn,xQuad,v,vn,vQuad)
-#                
-#                ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
-#                species.vel = species.toMatrix(vn[:,m+1])
-#                species.F = species.a*(species.E + np.cross(species.vel,species.B))
-#                Fn[:,m+1] = species.toVector(species.F)
-#                #########################################
-#                
-#            F[:,:] = Fn[:,:]
-#            x[:,:] = xn[:,:]
-#            v[:,:] = vn[:,:]
-#            
-#                
-#
-#        vel = v[:,-1]
-#        species.vel = species.toMatrix(vel)
-#
-#        return species
-                
-                
-
-    def boris_SDC(self, species,fields, controller,**kwargs):
+    def boris_SDC_vel(self, species,fields, simulationManager,**kwargs):
         M = self.M
         K = self.K
-        
-        #Remap collocation weights from [0,1] to [tn,tn+1]
-        #nodes = (t-dt) + self.nodes * dt
-        weights =  self.coll_params['weights']
-
-        Qmat =  self.coll_params['Qmat']
-        Smat =  self.coll_params['Smat']
-
-        dm =  self.coll_params['dm']
-
-        SX =  self.coll_params['SX'] 
-
-        SQ =  self.coll_params['SQ']
-
-        
-        x0 =  self.coll_params['x0']
-        v0 =  self.coll_params['v0']
-        
-        xn =  self.coll_params['xn']
-        vn =  self.coll_params['vn']
-        
-        F = self.coll_params['Fn']
-        Fn = self.coll_params['F']
-        
-        #Populate node solutions with x0, v0, F0
-        x0[:,0] = self.toVector(species.pos)
-        v0[:,0] = self.toVector(species.vel)
-        F[:,0] = self.toVector(species.F)
-        En_m0 = species.E
-
-        for m in range(1,M+1):
-            x0[:,m] = x0[:,0]
-            v0[:,m] = v0[:,0]
-            F[:,m] = F[:,0]
-            
-        x = np.copy(x0)
-        v = np.copy(v0)
-        
-        xn[:,:] = x[:,:]
-        vn[:,:] = v[:,:]
-        Fn[:,:] = F[:,:]
-
-        #print()
-        #print(simulationManager.ts)
         for k in range(1,K+1):
-            #print("k = " + str(k))
-            En_m = En_m0 #reset electric field values for new sweep
-
             for m in range(self.ssi,M):
-                #print("m = " + str(m))
-                #Determine next node (m+1) positions
-                sumSQ = 0
-                for l in range(1,M+1):
-                    sumSQ += SQ[m+1,l]*F[:,l]
-                
-                sumSX = 0
-                for l in range(1,m+1):
-                    sumSX += SX[m+1,l]*(Fn[:,l] - F[:,l])
-
-                xQuad = xn[:,m] + dm[m]*v[:,0] + sumSQ
-                          
-                ### POSITION UPDATE FOR NODE m/SWEEP k ###
-                xn[:,m+1] = xQuad + sumSX 
-                
-                ##########################################
-                
-                sumS = 0
-                for l in range(1,M+1):
-                    sumS += Smat[m+1,l] * F[:,l]
-                
-                vQuad = vn[:,m] + sumS
-                
-                ck_dm = -1/2 * (F[:,m+1]
-                        +F[:,m]) + 1/dm[m] * sumS
-                
-                ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
-                species.pos = self.toMatrix(xn[:,m+1],3)
-                self.check_boundCross(species,fields,**kwargs)
                 self.fieldGather(species,fields)
                 ###########################################
                 
@@ -1177,46 +1068,178 @@ class kpps_analysis:
             v[:,:] = vn[:,:]
             
                 
-        species = self.updateStep(species,fields,x,v,x0,v0,weights,Qmat)
-        return species
-    
-    
-    def lobatto_update(self,species,mesh,x,v,*args,**kwargs):
-        pos = x[:,-1]
+
         vel = v[:,-1]
-        
-        species.pos = species.toMatrix(pos)
         species.vel = species.toMatrix(vel)
-        self.check_boundCross(species,mesh,**kwargs)
 
         return species
-    
-    
-    def legendre_update(self,species,mesh,x,v,x0,v0,weights,Qmat,**kwargs):
+                
+                
+
+    def boris_SDC(self, species_list,fields, controller,**kwargs):
         M = self.M
-        d = 3*species.nq
+        K = self.K
         
-        Id = np.identity(d)
-        q = np.zeros(M+1,dtype=np.float)
-        q[1:] = weights
-        q = np.kron(q,Id)
-        qQ = q @ np.kron(Qmat,Id)
-        
-        V0 = self.toVector(v0.transpose())
-        F = self.FXV(species,mesh,x,v)
-        
-        vel = v0[:,0] + q @ F
-        pos = x0[:,0] + q @ V0 + qQ @ F
-        
-        species.pos = species.toMatrix(pos)
-        species.vel = species.toMatrix(vel)
-        self.check_boundCross(species,mesh,**kwargs)
-        return species
+        #Remap collocation weights from [0,1] to [tn,tn+1]
+        #nodes = (t-dt) + self.nodes * dt
+        weights =  self.coll_params['weights']
+
+        Qmat =  self.coll_params['Qmat']
+        Smat =  self.coll_params['Smat']
+
+        dm =  self.coll_params['dm']
+
+        SX =  self.coll_params['SX'] 
+
+        SQ =  self.coll_params['SQ']
+
+        for species in species_list:
+            species.x0 =  self.coll_params['x0']
+            species.v0 =  self.coll_params['v0']
+            
+            species.xn =  self.coll_params['xn']
+            species.vn =  self.coll_params['vn']
+            
+            species.F = self.coll_params['Fn']
+            species.Fn = self.coll_params['F']
+            
+            #Populate node solutions with x0, v0, F0
+            species.x0[:,0] = self.toVector(species.pos)
+            species.v0[:,0] = self.toVector(species.vel)
+            species.F[:,0] = self.toVector(species.lntz)
+            species.En_m0 = species.E
+
+            for m in range(1,M+1):
+                species.x0[:,m] = species.x0[:,0]
+                species.v0[:,m] = species.v0[:,0]
+                species.F[:,m] = species.F[:,0]
+            
+            species.x = np.copy(species.x0)
+            species.v = np.copy(species.v0)
+            
+            species.xn[:,:] = species.x[:,:]
+            species.vn[:,:] = species.v[:,:]
+            species.Fn[:,:] = species.F[:,:]
+
+        #print()
+        #print(simulationManager.ts)
+        for k in range(1,K+1):
+            print("k = " + str(k))
+            for species in species_list:
+                species.En_m = species.En_m0 #reset electric field values for new sweep
+
+            for m in range(self.ssi,M):
+                for species in species_list:
+                    #print("m = " + str(m))
+                    #Determine next node (m+1) positions
+                    sumSQ = 0
+                    for l in range(1,M+1):
+                        sumSQ += SQ[m+1,l]*species.F[:,l]
+                    
+                    sumSX = 0
+                    for l in range(1,m+1):
+                        sumSX += SX[m+1,l]*(species.Fn[:,l] - species.F[:,l])
+    
+                    xQuad = species.xn[:,m] + dm[m]*species.v[:,0] + sumSQ
+                              
+                    ### POSITION UPDATE FOR NODE m/SWEEP k ###
+                    species.xn[:,m+1] = xQuad + sumSX 
+                    
+                    ##########################################
+                    
+                    sumS = 0
+                    for l in range(1,M+1):
+                        sumS += Smat[m+1,l] * species.F[:,l]
+                    
+                    vQuad = species.vn[:,m] + sumS
+                    
+                    species.ck_dm = -1/2 * (species.F[:,m+1]
+                                            +species.F[:,m]) + 1/dm[m] * sumS
+                    
+                    ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
+                    species.pos = self.toMatrix(species.xn[:,m+1],3)
+                    self.check_boundCross(species,fields,**kwargs)
+                    
+                
+                self.run_fieldIntegrator(species_list,fields,controller)
+                
+                for species in species_list:
+                    self.fieldGather(species,fields)
+                    ###########################################
+                    
+                    #Sample the electric field at the half-step positions (yields form Nx3)
+                    half_E = (species.En_m+species.E)/2
+                    species.En_m = species.E              #Save m+1 value as next node's m value
+                    
+                    #Resort all other 3d vectors to shape Nx3 for use in Boris function
+                    v_oldNode = self.toMatrix(species.vn[:,m])
+                    species.ck_dm = self.toMatrix(species.ck_dm)
+                    
+                    ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
+                    v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,species.ck_dm)
+                    species.vn[:,m+1] = self.toVector(v_new)
+                    ##########################################
+                    
+#                    self.calc_residuals(species,k,m,species.x,species.xn,xQuad,
+#                                        species.v,species.vn,vQuad)
+                    
+                    ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
+                    print(species.vel[0,2])
+                    species.vel = species.toMatrix(species.vn[:,m+1])
+                    print(species.vel[0,2])
+                    species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
+                    species.Fn[:,m+1] = species.toVector(species.lntz)
+                    #########################################
+                
+            for species in species_list:
+                species.F[:,:] = species.Fn[:,:]
+                species.x[:,:] = species.xn[:,:]
+                species.v[:,:] = species.vn[:,:]
+            
+                
+        species_list = self.updateStep(species_list,fields,weights,Qmat)
+            
+        return species_list
     
     
-    def lorentzf(self,species,mesh,xm,vm,**kwargs):
-        species.pos = species.toMatrix(xm)
-        species.vel = species.toMatrix(vm)
+    def lobatto_update(self,species_list,mesh,*args,**kwargs):
+        for species in species_list:
+            pos = species.x[:,-1]
+            vel = species.v[:,-1]
+            
+            species.pos = species.toMatrix(pos)
+            species.vel = species.toMatrix(vel)
+            self.check_boundCross(species,mesh,**kwargs)
+
+        return species_list
+    
+    
+    def legendre_update(self,species_list,mesh,weights,Qmat,**kwargs):
+        for species in species_list:
+            M = self.M
+            d = 3*species.nq
+            
+            Id = np.identity(d)
+            q = np.zeros(M+1,dtype=np.float)
+            q[1:] = weights
+            q = np.kron(q,Id)
+            qQ = q @ np.kron(Qmat,Id)
+            
+            V0 = self.toVector(species.v0.transpose())
+            F = self.FXV(species,mesh)
+            
+            vel = species.v0[:,0] + q @ F
+            pos = species.x0[:,0] + q @ V0 + qQ @ F
+            
+            species.pos = species.toMatrix(pos)
+            species.vel = species.toMatrix(vel)
+            self.check_boundCross(species,mesh,**kwargs)
+        return species_list
+    
+    
+    def lorentzf(self,species,mesh,m,**kwargs):
+        species.pos = species.toMatrix(species.x[:,m])
+        species.vel = species.toMatrix(species.v[:,m])
         self.check_boundCross(species,mesh,**kwargs)
 
         self.fieldGather(species,mesh)
@@ -1232,14 +1255,14 @@ class kpps_analysis:
     
     
     
-    def FXV(self,species,fields,x,v):
-        dxM = np.shape(x)
+    def FXV(self,species,fields):
+        dxM = np.shape(species.x)
         d = dxM[0]
         M = dxM[1]-1
         
         F = np.zeros((d,M+1),dtype=np.float)
         for m in range(0,M+1):
-            F[:,m] = self.lorentzf(species,fields,x[:,m],v[:,m])
+            F[:,m] = self.lorentzf(species,fields,m)
         
         F = self.toVector(F.transpose())
         return F
