@@ -777,7 +777,6 @@ class kpps_analysis:
     
 ######################## Particle Analysis Methods ############################
     def boris(self, vel, E, B, dt, alpha, ck=0):
-        print(vel[0,2])
         """
         Applies Boris' trick for given velocity, electric and magnetic 
         field for vector data in the shape (N x 3), i.e. particles as rows 
@@ -1094,16 +1093,17 @@ class kpps_analysis:
         SQ =  self.coll_params['SQ']
 
         for species in species_list:
-            species.x0 =  self.coll_params['x0']
-            species.v0 =  self.coll_params['v0']
             
-            species.xn =  self.coll_params['xn']
-            species.vn =  self.coll_params['vn']
+            species.x0 = np.copy(self.coll_params['x0'])
+            species.v0 = np.copy(self.coll_params['v0'])
             
-            species.F = self.coll_params['Fn']
-            species.Fn = self.coll_params['F']
+            species.xn = np.copy(self.coll_params['xn'])
+            species.vn = np.copy(self.coll_params['vn'])
             
-            #Populate node solutions with x0, v0, F0
+            species.F = np.copy(self.coll_params['Fn'])
+            species.Fn = np.copy(self.coll_params['F'])
+            
+            ## Populate node solutions with x0, v0, F0 ##
             species.x0[:,0] = self.toVector(species.pos)
             species.v0[:,0] = self.toVector(species.vel)
             species.F[:,0] = self.toVector(species.lntz)
@@ -1113,6 +1113,7 @@ class kpps_analysis:
                 species.x0[:,m] = species.x0[:,0]
                 species.v0[:,m] = species.v0[:,0]
                 species.F[:,m] = species.F[:,0]
+            #############################################
             
             species.x = np.copy(species.x0)
             species.v = np.copy(species.v0)
@@ -1124,7 +1125,7 @@ class kpps_analysis:
         #print()
         #print(simulationManager.ts)
         for k in range(1,K+1):
-            print("k = " + str(k))
+            #print("k = " + str(k))
             for species in species_list:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
 
@@ -1172,11 +1173,13 @@ class kpps_analysis:
                     species.En_m = species.E              #Save m+1 value as next node's m value
                     
                     #Resort all other 3d vectors to shape Nx3 for use in Boris function
+                    
                     v_oldNode = self.toMatrix(species.vn[:,m])
                     species.ck_dm = self.toMatrix(species.ck_dm)
                     
                     ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
                     v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,species.ck_dm)
+                    #print(v_new[0:4,2])
                     species.vn[:,m+1] = self.toVector(v_new)
                     ##########################################
                     
@@ -1184,11 +1187,11 @@ class kpps_analysis:
 #                                        species.v,species.vn,vQuad)
                     
                     ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
-                    print(species.vel[0,2])
                     species.vel = species.toMatrix(species.vn[:,m+1])
-                    print(species.vel[0,2])
+                    
                     species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
                     species.Fn[:,m+1] = species.toVector(species.lntz)
+                    
                     #########################################
                 
             for species in species_list:
