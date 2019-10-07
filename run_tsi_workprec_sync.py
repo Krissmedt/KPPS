@@ -66,8 +66,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [5]
-resolutions = [10]
+steps = [1,2,4,8,16,32,64]
+resolutions = [100]
 
 L = 2*pi
 tend = 1
@@ -84,7 +84,7 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200
+nq = 2000
 
 prefix = 'TE'+str(tend)
 simulate = True

@@ -69,8 +69,8 @@ class meshLoader:
         zlim = mesh.zlimits
         
         mesh.x, mesh.y, mesh.z = np.mgrid[xlim[0]:xlim[1]+mesh.dx:(mesh.xres+2)*1j, 
-                                          ylim[0]:ylim[1]+mesh.dy:(mesh.xres+2)*1j, 
-                                          zlim[0]:zlim[1]+mesh.dz:(mesh.xres+2)*1j]
+                                          ylim[0]:ylim[1]+mesh.dy:(mesh.yres+2)*1j, 
+                                          zlim[0]:zlim[1]+mesh.dz:(mesh.zres+2)*1j]
         
         mesh.cells = np.prod(mesh.res)
         mesh.nn = np.prod(mesh.res+1)

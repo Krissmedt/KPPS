@@ -29,7 +29,7 @@ def update_phase(num,xdata,ydata,lines,KE,dt):
     
     lines = update_lines(num,xdata,ydata,lines)
     
-    return lines
+    return lines 
 
 
 def update_dist(num,xdata,ydata,lines,PE):
@@ -66,12 +66,12 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1,2,4]
-resolutions = [10]
+steps = [20,40,80,160]
+resolutions = [100]
 iterations = [3]
 
 L = 2*pi
-tend = 0.1
+tend = 20
 
 dx_mag = 0.0001
 dx_mode = 1
@@ -84,11 +84,10 @@ a = -1
 omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
-ppc = 20
-#nq = 1280
+#ppc = 20
+nq = 2000
 
 prefix = 'TE'+str(tend)
-prefix = 'short'
 simulate = True
 plot = False
 
@@ -118,7 +117,7 @@ data_params = {}
 
 sim_params['t0'] = 0
 sim_params['tEnd'] = tend
-sim_params['percentBar'] = False
+sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
 
@@ -173,8 +172,8 @@ for Nt in steps:
         mLoader_params['resolution'] = [2,2,res]
         for K in iterations:
             analysis_params['K'] = K
-            #ppc = nq/res
-            nq = ppc*res
+            ppc = nq/res
+            #nq = ppc*res
             
             q = omega_p**2 * L / (nq*a*1)
             
@@ -195,7 +194,7 @@ for Nt in steps:
             species_params = [beam1_params,beam2_params]
             loader_params = [loader1_params,loader2_params]
     
-            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_PPC' + str(ppc) + '_NT' + str(Nt) 
+            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             ## Numerical solution ##

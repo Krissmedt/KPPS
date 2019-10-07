@@ -53,12 +53,17 @@ class species:
         except KeyError:
             pass
         
-        ## Initialise number-dependent arrays
-        self.E = np.zeros((self.nq,3),dtype=np.float) 
-        self.B = np.zeros((self.nq,3),dtype=np.float) 
-        self.F = np.zeros((self.nq,3),dtype=np.float) 
-        self.vel = np.zeros((self.nq,3),dtype=np.float)
-        self.pos = np.zeros((self.nq,3),dtype=np.float)
+        ## Initialise at-particle quantity arrays
+        self.E = np.zeros((self.nq,3),dtype=np.float) #Electric field vector
+        self.B = np.zeros((self.nq,3),dtype=np.float) #Magnetic field vector
+        self.lntz = np.zeros((self.nq,3),dtype=np.float) #Lorentz force vector
+        self.vel = np.zeros((self.nq,3),dtype=np.float) #Velocity vector
+        self.pos = np.zeros((self.nq,3),dtype=np.float) #Position vector
+        self.ones = np.ones(self.nq,dtype=np.float)
+        
+        
+    def vals_at_p(self,const):
+        return self.ones*const
         
     ## Additional Methods
     def toVector(self,storageMatrix):

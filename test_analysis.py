@@ -131,6 +131,50 @@ class Test_units_analysis:
         assert p.E[:,2].all() == linearIncrease.all()
         
         
+    def test_polyGather(self):
+        k = 5
+        k_gather = 1
+        pos = 0.2
+        
+        species_params = {}
+        pLoader_params = {}
+        
+        species_params['nq'] = 1
+        species_params['mq'] = 1
+        species_params['q'] = 1
+        p = species(**species_params)
+        
+        pLoader_params['load_type'] = 'direct'
+        pLoader_params['vel'] = np.zeros((species_params['nq'],3),dtype=np.float)
+        pLoader_params['pos'] = np.array([[0,0,pos]])
+        pLoader = particleLoader(**pLoader_params)
+        
+        m = cp.copy(self.m)
+        
+        mLoader_params = cp.copy(self.mLoader_params)
+        mLoader_params['resolution'] = [2,2,10]
+        mLoader = meshLoader(**mLoader_params)
+        
+        pLoader.run([p],self.sim)
+        mLoader.run(m,self.sim)
+
+        
+        m.E[2,1,1,:] = m.z[1,1,:]**k
+        self.kpa.gather_order = k_gather
+        self.kpa.mesh_boundary_z = 'open'
+        self.kpa.poly_gather_setup([p],m)
+        self.kpa.poly_gather_1d(p,m)
+
+        print(m.E[2,1,1,:])
+        print(p.E[0,2])
+        real = pos**k
+        print(real)
+        error = abs(p.E[0,2]-real)/real
+        print(error)
+        
+
+
+        
     def test_poisson_setup_fixed(self):
         p = species()
         m = mesh()
@@ -202,3 +246,7 @@ class Test_units_analysis:
         assert x[12] == 3
         assert x[13] == 4
         assert x[25] == 5
+        
+test = Test_units_analysis()
+test.setup()
+test.test_polyGather()

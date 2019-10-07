@@ -41,13 +41,17 @@ sims = {}
 #sims['tsi_TE1_boris_staggered_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 #sims['tsi_TE1_boris_staggered_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 
-sims['tsi_TE1_boris_synced_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
-sims['tsi_TE1_boris_synced_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_short_boris_SDC_M3K3_NZ10_NQ2000_NT'] = [1,2,4,8,16,32,64]
+sims['tsi_short_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
+
+#sims['tsi_TE1_boris_staggered_NZ10_NQ2000_NT'] = [1,2,4,8,16,32,64]
+sims['tsi_TE1_boris_staggered_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
+sims['tsi_TE1_boris_synced_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
 #sims['tsi_TE1_boris_synced_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 #sims['tsi_TE1_boris_synced_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 
 
-comp_run = 'tsi_TE1_boris_synced_NZ1000_NQ20000_NT1024'
+comp_run = 'tsi_TE1_boris_SDC_M5K5_NZ100_NQ2000_NT128'
 
 omega_p = 1
 
@@ -236,7 +240,7 @@ if plot == True:
     yRange = ax_dt.get_ylim()
     
     ax_dt.plot(xRange,DH.orderLines(1,xRange,yRange),
-                ls='-.',c='0.1',label='2nd Order')
+                ls='-.',c='0.1',label='1st Order')
     ax_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
                 ls='dotted',c='0.25',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),

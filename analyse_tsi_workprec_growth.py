@@ -12,23 +12,25 @@ import h5py as h5
 
 analyse = True
 plot = True
-snapPlot = False
+snapPlot = True
 compare_linear = True
 
-start_time = 10
-max_time = 17.5
+start_time = 7.5
+max_time = 15
 
-
+data_root = "../data/"
 sims = {}
 
-#sims['tsi_TE20_boris_SDC_M3K3_NZ10_PPC20_NT'] = [50,100,200,400]
-sims['tsi_TE20_boris_SDC_M3K3_NZ100_PPC20_NT'] = [50,100,200,400]
+sims['tsi_TE20_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [20,40,80,160]
+sims['tsi_TE20_boris_synced_NZ100_NQ2000_NT'] = [20,40,80,160]
 
-#sims['tsi_TE20_boris_synced_NZ10_PPC20_NT'] = [50,100,200,400]
-sims['tsi_TE20_boris_synced_NZ100_PPC20_NT'] = [50,100,200]
+#sims['tsi_TE1_boris_staggered_NZ10_NQ2000_NT'] = [1,2,4,8,16,32,64]
+#sims['tsi_TE1_boris_staggered_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
+#sims['tsi_TE1_boris_synced_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_synced_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 
 
-comp_run = 'tsi_TE20_boris_SDC_M3K5_NZ100_PPC20_NT800'
+comp_run = 'tsi_TE20_boris_SDC_M3K3_NZ100_NQ2000_NT160'
 
 
 ################################ Linear analysis ##############################
@@ -49,7 +51,8 @@ roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
 real_slope = roots[1].imag
 
 ############################### Setup #########################################
-
+data_params = {}
+data_params['dataRootFolder'] = data_root
 plot_params = {}
 plot_params['legend.fontsize'] = 8
 plot_params['figure.figsize'] = (6,4)
@@ -61,7 +64,7 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 plt.rcParams.update(plot_params)
 
-DH_comp = dataHandler2()
+DH_comp = dataHandler2(**data_params)
 comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
 mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
 start_dt = np.int(start_time/(comp_sim.dt*DH_comp.samplePeriod))
@@ -87,11 +90,11 @@ if analyse == True:
         
         filename = key + "_workprec_growth" + ".h5"
         filenames.append(filename)
-        file = h5.File(filename,'w')
+        file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
         
         for tsteps in value:
-            DH = dataHandler2()
+            DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
             print(sim.runTime)
@@ -137,8 +140,8 @@ if analyse == True:
                 fig = plt.figure(DH.figureNo+3)
                 gphi_ax = fig.add_subplot(1,1,1)
                 line_gphi = gphi_ax.plot(tArray,max_phi_data_log,label=sim_name)
-                text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
-                                         verticalalignment='bottom',fontsize=8)
+                #text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
+                 #                        verticalalignment='bottom',fontsize=8)
                 #g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
                 gphi_ax.set_xlabel('$t$')
                 gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
@@ -172,7 +175,7 @@ if plot == True:
             
 
     for filename in filenames:
-        file = h5.File(filename,'r')
+        file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         avg_errors = file["fields/errors"][:]
@@ -194,16 +197,18 @@ if plot == True:
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(10)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,avg_errors_nonlinear,label=label)
+        #ax_rhs.plot(rhs_evals,avg_errors_nonlinear,label=label)
         if compare_linear == True:
-            ax_rhs.plot(rhs_evals,avg_errors,label=label)
+            ax_rhs.plot(rhs_evals,avg_errors,label=label+" vs. Linear")
             
         ##Order Plot w/ dt
         fig_dt = plt.figure(11)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,avg_errors_nonlinear,label=label)
+        #ax_dt.plot(dts,avg_errors_nonlinear,label=label)
         if compare_linear == True:
-            ax_dt.plot(dts,avg_errors,label=label)
+            ax_dt.plot(dts,avg_errors,label=label+" vs. Linear")
+            
+        file.close()
         
         
     ax_rhs.set_xscale('log')
@@ -211,7 +216,7 @@ if plot == True:
     ax_rhs.set_xlabel('Number of RHS evaluations')
     ax_rhs.set_yscale('log')
     ax_rhs.set_ylim(10**(-6),10)
-    ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
+    ax_rhs.set_ylabel('Growth rate error')
     
     xRange = ax_rhs.get_xlim()
     yRange = ax_rhs.get_ylim()
@@ -227,7 +232,7 @@ if plot == True:
     ax_dt.set_xlabel(r'$\Delta t$')
     ax_dt.set_yscale('log')
     ax_dt.set_ylim(10**(-4),10)
-    ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
+    ax_dt.set_ylabel('Growth rate error')
     
     xRange = ax_dt.get_xlim()
     yRange = ax_dt.get_ylim()
