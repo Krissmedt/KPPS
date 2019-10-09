@@ -151,9 +151,12 @@ class kpps_analysis:
             if self.field_type == 'pic':
                 if self.gather_order == 1:
                     self.gather = self.trilinear_gather
-                else:
-                    self.gather = self.lagrange_gather_1d
-                    self.preAnalysis_methods.append(self.lagrange_gather_setup)
+                elif self.gather_order%2 == 0:
+                    self.gather = self.poly_gather_1d_even
+                    self.preAnalysis_methods.append(self.poly_gather_setup)
+                elif self.gather_order%2 != 0:
+                    self.gather = self.poly_gather_1d_odd
+                    self.preAnalysis_methods.append(self.poly_gather_setup)
                     
                 self.scatter = self.trilinear_qScatter
                 
@@ -643,7 +646,7 @@ class kpps_analysis:
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
-            li = self.cell_index(species.pos[pii],O,mesh.dh)
+            li = self.lower_index(species.pos[pii],O,mesh.dh)
             rpos = species.pos[pii] - O - li*mesh.dh
             w = self.trilinear_weights(rpos,mesh.dh)
             i,j,k = li
@@ -659,7 +662,7 @@ class kpps_analysis:
         return species
     
     
-    def poly_gather_setup(self,species_list,mesh):
+    def poly_gather_setup(self,species_list,mesh,controller):
         k = self.gather_order
         mesh.interpol_nodes = np.zeros((mesh.res[2]+1,k+2),dtype=np.int)
         
@@ -667,8 +670,9 @@ class kpps_analysis:
             for i in range(0,mesh.res[2]+1):
                 mesh.interpol_nodes[i,0] = i
                 min_j = i - np.ceil((k+1)/2)+1
-                max_j = (i + np.ceil((k+1)/2))
+                max_j = (i + np.ceil((k)/2))
                 mesh.interpol_nodes[i,1:] = np.linspace(min_j,max_j,k+1)%(mesh.res[2]+1)
+
 #        else:
 #            for i in range(0,mesh.res[2]):
 #                min_j = i - np.floor(k/2)
@@ -679,17 +683,29 @@ class kpps_analysis:
                 
         return mesh
         
+    def poly_gather_1d_odd(self,species,mesh):
+        index_finder = self.lower_index
+        species = self.poly_gather_1d(species,mesh,index_finder)
         
+        return species
     
-    def poly_gather_1d(self,species,mesh):
+    
+    def poly_gather_1d_even(self,species,mesh):
+        index_finder = self.close_index
+        species = self.poly_gather_1d(species,mesh,index_finder)
+        
+        return species
+    
+    
+    def poly_gather_1d(self,species,mesh,index_method):
         k = self.gather_order
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for pii in range(0,species.nq):
-            li = self.cell_index(species.pos[pii],O,mesh.dh)
+            Ej = []
+            index = index_method(species.pos[pii],O,mesh.dh)
             
-            xj_i = mesh.interpol_nodes[li[2],1:]
-
-            Ej = mesh.E[2,1,1,xj_i[0]:xj_i[-1]+1]
+            xj_i = mesh.interpol_nodes[index[2],1:]
+            
             xj = mesh.z[1,1,xj_i]
             c = np.ones(k+1)
             
@@ -698,7 +714,11 @@ class kpps_analysis:
                     c[j] *= (species.pos[pii,2] - xj[m])/(xj[j] - xj[m])
                 for m in range(j+1,k+1):
                     c[j] *= (species.pos[pii,2] - xj[m])/(xj[j] - xj[m])
-            
+                    
+            for i in xj_i:    
+                Ej.append(mesh.E[2,1,1,i])
+            Ej = np.array(Ej)
+
             E = Ej*c
             species.E[pii,2] = E.sum()
                 
@@ -709,7 +729,7 @@ class kpps_analysis:
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
         for species in species_list:
             for pii in range(0,species.nq):
-                li = self.cell_index(species.pos[pii],O,mesh.dh)
+                li = self.lower_index(species.pos[pii],O,mesh.dh)
                 rpos = species.pos[pii] - O - li*mesh.dh
                 w = self.trilinear_weights(rpos,mesh.dh)
 
@@ -756,11 +776,27 @@ class kpps_analysis:
         
         return w
     
-    def cell_index(self,pos,O,dh):
+    def lower_index(self,pos,O,dh):
         li = np.floor((pos-O)/dh)
         li = np.array(li,dtype=np.int)
         
         return li
+    
+    def upper_index(self,pos,O,dh):
+        ui = np.ceil((pos-O)/dh)
+        ui = np.array(ui,dtype=np.int)
+        
+        return ui
+    
+    def close_index(self,pos,O,dh):
+        i = (pos-O)/dh
+        li = np.floor((pos-O)/dh)
+        ui = np.ceil((pos-O)/dh)
+        
+        ci = np.where(i-li < ui-i,li,ui)
+        ci = np.array(ci,dtype=np.int)
+        
+        return ci
     
     
     
