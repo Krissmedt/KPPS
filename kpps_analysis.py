@@ -197,17 +197,9 @@ class kpps_analysis:
         # Setup required particle analysis methods
         if self.particleIntegration == True:
             self.particleIntegrator_methods.append(self.particleIntegrator)
-
+            
             if self.particleIntegrator == 'boris_SDC':
                 self.preAnalysis_methods.append(self.collSetup)
-            
-            if self.particleIntegrator == 'boris_staggered':
-                self.particleInt1 = self.none
-                self.particleInt2 = self.boris_staggered
-                
-            if self.particleIntegrator == 'boris_synced':
-                self.particleInt1 = self.boris_synced_pos
-                self.particleInt2 = self.boris_synced_vel
                 
             self.fieldGather_methods.append(self.gather)
                 
@@ -528,6 +520,7 @@ class kpps_analysis:
     
         
     def poisson_cube2nd(self,species_list,fields,controller=None):
+        
         rho = self.meshtoVector(fields.rho[self.mi_x0:self.mi_xN,
                                            self.mi_y0:self.mi_yN,
                                            self.mi_z0:self.mi_zN])
@@ -537,7 +530,7 @@ class kpps_analysis:
         phi = self.field_solver(self.FDMat,rho*self.unit_scale_poisson,fields.BC_vector)
         phi = self.vectortoMesh(phi,self.interior_shape)
 
-        fields.phi[self.mi_x0::self.mi_xN,
+        fields.phi[self.mi_x0:self.mi_xN,
                    self.mi_y0:self.mi_yN,
                    self.mi_z0:self.mi_zN] = phi
 
@@ -1290,9 +1283,8 @@ class kpps_analysis:
         BC_vector = np.zeros(mesh.BC_vector.shape[0]+1,dtype=np.float)
         BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
-                
-        self.FDMat = sps.csr_matrix(FDMat)
 
+        self.FDMat = sps.csr_matrix(FDMat)
         self.solver_post = self.mirrored_boundary_z
         
 

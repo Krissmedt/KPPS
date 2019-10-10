@@ -29,29 +29,19 @@ plot = True
 snapPlot = False
 
 h5_suffix = ''
-data_root = "../data/"
+data_root = "./"
 start_time = 0
 max_time = 1
 
 sims = {}
 
 
-#sims['tsi_TE1_boris_staggered_NZ10_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
-#sims['tsi_TE1_boris_staggered_NZ100_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
-#sims['tsi_TE1_boris_staggered_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
-#sims['tsi_TE1_boris_staggered_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
 
-#sims['tsi_short_boris_SDC_M3K3_NZ10_NQ2000_NT'] = [1,2,4,8,16,32,64]
-sims['tsi_short_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
-
-#sims['tsi_TE1_boris_staggered_NZ10_NQ2000_NT'] = [1,2,4,8,16,32,64]
-sims['tsi_TE1_boris_staggered_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
-sims['tsi_TE1_boris_synced_NZ100_NQ2000_NT'] = [1,2,4,8,16,32,64]
-#sims['tsi_TE1_boris_synced_NZ1000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
-#sims['tsi_TE1_boris_synced_NZ10000_NQ20000_NT'] = [1,2,4,8,16,32,64,128]
+#sims['tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16]
+sims['tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16]
 
 
-comp_run = 'tsi_TE1_boris_SDC_M5K5_NZ100_NQ2000_NT128'
+comp_run = 'tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT32'
 
 omega_p = 1
 

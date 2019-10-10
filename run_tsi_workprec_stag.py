@@ -1,4 +1,4 @@
-from kpps import kpps
+from kpps import kpps as kpps_class
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 from decimal import Decimal
 import io 
@@ -66,8 +66,10 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [20,40,80,160]
+steps = [64]
 resolutions = [100]
+
+dataRoot = "./data_tsi_particles/"
 
 L = 2*pi
 tend = 1
@@ -90,7 +92,11 @@ prefix = 'TE'+str(tend)
 simulate = True
 plot = False
 
-slow_factor = 100
+restart = False
+restart_ts = 14
+
+
+slow_factor = 1
 
 ############################ Linear Analysis ##################################
 k2 = dx_mode**2
@@ -147,8 +153,7 @@ analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 
-data_params['dataRootFolder'] = "../data/" 
-data_params['samplePeriod'] = 1
+data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 
@@ -162,9 +167,12 @@ plot_params['ytick.labelsize'] = 8
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
-    
+
+kppsObject = kpps_class()
+
 for Nt in steps:
     sim_params['tSteps'] = Nt
+    data_params['samplePeriod'] = Nt/4
     dt = tend/Nt
     for res in resolutions:
         ppc = nq/res
@@ -203,11 +211,14 @@ for Nt in steps:
                      dataSettings=data_params)
         
         if simulate == True:
-            kppsObject = kpps(**model)
-            DH = kppsObject.run()
-            
-            sim = DH.controller_obj
-            sim_name = sim.simID
+            if restart == True:
+                DH = kppsObject.restart(dataRoot,sim_name,restart_ts)
+                sim = DH.controller_obj
+                sim_name = sim.simID
+            else:
+                DH = kppsObject.start(**model)
+                sim = DH.controller_obj
+                sim_name = sim.simID
         else:
             DH = dataHandler2(**data_params)
             sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)

@@ -69,6 +69,8 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 steps = [1,2,4,8,16,32,64]
 resolutions = [100]
 
+data_root = './'
+
 L = 2*pi
 tend = 1
 
@@ -89,6 +91,9 @@ nq = 2000
 prefix = 'TE'+str(tend)
 simulate = True
 plot = False
+
+restart = False
+restart_ts = 14
 
 slow_factor = 100
 
@@ -146,10 +151,9 @@ analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
-data_params['dataRootFolder'] = "../data/" 
+data_params['dataRootFolder'] = data_root
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -169,6 +173,7 @@ else:
     
 for Nt in steps:
     sim_params['tSteps'] = Nt
+    data_params['samplePeriod'] = Nt
     dt = tend/Nt
     for res in resolutions:
         ppc = nq/res
@@ -207,11 +212,14 @@ for Nt in steps:
                      dataSettings=data_params)
         
         if simulate == True:
-            kppsObject = kpps(**model)
-            DH = kppsObject.run()
-            
-            sim = DH.controller_obj
-            sim_name = sim.simID
+            if restart == True:
+                DH = kppsObject.restart(dataRoot,sim_name,restart_ts)
+                sim = DH.controller_obj
+                sim_name = sim.simID
+            else:
+                DH = kppsObject.start(**model)
+                sim = DH.controller_obj
+                sim_name = sim.simID
         else:
             DH = dataHandler2()
             sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)

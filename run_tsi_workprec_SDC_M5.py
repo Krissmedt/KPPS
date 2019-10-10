@@ -66,9 +66,11 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [256]
-resolutions = [1000]
+steps = [1024]
+resolutions = [10000]
 iterations = [5]
+
+dataRoot = '../data_tsi_particles/'
 
 L = 2*pi
 tend = 1
@@ -85,13 +87,16 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 prefix = 'TE'+str(tend)
 simulate = True
 plot = False
 
-slow_factor = 100
+restart = False
+restart_ts = 14
+
+slow_factor = 1
 
 ############################ Linear Analysis ##################################
 k2 = dx_mode**2
@@ -149,10 +154,9 @@ analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = []   
 
-data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
-data_params['dataRootFolder'] = "../data/" 
+data_params['dataRootFolder'] = dataRoot
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -165,9 +169,10 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
 
-    
+kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
+    data_params['samplePeriod'] = Nt/4
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -208,11 +213,14 @@ for Nt in steps:
                          dataSettings=data_params)
             
             if simulate == True:
-                kppsObject = kpps(**model)
-                DH = kppsObject.run()
-                
-                sim = DH.controller_obj
-                sim_name = sim.simID
+                if restart == True:
+                    DH = kppsObject.restart(dataRoot,sim_name,restart_ts)
+                    sim = DH.controller_obj
+                    sim_name = sim.simID
+                else:
+                    DH = kppsObject.start(**model)
+                    sim = DH.controller_obj
+                    sim_name = sim.simID
             else:
                 DH = dataHandler2()
                 sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)

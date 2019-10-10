@@ -83,9 +83,8 @@ class dataHandler2:
                 method(species_list,fields,simulationManager)
             
 
-    def run_setup(self):
+    def run_setup(self,controller):
 
-        self.controller_check()
         self.sampling_setup()
             
         self.dataFoldername = self.dataRootFolder + self.controller_obj.simID
@@ -95,7 +94,15 @@ class dataHandler2:
                 self.runOps.append(self.p_dumper)
             if self.write_m == True:
                 self.runOps.append(self.m_dumper)
-            self.dataFoldername = self.mkDataDir(self.dataFoldername)
+                
+            if controller.restarted == False:
+                self.dataFoldername = self.mkDataDir(self.dataFoldername)
+                
+                sim_filename = self.dataFoldername + "/sim"
+                sim_file = io.open(sim_filename,mode='wb')
+                self.controller_obj = controller
+                pk.dump(controller,sim_file)
+            
         
         if self.write_vtk == True:
             import vtk_writer as vtk_writer
@@ -108,7 +115,8 @@ class dataHandler2:
                 self.dataFoldername = self.mkDataDir(self.dataFoldername)
                 self.mkDataDir(self.vtkFoldername)
         
-        self.controller_obj.simID = self.dataFoldername  
+        self.controller_obj.simID = self.dataFoldername 
+
             
         
     def p_dumper(self,species_list,fields,simulationManager):
@@ -146,10 +154,6 @@ class dataHandler2:
         for method in self.postOps:
             method(species_list,fields,controller)
             
-        sim_filename = self.dataFoldername + "/sim"
-        sim_file = io.open(sim_filename,mode='wb')
-        self.controller_obj = controller
-        pk.dump(controller,sim_file)
             
     def load_sim(self,sim_name=None,overwrite=False):
         try:
@@ -403,16 +407,6 @@ class dataHandler2:
         
         oLine = [a*xRange[0]**order,a*xRange[1]**order]
         return oLine
-    
-                
-    def controller_check(self):
-        try:
-            self.dt = self.controller_obj.dt
-        
-        except AttributeError:
-            print("DataHandler:  No valid controller object detected in dataHandler module" 
-                  + ", cancelling run.")
-            raise SystemExit(0)
             
             
     def set_taggedList(self,p_data,tagged_list):
