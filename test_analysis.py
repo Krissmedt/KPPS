@@ -132,8 +132,7 @@ class Test_units_analysis:
         
         
     def test_polyGather(self):
-        k = 5
-        k_gather = 1
+
         pos = 0.2
         
         species_params = {}
@@ -157,21 +156,30 @@ class Test_units_analysis:
         
         pLoader.run([p],self.sim)
         mLoader.run(m,self.sim)
-
+        self.kpa.mesh_boundary_z = 'open'
         
+#        k = 3
+#        k_gather = 3
+#        m.E[2,1,1,:] = m.z[1,1,:]**k
+#        self.kpa.gather_order = k_gather
+#        self.kpa.poly_gather_setup([p],m)
+#        print(m.interpol_nodes)
+#        self.kpa.poly_gather_1d_odd(p,m)
+#        print(m.E[2,1,1,:])
+#        print(p.E)
+#        print(p.pos**k)
+
+
+        k = 3
+        k_gather = 2
         m.E[2,1,1,:] = m.z[1,1,:]**k
         self.kpa.gather_order = k_gather
-        self.kpa.mesh_boundary_z = 'open'
         self.kpa.poly_gather_setup([p],m)
-        self.kpa.poly_gather_1d(p,m)
-
+        print(m.interpol_nodes)
+        self.kpa.poly_gather_1d_even(p,m)
         print(m.E[2,1,1,:])
-        print(p.E[0,2])
-        real = pos**k
-        print(real)
-        error = abs(p.E[0,2]-real)/real
-        print(error)
-        
+        print(p.E)
+        print(p.pos**k)
 
 
         
@@ -228,6 +236,21 @@ class Test_units_analysis:
         assert Fk[1,1+np.int((m.zres-1)*(m.yres-1))] == 1/m.dx**2
         
         return Dk,Ek,Fk
+        
+    def test_indexMethods(self):
+        O = np.array([0,0,0])
+        dh = 1
+        pos = np.array([0.9,1.4,2.5])
+        
+        kpa = kpps_analysis()
+        
+        li = kpa.lower_index(pos,O,dh)
+        ui = kpa.upper_index(pos,O,dh)
+        ci = kpa.close_index(pos,O,dh)
+        
+        assert (li==[0,1,2]).all()
+        assert (ui==[1,2,3]).all()
+        assert (ci==[1,1,3]).all()
         
         
     def test_toMethods(self):
