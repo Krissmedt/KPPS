@@ -76,6 +76,7 @@ class kpps_analysis:
         self.iter_tol = 1e-05
         self.iter_max = None
         self.FDMat = None
+        self.scatter_order = 1
         self.gather_order = 1
         self.mesh_boundary_z = 'fixed'
         self.mesh_boundary_y = 'fixed'
@@ -655,25 +656,33 @@ class kpps_analysis:
         return species
     
     
-    def poly_gather_setup(self,species_list,mesh,controller):
-        k = self.gather_order
-        mesh.interpol_nodes = np.zeros((mesh.res[2]+1,k+2),dtype=np.int)
-        
-        if self.mesh_boundary_z == 'open':
-            for i in range(0,mesh.res[2]+1):
-                mesh.interpol_nodes[i,0] = i
-                min_j = i - np.ceil((k+1)/2)+1
-                max_j = (i + np.ceil((k)/2))
-                mesh.interpol_nodes[i,1:] = np.linspace(min_j,max_j,k+1)%(mesh.res[2]+1)
+    def poly_interpol_setup(self,species_list,mesh,controller):
+        kg = self.gather_order
+        ks = self.scatter_order
+        kList = [kg,ks]
 
-#        else:
-#            for i in range(0,mesh.res[2]):
-#                min_j = i - np.floor(k/2)
-#                max_j = i + np.floor((k+1)/2)
-#                mesh.interpol_nodes[i,:] = np.linspace(min_j,max_j,k+1)
+        nodesList = []
+        for k in kList:
+            interpol_nodes = np.zeros((mesh.res[2]+1,k+2),dtype=np.int)
+            if self.mesh_boundary_z == 'open':
+                for i in range(0,mesh.res[2]+1):
+                    interpol_nodes[i,0] = i
+                    min_j = i - np.ceil((k+1)/2)+1
+                    max_j = (i + np.ceil((k)/2))
+                    interpol_nodes[i,1:] = np.linspace(min_j,max_j,k+1)%(mesh.res[2]+1)
+    
+    #        else:
+    #            for i in range(0,mesh.res[2]):
+    #                min_j = i - np.floor(k/2)
+    #                max_j = i + np.floor((k+1)/2)
+    #                mesh.interpol_nodes[i,:] = np.linspace(min_j,max_j,k+1)
                 
-        mesh.interpol_nodes = mesh.interpol_nodes.astype(int)
-                
+            interpol_nodes = interpol_nodes.astype(int)
+            nodesList.append(interpol_nodes)
+
+        mesh.gather_nodes = nodesList[0]
+        mesh.scatter_nodes = nodesList[1]
+        
         return mesh
         
     def poly_gather_1d_odd(self,species,mesh):
@@ -697,7 +706,7 @@ class kpps_analysis:
             Ej = []
             index = index_method(species.pos[pii],O,mesh.dh)
             
-            xj_i = mesh.interpol_nodes[index[2],1:]
+            xj_i = mesh.gather_nodes[index[2],1:]
             
             xj = mesh.z[1,1,xj_i]
             c = np.ones(k+1)
@@ -735,7 +744,28 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
-        self.scatter_BC(species,mesh,controller)
+            self.scatter_BC(species,mesh,controller)
+            
+        mesh.rho += mesh.q/mesh.dv
+        return mesh
+    
+    
+    def quadratic_qScatter_1d(self,species_list,mesh,controller):
+        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+        for species in species_list:
+            for pii in range(0,species.nq):
+                ci = self.close_index(species.pos[pii],O,mesh.dh)
+                rpos = species.pos[pii] - O - ci*mesh.dh
+                w = self.quadratic_weights_1d(rpos,mesh.dh)
+                print(mesh.dh)
+                print(rpos)
+                print(w)
+                mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],1]] += species.q*w[0]
+                mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],2]] += species.q*w[1]
+                mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],3]] += species.q*w[2]
+                
+            self.scatter_BC(species,mesh,controller)
+            
         mesh.rho += mesh.q/mesh.dv
         return mesh
     
@@ -769,6 +799,16 @@ class kpps_analysis:
         
         return w
     
+    def quadratic_weights_1d(self,rpos,dh):
+        h = rpos/dh
+        w = np.zeros(3,dtype=np.float)
+        
+        w[0] = 1/2*h[2]**2 - 1/2*h[2]
+        w[1] = 1-h[2]**2
+        w[2] = 1/2*h[2]**2 + 1/2*h[2]
+        
+        return w
+    
     def lower_index(self,pos,O,dh):
         li = np.floor((pos-O)/dh)
         li = np.array(li,dtype=np.int)
@@ -783,12 +823,13 @@ class kpps_analysis:
     
     def close_index(self,pos,O,dh):
         i = (pos-O)/dh
+
         li = np.floor((pos-O)/dh)
         ui = np.ceil((pos-O)/dh)
         
-        ci = np.where(i-li < ui-i,li,ui)
+        ci = np.where(i-li <= ui-i,li,ui)
         ci = np.array(ci,dtype=np.int)
-        
+
         return ci
     
     
