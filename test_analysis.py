@@ -158,29 +158,55 @@ class Test_units_analysis:
         mLoader.run(m,self.sim)
         self.kpa.mesh_boundary_z = 'open'
         
-#        k = 3
-#        k_gather = 3
-#        m.E[2,1,1,:] = m.z[1,1,:]**k
-#        self.kpa.gather_order = k_gather
-#        self.kpa.poly_gather_setup([p],m)
-#        print(m.interpol_nodes)
-#        self.kpa.poly_gather_1d_odd(p,m)
-#        print(m.E[2,1,1,:])
-#        print(p.E)
-#        print(p.pos**k)
-
-
-        k = 3
-        k_gather = 2
+        k = 5
+        k_gather = 5
         m.E[2,1,1,:] = m.z[1,1,:]**k
         self.kpa.gather_order = k_gather
-        self.kpa.poly_gather_setup([p],m)
-        print(m.interpol_nodes)
-        self.kpa.poly_gather_1d_even(p,m)
-        print(m.E[2,1,1,:])
-        print(p.E)
-        print(p.pos**k)
+        self.kpa.poly_interpol_setup([p],m,self.sim)
+        self.kpa.poly_gather_1d_odd(p,m)
+        assert np.all(np.isclose(p.E,p.pos**k))
 
+        k = 4
+        k_gather = 4
+        m.E[2,1,1,:] = m.z[1,1,:]**k
+        self.kpa.gather_order = k_gather
+        self.kpa.poly_interpol_setup([p],m,self.sim)
+        self.kpa.poly_gather_1d_even(p,m)
+        assert np.all(np.isclose(p.E,p.pos**k))
+
+        
+    def test_polyScatter(self):
+        pos = -0.1
+        
+        species_params = {}
+        pLoader_params = {}
+        
+        species_params['nq'] = 1
+        species_params['mq'] = 1
+        species_params['q'] = 10
+        p = species(**species_params)
+        
+        pLoader_params['load_type'] = 'direct'
+        pLoader_params['vel'] = np.zeros((species_params['nq'],3),dtype=np.float)
+        pLoader_params['pos'] = np.array([[0,0,pos]])
+        pLoader = particleLoader(**pLoader_params)
+        
+        m = cp.copy(self.m)
+        
+        mLoader_params = cp.copy(self.mLoader_params)
+        mLoader_params['resolution'] = [2,2,10]
+        mLoader = meshLoader(**mLoader_params)
+        
+        pLoader.run([p],self.sim)
+        mLoader.run(m,self.sim)
+        self.kpa.mesh_boundary_z = 'open'
+        
+        k = 2
+        self.kpa.scatter_order = k
+        self.kpa.poly_interpol_setup([p],m,self.sim)
+        self.kpa.quadratic_qScatter_1d([p],m,self.sim)
+        print(m.q[1,1,:])
+        print(m.q.sum())
 
         
     def test_poisson_setup_fixed(self):
@@ -272,4 +298,4 @@ class Test_units_analysis:
         
 test = Test_units_analysis()
 test.setup()
-test.test_polyGather()
+test.test_polyScatter()
