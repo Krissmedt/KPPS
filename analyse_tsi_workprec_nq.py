@@ -36,10 +36,9 @@ max_time = 1
 sims = {}
 
 
-sims['tsi_TE1_boris_SDC_NZ1000_NQ200_NT100'] = [5,10,20,40,80]
-sims['tsi_TE1_boris_staggered_NZ_NQ20000_NT64'] = [5,10,20,40,80]
+sims['tsi_TE1_boris_SDC_NZ1000_NQ_NT100'] = [20,200,2000]
 
-comp_run = 'tsi_TE1_boris_SDC_M5K5_NZ1000_NQ20000_NT128'
+comp_run = 'tsi_TE1_boris_SDC_NZ1000_NQ20000_NT100'
 
 omega_p = 1
 
@@ -69,33 +68,34 @@ plot_params['xtick.labelsize'] = 8
 plot_params['ytick.labelsize'] = 8
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
+plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
 filenames = []
 if analyse == True:
     DH_comp = dataHandler2(**data_params)
     comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-    mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
-    pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
-    p1Data_comp = pDataList_comp[0] 
+    mData_comp = DH_comp.load_m(['E','phi','dz'],sim_name=comp_sim_name)
+    dz_comp = mData_comp['dz'][0] 
+    E_comp = mData_comp['E'][-1,2,1,1,:-2]
+    UE_comp = np.sum(E_comp*E_comp/2)*dz_comp
 
     for key, value in sims.items():
         dzs = []
         Nts = []
+        Nqs = []
         rhs_evals = []
-        avg_errors = []
-        avg_slopes = []
-        avg_errors_nonlinear = []
-        
+        errors = []
+
         filename = key + "_workprec_dz" + h5_suffix + ".h5"
         filenames.append(filename)
         file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
     
-        for ncells in value:
+        for nq in value:
             DH = dataHandler2(**data_params)
-            insert = key.find('NZ')
-            sim_name = key[:insert+2] + str(ncells) + key[insert+2:]
+            insert = key.find('NQ')
+            sim_name = key[:insert+2] + str(nq) + key[insert+2:]
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
     
             ####################### Analysis and Visualisation ############################
@@ -104,55 +104,26 @@ if analyse == True:
             
             start_dt = np.int(start_time/(sim.dt*DH.samplePeriod))
             max_dt = np.int(max_time/(sim.dt*DH.samplePeriod))+1
-            
-            pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
-            
-            p1Data_dict = pData_list[0]
-            p2Data_dict = pData_list[1]
     
             mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name)
             dz = mData_dict['dz'][0]
+            
+            
+            E = mData_dict['E'][-1,2,1,1,:-2]            
+            UE = np.sum(E*E/2)*dz
+            error = abs(UE_comp-UE)/UE_comp
 
-            ## particle position comparison
-            skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-            skip_int = np.int(skip)
-            skip_p = np.int(p1Data_comp['pos'].shape[1]/p1Data_dict['pos'].shape[1])
-            
-            tArray = p1Data_dict['t'][:]
-            tArray_comp = p1Data_comp['t'][:]
-            tArray_comp = tArray_comp[0::skip_int]
-            
-            beam1_pos = p1Data_dict['pos'][:,:,2]
-            beam2_pos = p2Data_dict['pos'][:,:,2]
-            comp_beam1_pos = p1Data_comp['pos'][:,:,2]
-            comp_beam1_pos = comp_beam1_pos[0::skip_int,:]
-            
-            
-            tArray_slice = tArray[start_dt:max_dt]
-            tArray_comp_slice = tArray_comp[start_dt:max_dt]
-
-            beam1_pos_slice = beam1_pos[start_dt:max_dt]
-            comp_beam1_pos_slice = comp_beam1_pos[start_dt:max_dt]
-            
-            pos_diff = np.abs(comp_beam1_pos_slice-beam1_pos_slice)
-            rel_pos_diff = pos_diff/np.abs(comp_beam1_pos_slice)
-            final_errors = rel_pos_diff[max_dt-1,:]
-            
-            avg_error = np.average(final_errors)
             dzs.append(dz)
+            Nqs.append(nq)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)
-            avg_errors.append(avg_error)
-            print(avg_errors)
-            
-            if snapPlot == True:
-                phase_snap(0,p1Data_dict,p2Data_dict,figNo=3)
-                phase_snap(-1,p1Data_dict,p2Data_dict,figNo=4)
+            errors.append(error)
+        
         
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
         file.attrs["dt"] = str(dt)
         file.attrs["Nt"] = str(Nt)
-        
+
         try:
             file.attrs["M"] = str(sim.analysisSettings['M'])
             file.attrs["K"] = str(sim.analysisSettings['K'])
@@ -161,22 +132,23 @@ if analyse == True:
         
         grp.create_dataset('dzs',data=dzs)
         grp.create_dataset('Nts',data=Nts)
+        grp.create_dataset('Nqs',data=Nqs)
         grp.create_dataset('rhs_evals',data=rhs_evals)
-        grp.create_dataset('errors',data=avg_errors)
+        grp.create_dataset('errors',data=errors)
         file.close()
 
 if plot == True:
     plt.rcParams.update(plot_params)
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key + "_workprec_dz" + h5_suffix + ".h5"
+            filename = key + "_workprec_nq" + h5_suffix + ".h5"
             filenames.append(filename)
             
 
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
-        dzs = file["fields/dzs"][:]
-        avg_errors = file["fields/errors"][:]
+        nqs = file["fields/Nqs"][:]
+        errors = file["fields/errors"][:]
 
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nt=" + file.attrs["Nt"]
@@ -189,24 +161,23 @@ if plot == True:
         ##Order Plot w/ dz
         fig_dz = plt.figure(11)
         ax_dz = fig_dz.add_subplot(1, 1, 1)
-        ax_dz.plot(dzs,avg_errors,label=label)
-        
+        ax_dz.plot(nqs,errors,label=label)
     file.close()
     
     ax_dz.set_xscale('log')
     #ax_dz.set_xlim(10**-3,10**-1)
-    ax_dz.set_xlabel(r'Cell Spacing $\Delta z$')
+    ax_dz.set_xlabel(r'Particle Count $N_q$')
     ax_dz.set_yscale('log')
-    ax_dz.set_ylim(10**(-12),10)
-    ax_dz.set_ylabel('Avg. relative particle $\Delta z$')
+    ax_dz.set_ylim(10**(-4),10**7)
+    ax_dz.set_ylabel(r'Relative ES Energy Error $\Delta E^2 /2$')
     
     xRange = ax_dz.get_xlim()
     yRange = ax_dz.get_ylim()
     
-    ax_dz.plot(xRange,DH.orderLines(1,xRange,yRange),
+    ax_dz.plot(xRange,DH.orderLines(-1,xRange,yRange),
                 ls='-.',c='0.1',label='1st Order')
-    ax_dz.plot(xRange,DH.orderLines(2,xRange,yRange),
+    ax_dz.plot(xRange,DH.orderLines(-2,xRange,yRange),
                 ls='dotted',c='0.25',label='2nd Order')
-    ax_dz.plot(xRange,DH.orderLines(4,xRange,yRange),
+    ax_dz.plot(xRange,DH.orderLines(-4,xRange,yRange),
                 ls='dashed',c='0.75',label='4th Order')
     ax_dz.legend()

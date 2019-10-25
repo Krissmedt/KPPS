@@ -1,4 +1,4 @@
-from kpps import kpps as kpps_class
+from kpps import kpps
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 from decimal import Decimal
 import io 
@@ -29,7 +29,7 @@ def update_phase(num,xdata,ydata,lines,KE,dt):
     
     lines = update_lines(num,xdata,ydata,lines)
     
-    return lines
+    return lines 
 
 
 def update_dist(num,xdata,ydata,lines,PE):
@@ -66,15 +66,16 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [10,20,40,80,160,320]
-resolutions = [10,100,1000]
+particles = [200000]
+resolutions = [5000]
 
-dataRoot = "../data_tsi_growth/"
+dataRoot = "../data_tsi_spatial/"
 
 L = 2*pi
-tend = 10
+Nt = 1000
+tend = 1
 
-dx_mag = 0.1
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -84,10 +85,6 @@ dv_mode = 1
 a = -1
 omega_p = 1
 
-#Nq is particles per species, total nq = 2*nq
-#ppc = 20
-nq = 20000
-
 prefix = 'TE'+str(tend)
 simulate = True
 plot = False
@@ -95,9 +92,7 @@ plot = False
 restart = False
 restart_ts = 14
 
-
 slow_factor = 1
-
 ############################ Linear Analysis ##################################
 k2 = dx_mode**2
 v2 = v**2
@@ -122,6 +117,7 @@ analysis_params = {}
 data_params = {}
 
 sim_params['t0'] = 0
+sim_params['tSteps'] = Nt
 sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
@@ -139,7 +135,9 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_staggered'
+analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['M'] = 3
+analysis_params['K'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -151,11 +149,12 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+analysis_params['pre_hook_list'] = []   
 
-data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
+data_params['dataRootFolder'] = dataRoot
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -168,13 +167,13 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
 
-kppsObject = kpps_class()
-
-for Nt in steps:
-    sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+kppsObject = kpps()
+for nq in particles:
+    data_params['samplePeriod'] = Nt/4
     dt = tend/Nt
     for res in resolutions:
+        mLoader_params['resolution'] = [2,2,res]
+
         ppc = nq/res
         #nq = ppc*res
         
@@ -192,13 +191,12 @@ for Nt in steps:
         loader2_params['pos'] = particle_pos_init(ppc,res,L,-dx_mag,dx_mode)
         loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
         
-        mLoader_params['resolution'] = [2,2,res]
         mesh_params['node_charge'] = -2*ppc*q
         
         species_params = [beam1_params,beam2_params]
         loader_params = [loader1_params,loader2_params]
 
-        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##
@@ -224,7 +222,7 @@ for Nt in steps:
             sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
         
         
-        ####################### Analysis and Visualisation ###########################
+        ####################### Analysis and Visualisation ###########################            
         if plot == True:       
             pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
             
@@ -284,6 +282,8 @@ for Nt in steps:
                         uni_time_evol[ti,pii] = 0 + overshoot % L
                         
             dx_evol = p1_data - uni_time_evol
+
+            
             
             ## Phase animation setup
             fig = plt.figure(DH.figureNo+4,dpi=150)
