@@ -66,16 +66,16 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [256]
+steps = [10,20,40,80,160,320]
 resolutions = [10,100,1000]
 iterations = [3]
 
-dataRoot = "../data_tsi_particles/"
+dataRoot = "../data_tsi_growth/"
 
 L = 2*pi
-tend = 1
+tend = 10
 
-dx_mag = 0.0001
+dx_mag = 0.1
 dx_mode = 1
 
 v = 1
@@ -87,7 +87,7 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200000
+nq = 20000
 
 prefix = 'TE'+str(tend)
 simulate = True
@@ -171,7 +171,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samplePeriod'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]

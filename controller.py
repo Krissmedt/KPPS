@@ -19,6 +19,7 @@ class controller:
         self.runTime = 0
 
         self.percentBar = False
+        self.restarted = False
         
         self.xlimits = np.array([-1,1],dtype=np.float)
         self.ylimits = np.array([-1,1],dtype=np.float)
@@ -94,8 +95,8 @@ class controller:
     
         
     def updateTime(self):
-        self.ts = self.ts + 1
-        self.t = self.t + self.dt
+        self.ts += 1
+        self.t += self.dt
         self.tArray.append(self.t)
         
         for method in self.hookFunctions:
