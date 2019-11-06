@@ -20,7 +20,7 @@ from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
 import time
 import copy as cp
-
+import matplotlib.pyplot as plt
 ## Class
 class kpps_analysis:
     def __init__(self,**kwargs):
@@ -302,6 +302,17 @@ class kpps_analysis:
             self.check_boundCross(species,mesh,**kwargs)
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
+            
+        fig = plt.figure(1,dpi=150)
+        p_ax = fig.add_subplot(1,1,1)
+        p_ax.plot(species_list[0].pos[:,2],species_list[0].vel[:,2],'go',label='Markers')[0]
+        p_ax.plot(species_list[1].pos[:,2],species_list[1].vel[:,2],'bo',label='Cold')[0]
+        p_ax.plot(species_list[2].pos[:,2],species_list[2].vel[:,2],'ro',label='Hot')[0]
+        p_ax.set_xlim([0.0,2*pi])
+        p_ax.set_xlabel('$z$')
+        p_ax.set_ylabel('$v_z$')
+        p_ax.set_ylim([-2,2])
+        p_ax.legend()
             
         return species_list, mesh
     
@@ -745,8 +756,11 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
         
             self.scatter_BC(species,mesh,controller)
-            
+
         mesh.rho += mesh.q/mesh.dv
+        print(mesh.q[1,1,:-2])
+        print(np.sum(mesh.q[1,1,:-2]))
+        
         return mesh
     
     
@@ -933,8 +947,6 @@ class kpps_analysis:
 
         self.coll_params = {}
         
-        d = 3*species.nq
-        
         self.coll_params['dt'] = controller.dt
         
         #Remap collocation weights from [0,1] to [tn,tn+1]
@@ -968,24 +980,25 @@ class kpps_analysis:
         self.coll_params['SX'] = SX
         self.coll_params['SQ'] = Smat @ Qmat
         
-        self.coll_params['x0'] = np.zeros((d,M+1),dtype=np.float)
-        self.coll_params['v0'] = np.zeros((d,M+1),dtype=np.float)
-        
-        self.coll_params['xn'] = np.zeros((d,M+1),dtype=np.float)
-        self.coll_params['vn'] = np.zeros((d,M+1),dtype=np.float)
-        
-        self.coll_params['F'] = np.zeros((d,M+1),dtype=np.float)
-        self.coll_params['Fn'] = np.zeros((d,M+1),dtype=np.float)
+#        self.coll_params['x0'] = np.zeros((d,M+1),dtype=np.float)
+#        self.coll_params['v0'] = np.zeros((d,M+1),dtype=np.float)
+#        
+#        self.coll_params['xn'] = np.zeros((d,M+1),dtype=np.float)
+#        self.coll_params['vn'] = np.zeros((d,M+1),dtype=np.float)
+#        
+#        self.coll_params['F'] = np.zeros((d,M+1),dtype=np.float)
+#        self.coll_params['Fn'] = np.zeros((d,M+1),dtype=np.float)
 
         for species in species_list:
-            species.x0 = np.copy(self.coll_params['x0'])
-            species.v0 = np.copy(self.coll_params['v0'])
+            d = 3*species.nq
+            species.x0 = np.zeros((d,M+1),dtype=np.float)
+            species.v0 = np.zeros((d,M+1),dtype=np.float)
             
-            species.xn = np.copy(self.coll_params['xn'])
-            species.vn = np.copy(self.coll_params['vn'])
+            species.xn = np.zeros((d,M+1),dtype=np.float)
+            species.vn = np.zeros((d,M+1),dtype=np.float)
             
-            species.F = np.copy(self.coll_params['Fn'])
-            species.Fn = np.copy(self.coll_params['F'])
+            species.F = np.zeros((d,M+1),dtype=np.float)
+            species.Fn = np.zeros((d,M+1),dtype=np.float)
             
             species.x_con = np.zeros((K,M))
             species.x_res = np.zeros((K,M))
@@ -1436,7 +1449,7 @@ class kpps_analysis:
         self.solver_post = self.mirrored_boundary_z
 
     def scatter_periodicBC_1d(self,species,mesh,controller):
-        mesh.q[1,1,0] += mesh.q[1,1,-2]       
+        #mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
     def rho_mod_1d(self,species,mesh,controller):
