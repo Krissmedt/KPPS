@@ -66,7 +66,7 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [10,20,40,80,160,320]
+steps = [30,50,60,70,90,100,110,120,130,140,150,640,1280]
 resolutions = [10,100,1000]
 
 dataRoot = "../data_tsi_growth/"
@@ -158,12 +158,12 @@ data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
-plot_params['legend.fontsize'] = 8
-plot_params['figure.figsize'] = (6,4)
+plot_params['legend.fontsize'] = 10
+plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
+plot_params['axes.titlesize'] = 16
+plot_params['xtick.labelsize'] = 12
+plot_params['ytick.labelsize'] = 12
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
@@ -173,7 +173,6 @@ kppsObject = kpps_class()
 for Nt in steps:
     sim_params['tSteps'] = Nt
     data_params['samples'] = 10
-    dt = tend/Nt
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res
@@ -288,8 +287,8 @@ for Nt in steps:
             ## Phase animation setup
             fig = plt.figure(DH.figureNo+4,dpi=150)
             p_ax = fig.add_subplot(1,1,1)
-            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',label='Beam 1, v=1')[0]
-            line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',label='Beam 2, v=-1')[0]
+            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
+            line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
             p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
             p_ax.set_xlim([0.0, L])
             p_ax.set_xlabel('$z$')
@@ -353,6 +352,7 @@ for Nt in steps:
             #growth_ax.set_ylim([-0.001,0.001])
             growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
             growth_ax.legend()
+            fig5.savefig(sim_name+'growth.png', dpi=None, facecolor='w', edgecolor='w',orientation='portrait')
             
             # Setting data/line lists:
             xdata = [Z,Z]
@@ -378,11 +378,13 @@ for Nt in steps:
                                                fargs=(hist_data,hist_ax,hist_bins,
                                                       hist_xmin,hist_xmax,hist_ymax),
                                                interval=1000/fps)
+                                                
             
             perturb_ani.save(sim_name+'_perturb.mp4')
             phase_ani.save(sim_name+'_phase.mp4')
             dist_ani.save(sim_name+'_dist.mp4')
             hist_ani.save(sim_name+'_hist.mp4')
+
             plt.show()
         
         print("Setup time = " + str(sim.setupTime))

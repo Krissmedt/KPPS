@@ -28,20 +28,25 @@ analyse = True
 plot = True
 snapPlot = False
 
+y_max = 10**(-4)
+fig_type = 'versus'
 h5_suffix = ''
-data_root = "./"
+data_root = "../data_tsi_particles/"
 start_time = 0
 max_time = 1
 
 sims = {}
 
 
+#sims['tsi_TE1_boris_staggered_NZ10_NQ200000_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['tsi_TE1_boris_staggered_NZ100_NQ200000_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['tsi_TE1_boris_staggered_NZ1000_NQ200000_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+##
+sims['tsi_TE1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['tsi_TE1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [1,2,4,8,16,32,64,128,256,512]
 
-#sims['tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16]
-sims['tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT'] = [1,2,4,8,16]
 
-
-comp_run = 'tsi_TE1_boris_SDC_M3K3_NZ100_NQ2000_NT32'
+comp_run = 'tsi_TE1_boris_SDC_M5K5_NZ10000_NQ200000_NT1024'
 
 omega_p = 1
 
@@ -63,13 +68,13 @@ data_params = {}
 data_params['dataRootFolder'] = data_root
 
 plot_params = {}
-plot_params['legend.fontsize'] = 10
+plot_params['legend.fontsize'] = 12
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
-plot_params['lines.linewidth'] = 2
+plot_params['axes.labelsize'] = 14
+plot_params['axes.titlesize'] = 14
+plot_params['xtick.labelsize'] = 10
+plot_params['ytick.labelsize'] = 10
+plot_params['lines.linewidth'] = 3
 plot_params['axes.titlepad'] = 5
 plt.rcParams.update(plot_params)
 
@@ -77,9 +82,13 @@ filenames = []
 if analyse == True:
     DH_comp = dataHandler2(**data_params)
     comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-    mData_comp = DH_comp.load_m(['phi'],sim_name=comp_sim_name)
+    mData_comp = DH_comp.load_m(['phi','E','dz'],sim_name=comp_sim_name)
     pDataList_comp = DH_comp.load_p(['pos'],species=['beam1','beam2'],sim_name=comp_sim_name)
     p1Data_comp = pDataList_comp[0] 
+    tArray_comp = mData_comp['t']
+    dz_comp = mData_comp['dz'][0] 
+    E_comp = mData_comp['E'][-1,2,1,1,:-1]
+    UE_comp = np.sum(E_comp*E_comp/2)*dz_comp
 
     for key, value in sims.items():
         dts = []
@@ -87,7 +96,7 @@ if analyse == True:
         rhs_evals = []
         avg_errors = []
         avg_slopes = []
-        avg_errors_nonlinear = []
+        energy_errors = []
         
         filename = key + "_workprec_pos" + h5_suffix + ".h5"
         filenames.append(filename)
@@ -98,7 +107,7 @@ if analyse == True:
             DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
-    
+
             ####################### Analysis and Visualisation ############################
             dt = sim.dt
             Nt = sim.tSteps
@@ -111,17 +120,17 @@ if analyse == True:
             p1Data_dict = pData_list[0]
             p2Data_dict = pData_list[1]
     
-            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres'],sim_name=sim_name)
-
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name)
             
+            E = mData_dict['E'][-1,2,1,1,:-1]            
+            UE = np.sum(E*E/2)*mData_dict['dz'][0]
+
             ## particle position comparison
             skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
             skip_int = np.int(skip)
             skip_p = np.int(p1Data_comp['pos'].shape[1]/p1Data_dict['pos'].shape[1])
             
-            tArray = p1Data_dict['t'][:]
-            tArray_comp = p1Data_comp['t'][:]
-            tArray_comp = tArray_comp[0::skip_int]
+            tArray = mData_dict['t']
             
             beam1_pos = p1Data_dict['pos'][:,:,2]
             beam2_pos = p2Data_dict['pos'][:,:,2]
@@ -143,6 +152,7 @@ if analyse == True:
             dts.append(sim.dt)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)
+            energy_errors.append(UE)
             avg_errors.append(avg_error)
             
             if snapPlot == True:
@@ -161,9 +171,11 @@ if analyse == True:
         grp.create_dataset('Nts',data=Nts)
         grp.create_dataset('rhs_evals',data=rhs_evals)
         grp.create_dataset('errors',data=avg_errors)
+        grp.create_dataset('energy_errors',data=energy_errors)
         file.close()
 
 if plot == True:
+    DH = dataHandler2(**data_params)
     plt.rcParams.update(plot_params)
     if len(filenames) == 0:
         for key, value in sims.items():
@@ -176,7 +188,8 @@ if plot == True:
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         avg_errors = file["fields/errors"][:]
-
+        energy_errors = file["fields/energy_errors"][:]
+        
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
         elif file.attrs["integrator"] == "boris_synced":
@@ -200,6 +213,16 @@ if plot == True:
         ax_dt = fig_dt.add_subplot(1, 1, 1)
         ax_dt.plot(dts,avg_errors,label=label)
         
+        ##Order Plot w/ rhs
+        fig_E_rhs = plt.figure(12)
+        ax_E_rhs = fig_E_rhs.add_subplot(1, 1, 1)
+        ax_E_rhs.plot(rhs_evals,energy_errors,label=label)
+        
+        ##Order Plot w/ dt
+        fig_E_dt = plt.figure(13)
+        ax_E_dt = fig_E_dt.add_subplot(1, 1, 1)
+        ax_E_dt.plot(dts,energy_errors,label=label)
+        
     file.close()
         
         
@@ -207,7 +230,7 @@ if plot == True:
     #ax_rhs.set_xlim(10**3,10**5)
     ax_rhs.set_xlabel('Number of RHS evaluations')
     ax_rhs.set_yscale('log')
-    ax_rhs.set_ylim(10**(-12),10)
+    ax_rhs.set_ylim(10**(-10),y_max)
     ax_rhs.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_rhs.get_xlim()
@@ -217,13 +240,16 @@ if plot == True:
                 ls='dotted',c='0.25',label='2nd Order')
     ax_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
                 ls='dashed',c='0.75',label='4th Order')
+    
+    plot_params['legend.loc'] = 'upper right'
+    plt.rcParams.update(plot_params)
     ax_rhs.legend()
     
     ax_dt.set_xscale('log')
     #ax_dt.set_xlim(10**-3,10**-1)
     ax_dt.set_xlabel(r'$\Delta t$')
     ax_dt.set_yscale('log')
-    ax_dt.set_ylim(10**(-12),10)
+    ax_dt.set_ylim(10**(-10),y_max)
     ax_dt.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_dt.get_xlim()
@@ -235,4 +261,52 @@ if plot == True:
                 ls='dotted',c='0.25',label='2nd Order')
     ax_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
                 ls='dashed',c='0.75',label='4th Order')
+    
+    plot_params['legend.loc'] = 'upper left'
+    plt.rcParams.update(plot_params)
     ax_dt.legend()
+    
+    ax_E_rhs.set_xscale('log')
+    #ax_rhs.set_xlim(10**3,10**5)
+    ax_E_rhs.set_xlabel('Number of RHS evaluations')
+    ax_E_rhs.set_yscale('log')
+    ax_E_rhs.set_ylim(10**(-10),y_max)
+    ax_E_rhs.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
+    
+    xRange = ax_rhs.get_xlim()
+    yRange = ax_rhs.get_ylim()
+    
+    ax_E_rhs.plot(xRange,DH.orderLines(-2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_E_rhs.plot(xRange,DH.orderLines(-4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    
+    plot_params['legend.loc'] = 'upper right'
+    plt.rcParams.update(plot_params)
+    ax_E_rhs.legend()
+    
+    ax_E_dt.set_xscale('log')
+    #ax_dt.set_xlim(10**-3,10**-1)
+    ax_E_dt.set_xlabel(r'$\Delta t$')
+    ax_E_dt.set_yscale('log')
+    ax_E_dt.set_ylim(10**(-10),y_max)
+    ax_E_dt.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
+    
+    xRange = ax_dt.get_xlim()
+    yRange = ax_dt.get_ylim()
+    
+    ax_E_dt.plot(xRange,DH.orderLines(1,xRange,yRange),
+                ls='-.',c='0.1',label='1st Order')
+    ax_E_dt.plot(xRange,DH.orderLines(2,xRange,yRange),
+                ls='dotted',c='0.25',label='2nd Order')
+    ax_E_dt.plot(xRange,DH.orderLines(4,xRange,yRange),
+                ls='dashed',c='0.75',label='4th Order')
+    
+    plot_params['legend.loc'] = 'upper left'
+    plt.rcParams.update(plot_params)
+    ax_E_dt.legend()
+    
+    fig_rhs.savefig(data_root + 'tsi_particles_'+ fig_type + "_pos_" + str(max_time) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+    fig_dt.savefig(data_root + 'tsi_particles_' + fig_type + "_pos_" + str(max_time) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+    fig_E_rhs.savefig(data_root + 'tsi_particles_'+ fig_type + "_energy_" + str(max_time) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+    fig_E_dt.savefig(data_root + 'tsi_particles_' + fig_type + "_energy_" + str(max_time) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

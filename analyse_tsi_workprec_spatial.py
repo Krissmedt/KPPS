@@ -24,11 +24,12 @@ def phase_snap(tstep,beamData1,beamData2,figNo=3):
     p_ax.legend()
     plt.show()
 
-analyse = True
+analyse = False
 plot = True
 snapPlot = False
 
 h5_suffix = ''
+fig_type = 'NZ'
 data_root = "../data_tsi_spatial/"
 start_time = 0
 max_time = 1
@@ -36,7 +37,7 @@ max_time = 1
 sims = {}
 
 
-sims['tsi_TE1_boris_SDC_NZ1000_NQ200_NT100'] = [5,10,20,40,80]
+sims['tsi_TE1_boris_SDC_M3K3_NZ_NQ20000_NT64'] = [5,10,20,40,80]
 sims['tsi_TE1_boris_staggered_NZ_NQ20000_NT64'] = [5,10,20,40,80]
 
 comp_run = 'tsi_TE1_boris_SDC_M5K5_NZ1000_NQ20000_NT128'
@@ -61,14 +62,15 @@ data_params = {}
 data_params['dataRootFolder'] = data_root
 
 plot_params = {}
-plot_params['legend.fontsize'] = 10
+plot_params['legend.fontsize'] = 12
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
-plot_params['lines.linewidth'] = 2
+plot_params['axes.labelsize'] = 14
+plot_params['axes.titlesize'] = 14
+plot_params['xtick.labelsize'] = 10
+plot_params['ytick.labelsize'] = 10
+plot_params['lines.linewidth'] = 3
 plot_params['axes.titlepad'] = 5
+plot_params['legend.loc'] = 'lower right'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -197,7 +199,7 @@ if plot == True:
     #ax_dz.set_xlim(10**-3,10**-1)
     ax_dz.set_xlabel(r'Cell Spacing $\Delta z$')
     ax_dz.set_yscale('log')
-    ax_dz.set_ylim(10**(-12),10)
+    ax_dz.set_ylim(10**(-8),10**(-5))
     ax_dz.set_ylabel('Avg. relative particle $\Delta z$')
     
     xRange = ax_dz.get_xlim()
@@ -210,3 +212,4 @@ if plot == True:
     ax_dz.plot(xRange,DH.orderLines(4,xRange,yRange),
                 ls='dashed',c='0.75',label='4th Order')
     ax_dz.legend()
+    fig_dz.savefig(data_root + 'tsi_spatial_' + fig_type + '.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

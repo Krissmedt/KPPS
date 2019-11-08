@@ -30,15 +30,16 @@ snapPlot = False
 
 h5_suffix = ''
 data_root = "../data_tsi_spatial/"
+fig_type = 'NQ'
 start_time = 0
 max_time = 1
 
 sims = {}
 
 
-sims['tsi_TE1_boris_SDC_NZ1000_NQ_NT100'] = [20,200,2000]
+sims['tsi_TE1_boris_SDC_NZ1000_NQ_NT100'] = [20,200,2000,20000]
 
-comp_run = 'tsi_TE1_boris_SDC_NZ1000_NQ20000_NT100'
+comp_run = 'tsi_TE1_boris_SDC_NZ5000_NQ200000_NT1000'
 
 omega_p = 1
 
@@ -60,15 +61,14 @@ data_params = {}
 data_params['dataRootFolder'] = data_root
 
 plot_params = {}
-plot_params['legend.fontsize'] = 10
+plot_params['legend.fontsize'] = 12
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
-plot_params['lines.linewidth'] = 2
+plot_params['axes.labelsize'] = 14
+plot_params['axes.titlesize'] = 14
+plot_params['xtick.labelsize'] = 10
+plot_params['ytick.labelsize'] = 10
+plot_params['lines.linewidth'] = 3
 plot_params['axes.titlepad'] = 5
-plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -135,6 +135,8 @@ if analyse == True:
         grp.create_dataset('Nqs',data=Nqs)
         grp.create_dataset('rhs_evals',data=rhs_evals)
         grp.create_dataset('errors',data=errors)
+        grp.create_dataset('energy',data=UE)
+        grp.create_dataset('energy_reference',data=UE_comp)
         file.close()
 
 if plot == True:
@@ -165,11 +167,11 @@ if plot == True:
     file.close()
     
     ax_dz.set_xscale('log')
-    #ax_dz.set_xlim(10**-3,10**-1)
+    ax_dz.set_xlim(10**1,10**5)
     ax_dz.set_xlabel(r'Particle Count $N_q$')
     ax_dz.set_yscale('log')
-    ax_dz.set_ylim(10**(-4),10**7)
-    ax_dz.set_ylabel(r'Relative ES Energy Error $\Delta E^2 /2$')
+    ax_dz.set_ylim(10**(-5),10**7)
+    ax_dz.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
     
     xRange = ax_dz.get_xlim()
     yRange = ax_dz.get_ylim()
@@ -181,3 +183,4 @@ if plot == True:
     ax_dz.plot(xRange,DH.orderLines(-4,xRange,yRange),
                 ls='dashed',c='0.75',label='4th Order')
     ax_dz.legend()
+    fig_dz.savefig(data_root + 'tsi_spatial_' + fig_type + '.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
