@@ -16,83 +16,43 @@ sims = {}
 particle = 0
 
 
-#sims['NLO__type2_boris_staggered_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_staggered_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_staggered_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_staggered_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_staggered_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
-#sims['NLO__type2_boris_staggered_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,254,512]
+sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type2_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-#sims['NLO__type3_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_SDC_M5K5_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_SDC_M5K5_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_SDC_M5K5_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-#sims['NLO__type3_boris_SDC_M5K5_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
-
-#sims['NLO__type2_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type2_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-
-#sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-#sims['NLO__type4_boris_SDC_M3K3_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-#sims['NLO__type4_boris_staggered_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_staggered_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_staggered_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_staggered_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64]
-
-sims['NLO__type4_boris_SDC_M3K3_NZ10_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE0.1_NT'] = [1,2,4,8,16,32,64]
-
-#sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-#sims['NLO__type4_boris_SDC_M3K3_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_synced_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
-#sims['NLO__type4_boris_staggered_NZ100_TE0.1_NT'] = [1,2,4,8,16,32,64]
+#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
 comp_run = 'NLO__type4_boris_SDC_M5K5_NZ100_TE0.1_NT128'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
-plot_params['lines.linewidth'] = 2
+plot_params['axes.labelsize'] = 16
+plot_params['axes.titlesize'] = 16
+plot_params['xtick.labelsize'] = 12
+plot_params['ytick.labelsize'] = 12
+plot_params['lines.linewidth'] = 3
 plot_params['axes.titlepad'] = 5
 plot_params['legend.loc'] = 'upper right'
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
-analyse = True
+analyse = False
 plot = True
-plot_type = ''
-data_root = "../data/"
+plot_type = 'cross-integrator'
+data_root = "../data_nlo/"
 
 data_params = {}
 data_params['dataRootFolder'] = data_root
@@ -178,7 +138,7 @@ if plot == True:
             
 
     for filename in filenames:
-        file = h5.File(filename,'r')
+        file = h5.File(data_root +filename,'r')
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         zrels = file["fields/errors"][:]
@@ -194,6 +154,13 @@ if plot == True:
                 c = 'red'
             elif int(nlo_type) == 4:
                 c = 'green'
+                
+        elif plot_type == "cross-integrator":
+            label = file.attrs['label_type']
+            if file.attrs["integrator"] == "boris_SDC":
+                c = 'blue'
+            elif file.attrs["integrator"] == "boris_synced":
+                c = 'red'
         
         plt.rcParams.update(plot_params)
         ##Convergence Plot w/ rhs

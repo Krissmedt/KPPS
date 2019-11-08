@@ -18,18 +18,19 @@ compare_reference = True
 start_time = 0
 max_time = 10
 
+fig_type = 'versus'
 data_root = "../data_tsi_growth/"
 sims = {}
 
-#sims['tsi_TE10_boris_staggered_NZ10_NQ20000_NT'] = [10,20,40,160,320]
-#sims['tsi_TE10_boris_staggered_NZ100_NQ20000_NT'] = [10,20,40,160,320]
-#sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,40,160,320]
+#sims['tsi_TE10_boris_staggered_NZ10_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
+#sims['tsi_TE10_boris_staggered_NZ100_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
+sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
 
-sims['tsi_TE10_boris_SDC_M3K3_NZ10_NQ20000_NT'] = [10,20,40,160,320]
-sims['tsi_TE10_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [10,20,40,160,320]
-sims['tsi_TE10_boris_SDC_M3K3_NZ1000_NQ20000_NT'] = [10,20,40,160,]
+#sims['tsi_TE10_boris_SDC_M3K3_NZ10_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
+#sims['tsi_TE10_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
+sims['tsi_TE10_boris_SDC_M3K3_NZ1000_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
 
-comp_run = 'tsi_TE10_boris_SDC_M3K3_NZ1000_NQ20000_NT320'
+comp_run = 'tsi_TE10_boris_SDC_M5K5_NZ10000_NQ200000_NT1000'
 
 
 ################################ Linear analysis ##############################
@@ -61,6 +62,7 @@ plot_params['xtick.labelsize'] = 10
 plot_params['ytick.labelsize'] = 10
 plot_params['lines.linewidth'] = 3
 plot_params['axes.titlepad'] = 5
+plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -81,7 +83,7 @@ if analyse == True:
                                      max_phi_comp_log[start_dt:max_steps],1)
 
         dz_comp = mData_comp['dz'][0] 
-        E_comp = mData_comp['E'][max_steps,2,1,1,:-2]
+        E_comp = mData_comp['E'][max_steps,2,1,1,:-1]
         UE_comp = np.sum(E_comp*E_comp/2)*dz_comp
     
     for key, value in sims.items():
@@ -93,7 +95,7 @@ if analyse == True:
         avg_errors_nonlinear = []
         energy_errors = []
         
-        filename = key[:-3] + "_workprec_g" + str(max_time) + ".h5"
+        filename = key[:-3] + "_workprec_growth_"  + str(max_time)+ "s"  ".h5"
         filenames.append(filename)
         file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
@@ -102,7 +104,6 @@ if analyse == True:
             DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
-            print(sim.runTime)
     
             ####################### Analysis and Visualisation ############################
             dt = sim.dt
@@ -114,10 +115,12 @@ if analyse == True:
             NB = max_steps
 
             mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name)
+            tArray = mData_dict['t']
 
-            E = mData_dict['E'][NB,2,1,1,:-2]            
+            E = mData_dict['E'][NB,2,1,1,:-1]            
             UE = np.sum(E*E/2)*mData_dict['dz'][0]
-            
+            print(UE)
+            print(UE_comp)
             tArray = mData_dict['t']
             phi_data = mData_dict['phi'][:,1,1,:-1]
             PE_data = mData_dict['PE_sum']
@@ -168,6 +171,8 @@ if analyse == True:
         grp.create_dataset('Nts',data=Nts)
         grp.create_dataset('rhs_evals',data=rhs_evals)
         grp.create_dataset('errors',data=avg_errors)
+        grp.create_dataset('energy',data=UE)
+        grp.create_dataset('energy_reference',data=UE_comp)
         grp.create_dataset('energy_errors',data=energy_errors)
         file.close()
     
@@ -176,7 +181,7 @@ if analyse == True:
 if plot == True:
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key + "_workprec_growth" + ".h5"
+            filename = key[:-3] + "_workprec_growth_" + str(max_time)+ "s" + ".h5"
             filenames.append(filename)
             
 
@@ -190,6 +195,7 @@ if plot == True:
 
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
+            label = "Boris" + ", Nz=" + file.attrs["res"]
         elif file.attrs["integrator"] == "boris_synced":
             label = "Boris Synced" + ", Nz=" + file.attrs["res"]
         elif file.attrs["integrator"] == "boris_SDC":
@@ -269,10 +275,9 @@ if plot == True:
             ax.set_xscale('log')
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
-            ax.set_ylim(10**(-6),10)
+            ax.set_ylim(10**(-5),10)
             ax.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
             
-            ax.set_title('Convergence vs. Reference Solution')
             
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
@@ -282,5 +287,6 @@ if plot == True:
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                         ls='dashed',c='0.75',label='4th Order')
             
-            ax.legend()
-            
+            ax.legend(loc = 'best')
+            fig_nl_rhs.savefig(data_root + 'tsi_growth_'+ fig_type +"_"+ str(max_time) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'tsi_growth_' + fig_type +"_"+ str(max_time) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

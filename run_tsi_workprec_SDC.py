@@ -66,16 +66,16 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [10,20,40,80,160,320]
-resolutions = [10,100,1000]
+steps = [3000]
+resolutions = [100]
 iterations = [3]
 
-dataRoot = "../data_tsi_growth/"
+dataRoot = "../data_tsi_particles/"
 
 L = 2*pi
-tend = 10
+tend = 30
 
-dx_mag = 0.1
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -87,11 +87,11 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 2000
 
 prefix = 'TE'+str(tend)
 simulate = True
-plot = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -158,12 +158,12 @@ data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 
 plot_params = {}
-plot_params['legend.fontsize'] = 8
-plot_params['figure.figsize'] = (6,4)
+plot_params['legend.fontsize'] = 10
+plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 12
-plot_params['axes.titlesize'] = 12
-plot_params['xtick.labelsize'] = 8
-plot_params['ytick.labelsize'] = 8
+plot_params['axes.titlesize'] = 16
+plot_params['xtick.labelsize'] = 12
+plot_params['ytick.labelsize'] = 12
 plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
@@ -171,7 +171,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -232,7 +232,7 @@ for Nt in steps:
                 p1Data_dict = pData_list[0]
                 p2Data_dict = pData_list[1]
                 
-                mData_dict = DH.load_m(['phi','E','rho','PE_sum'],sim_name=sim_name)
+                mData_dict = DH.load_m(['phi','E','rho','dz'],sim_name=sim_name)
                 
                 tArray = mData_dict['t']
                 Z = np.zeros((DH.samples,res+1),dtype=np.float)
@@ -251,17 +251,19 @@ for Nt in steps:
                 rho_data = mData_dict['rho'][:,1,1,:-1]
                 
                 phi_data = mData_dict['phi'][:,1,1,:-1]
-                PE_data = mData_dict['PE_sum']
-                
+                PE_data = mData_dict['PE_sum']                
                 ## Growth rate phi plot setup
-                tA = 0
-                tB = tend
+                tA = 12.5
+                tB = 17.5
                 
                 NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
                 NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
                 
                 max_phi_data = np.amax(np.abs(phi_data),axis=1)
                 max_phi_data_log = np.log(max_phi_data)
+                E = mData_dict['E'][:,2,1,1,:-1]
+                E2 = E*E
+                UE =  np.sum(E/2,axis=0)*mData_dict['dz']
                 
                 g_slope = (max_phi_data_log[2:] - max_phi_data_log[1:-1])/dt
                 growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
@@ -291,8 +293,8 @@ for Nt in steps:
                 ## Phase animation setup
                 fig = plt.figure(DH.figureNo+4,dpi=150)
                 p_ax = fig.add_subplot(1,1,1)
-                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',label='Beam 1, v=1')[0]
-                line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',label='Beam 2, v=-1')[0]
+                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
+                line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
                 p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
                 p_ax.set_xlim([0.0, L])
                 p_ax.set_xlabel('$z$')
@@ -357,6 +359,18 @@ for Nt in steps:
                 growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 growth_ax.legend()
                 
+                ## Growth rate plot
+                fig6 = plt.figure(DH.figureNo+9,dpi=150)
+                energy_ax = fig5.add_subplot(1,1,1)
+                energy_ax.plot(tArray,UE,'blue',label="$\phi$ growth")
+#                energy_ax.plot(tArray[NA:NB],growth_line,'orange',label="slope")
+                energy_ax.set_xlabel('$t$')
+                energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
+                #growth_ax.set_ylim([-0.001,0.001])
+                growth_ax.set_title('Two stream instability energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                growth_ax.legend()
+                
+                
                 # Setting data/line lists:
                 xdata = [Z,Z]
                 ydata = [rho_data,phi_data]
@@ -386,6 +400,8 @@ for Nt in steps:
                 phase_ani.save(sim_name+'_phase.mp4')
                 dist_ani.save(sim_name+'_dist.mp4')
                 hist_ani.save(sim_name+'_hist.mp4')
+                fig5.savefig(dataRoot + sim_name + 'growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                fig6.savefig(dataRoot + sim_name + 'energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 plt.show()
         
         print("Setup time = " + str(sim.setupTime))

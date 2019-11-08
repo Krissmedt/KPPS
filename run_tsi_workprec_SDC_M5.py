@@ -66,16 +66,16 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1000]
-resolutions = [10000]
+steps = [64]
+resolutions = [1000]
 iterations = [5]
 
-dataRoot = '../data_tsi_growth/'
+dataRoot = '../data_tsi_particles/'
 
 L = 2*pi
 tend = 10
 
-dx_mag = 0.1
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -87,11 +87,11 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200000
+nq = 20000
 
 prefix = 'TE'+str(tend)
-simulate = True
-plot = False
+simulate = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -172,7 +172,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -222,7 +222,7 @@ for Nt in steps:
                     sim = DH.controller_obj
                     sim_name = sim.simID
             else:
-                DH = dataHandler2()
+                DH = dataHandler2(**data_params)
                 sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
             
             
@@ -386,6 +386,7 @@ for Nt in steps:
                 phase_ani.save(sim_name+'_phase.mp4')
                 dist_ani.save(sim_name+'_dist.mp4')
                 hist_ani.save(sim_name+'_hist.mp4')
+                fig5.savefig(dataRoot + sim_name + 'growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 plt.show()
         
         print("Setup time = " + str(sim.setupTime))
