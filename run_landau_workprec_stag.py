@@ -1,4 +1,4 @@
-from kpps import kpps
+from kpps import kpps as kpps_class
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 from decimal import Decimal
 import io 
@@ -6,7 +6,7 @@ import pickle as pk
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
-from caseFile_twoStream1D import *
+from caseFile_landau1D import *
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import cmath as cm
@@ -29,10 +29,10 @@ def update_phase(num,xdata,ydata,lines,KE,dt):
     
     lines = update_lines(num,xdata,ydata,lines)
     
-    return lines 
+    return lines
 
 
-def update_dist(num,xdata,ydata,lines):
+def update_dist(num,xdata,ydata,lines,PE):
     for ydat in ydata:
         ymin = np.min(ydat[num,:])
         ymax = np.max(ydat[num,:])
@@ -43,7 +43,8 @@ def update_dist(num,xdata,ydata,lines):
     mintext = '%.2E' % Decimal(str(ymin))
     maxtext = '%.2E' % Decimal(str(ymax))
     t = '%.2E' % Decimal(str(num*dt))
-    text = (r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']')
+    text = (r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']' 
+                 + '; PE = ' + str(PE[num]))
     dist_text.set_text(text)
         
     lines = update_lines(num,xdata,ydata,lines)
@@ -65,19 +66,20 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1000]
+steps = [200]
 resolutions = [100]
-iterations = [3]
 
-dataRoot = "../data_tsi_particles/"
+dataRoot = "../data_tsi_growth/"
 
 L = 2*pi
-tend = 10
+tend = 20
 
-dx_mag = 0.1
+dx_mag = 0.02
 dx_mode = 1
 
-v = 1
+v = 0
+v_th = 0.5
+
 dv_mag = 0
 dv_mode = 1
 
@@ -95,18 +97,20 @@ plot = True
 restart = False
 restart_ts = 14
 
+
 slow_factor = 1
-############################ Linear Analysis ##################################
-k2 = dx_mode**2
-v2 = v**2
 
-roots = [None,None,None,None]
-roots[0] = cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
-roots[1] = cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
-roots[2] = -cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
-roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
-
-real_slope = roots[1].imag
+############################# Linear Analysis ##################################
+#k2 = dx_mode**2
+#v2 = v**2
+#
+#roots = [None,None,None,None]
+#roots[0] = cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+#roots[1] = cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+#roots[2] = -cm.sqrt(k2 * v2+ omega_p**2 + omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+#roots[3] = -cm.sqrt(k2 * v2+ omega_p**2 - omega_p * cm.sqrt(4*k2*v2+omega_p**2))
+#
+#real_slope = roots[1].imag
 
 ############################ Setup and Run ####################################
 sim_params = {}
@@ -125,20 +129,15 @@ sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
 
-beam1_params['name'] = 'beam1'
-loader1_params['load_type'] = 'direct'
-loader1_params['speciestoLoad'] = [0]
-
-beam2_params['name'] = 'beam2'
-loader2_params['load_type'] = 'direct'
-loader2_params['speciestoLoad'] = [1]
+hot_params['name'] = 'hot'
+hotLoader_params['load_type'] = 'direct'
+hotLoader_params['speciestoLoad'] = [0]
 
 mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
-analysis_params['M'] = 3
+analysis_params['particleIntegrator'] = 'boris_staggered'
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -150,11 +149,11 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = []   
+analysis_params['pre_hook_list'] = ['ES_vel_rewind']
 
+data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
 data_params['plot_limits'] = [1,1,L]
-data_params['dataRootFolder'] = dataRoot
 
 plot_params = {}
 plot_params['legend.fontsize'] = 10
@@ -167,69 +166,60 @@ plot_params['lines.linewidth'] = 2
 plot_params['axes.titlepad'] = 5
 data_params['plot_params'] = plot_params
 
-kppsObject = kpps()
+kppsObject = kpps_class()
+
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
-    dt = tend/Nt
+    data_params['samples'] = 10
     for res in resolutions:
+        ppc = nq/res
+        #nq = ppc*res
+        
+        q = omega_p**2 * L / (nq*a*1)
+        
+        hot_params['nq'] = np.int(nq)
+        hot_params['mq'] = -q
+        hot_params['q'] = q
+        hotLoader_params['pos'] = particle_pos_init(nq,L,dx_mag,dx_mode)
+        hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
+        
         mLoader_params['resolution'] = [2,2,res]
-        for K in iterations:
-            analysis_params['K'] = K
-            ppc = nq/res
-            #nq = ppc*res
-            
-            q = omega_p**2 * L / (nq*a*1)
-            
-            beam1_params['nq'] = np.int(nq)
-            beam1_params['mq'] = -q
-            beam1_params['q'] = q
-            loader1_params['pos'] = particle_pos_init(ppc,res,L,dx_mag,dx_mode)
-            loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
-            
-            beam2_params['nq'] = np.int(nq)
-            beam2_params['mq'] = -q
-            beam2_params['q'] = q
-            loader2_params['pos'] = particle_pos_init(ppc,res,L,-dx_mag,dx_mode)
-            loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
-            
-            mesh_params['node_charge'] = -2*ppc*q
-            
-            species_params = [beam1_params,beam2_params]
-            loader_params = [loader1_params,loader2_params]
-    
-            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
-            sim_params['simID'] = sim_name
-            
-            ## Numerical solution ##
-            model = dict(simSettings=sim_params,
-                         speciesSettings=species_params,
-                         pLoaderSettings=loader_params,
-                         meshSettings=mesh_params,
-                         analysisSettings=analysis_params,
-                         mLoaderSettings=mLoader_params,
-                         dataSettings=data_params)
-            
-            if simulate == True:
-                if restart == True:
-                    DH = kppsObject.restart(dataRoot,sim_name,restart_ts)
-                    sim = DH.controller_obj
-                    sim_name = sim.simID
-                else:
-                    DH = kppsObject.start(**model)
-                    sim = DH.controller_obj
-                    sim_name = sim.simID
+        mesh_params['node_charge'] = -2*ppc*q
+        
+        species_params = [beam1_params,beam2_params]
+        loader_params = [loader1_params,loader2_params]
+
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_params['simID'] = sim_name
+        
+        ## Numerical solution ##
+        model = dict(simSettings=sim_params,
+                     speciesSettings=species_params,
+                     pLoaderSettings=loader_params,
+                     meshSettings=mesh_params,
+                     analysisSettings=analysis_params,
+                     mLoaderSettings=mLoader_params,
+                     dataSettings=data_params)
+        
+        if simulate == True:
+            if restart == True:
+                DH = kppsObject.restart(dataRoot,sim_name,restart_ts)
+                sim = DH.controller_obj
+                sim_name = sim.simID
             else:
-                DH = dataHandler2(**data_params)
-                sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
-            
-            
-            ####################### Analysis and Visualisation ###########################            
+                DH = kppsObject.start(**model)
+                sim = DH.controller_obj
+                sim_name = sim.simID
+        else:
+            DH = dataHandler2(**data_params)
+            sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
+        
+        
+        ####################### Analysis and Visualisation ###########################
             if plot == True:       
-                pData_list = DH.load_p(['pos','vel','KE_sum'],species=['beam1','beam2'],sim_name=sim_name)
+                pData_list = DH.load_p(['pos','vel','KE_sum'],species=['hot',sim_name=sim_name)
                 
                 p1Data_dict = pData_list[0]
-                p2Data_dict = pData_list[1]
                 
                 mData_dict = DH.load_m(['phi','E','rho','dz'],sim_name=sim_name)
                 
@@ -237,14 +227,9 @@ for Nt in steps:
                 Z = np.zeros((DH.samples,res+1),dtype=np.float)
                 Z[:] = np.linspace(0,L,res+1)
                 
-                p1_data = p1Data_dict['pos'][:,:,2]
-                p2_data = p2Data_dict['pos'][:,:,2]
-                
+                p1_data = p1Data_dict['pos'][:,:,2]      
                 v1_data = p1Data_dict['vel'][:,:,2] 
-                v2_data = p2Data_dict['vel'][:,:,2] 
-                
                 v1_max = np.max(v1_data)
-                v2_min = np.min(v2_data)
                 KE_data = p1Data_dict['KE_sum'] + p2Data_dict['KE_sum']
                 
                 rho_data = mData_dict['rho'][:,1,1,:-1]
@@ -295,20 +280,19 @@ for Nt in steps:
                 ## Phase animation setup
                 fig = plt.figure(DH.figureNo+4,dpi=150)
                 p_ax = fig.add_subplot(1,1,1)
-                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
-                line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
+                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
                 p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
                 p_ax.set_xlim([0.0, L])
                 p_ax.set_xlabel('$z$')
                 p_ax.set_ylabel('$v_z$')
                 p_ax.set_ylim([-4,4])
-                p_ax.set_title('Two stream instability phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 p_ax.legend()
                 
                 # Setting data/line lists:
-                pdata = [p1_data,p2_data]
-                vdata = [v1_data,v2_data]
-                phase_lines = [line_p1,line_p2]
+                pdata = [p1_data]
+                vdata = [v1_data]
+                phase_lines = [line_p1]
                 
                 ## Field value animation setup
                 fig2 = plt.figure(DH.figureNo+5,dpi=150)
@@ -320,7 +304,7 @@ for Nt in steps:
                 dist_ax.set_xlabel('$z$')
                 dist_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
                 dist_ax.set_ylim([-0.2, 1.2])
-                dist_ax.set_title('Two stream instability potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                dist_ax.set_title('Landau potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 dist_ax.legend()
                 
                 ## Velocity histogram animation setup
@@ -332,22 +316,12 @@ for Nt in steps:
                 hist_xmax = np.max(hist_data)
                 hist_xmin = np.min(hist_data)
                 n_bins = 40
-                vmag0 = 0.5*(abs(2*v))
+                vmag0 = 0.5*(abs(2*v+v_th))
                 min_vel = -3*vmag0
                 hist_dv = (-2*min_vel)/n_bins
                 hist_bins = []
                 for b in range(0,n_bins):
                     hist_bins.append(min_vel+b*hist_dv)
-                
-                ## Perturbation animation setup
-                fig4 = plt.figure(DH.figureNo+7,dpi=150)
-                pert_ax = fig4.add_subplot(1,1,1)
-                line_perturb = pert_ax.plot(uni_time_evol[0,0:1],dx_evol[0,0:1],'bo')[0]
-                pert_ax.set_xlim([0.0, L])
-                pert_ax.set_xlabel('$z$')
-                pert_ax.set_ylabel('$dz$')
-                pert_ax.set_title('Two stream instability perturbation, Nt=' + str(Nt) +', Nz=' + str(res+1))
-                pert_ax.legend()
                 
                 
                 ## Growth rate plot
@@ -361,7 +335,7 @@ for Nt in steps:
                 growth_ax.set_xlabel('$t$')
                 growth_ax.set_ylabel('log $\phi_{max}$')
                 #growth_ax.set_ylim([-0.001,0.001])
-                growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                growth_ax.set_title('Landau growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 growth_ax.legend()
                 
                 ## Energy plot
@@ -374,7 +348,7 @@ for Nt in steps:
                 energy_ax.set_xlabel('$t$')
                 energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
                 energy_ax.set_ylim([-20,1])
-                energy_ax.set_title('Two stream instability energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                energy_ax.set_title('Landau energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 energy_ax.legend()
                 
                 

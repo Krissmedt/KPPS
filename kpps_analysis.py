@@ -303,17 +303,6 @@ class kpps_analysis:
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
             
-        fig = plt.figure(1,dpi=150)
-        p_ax = fig.add_subplot(1,1,1)
-        p_ax.plot(species_list[0].pos[:,2],species_list[0].vel[:,2],'go',label='Markers')[0]
-        p_ax.plot(species_list[1].pos[:,2],species_list[1].vel[:,2],'bo',label='Cold')[0]
-        p_ax.plot(species_list[2].pos[:,2],species_list[2].vel[:,2],'ro',label='Hot')[0]
-        p_ax.set_xlim([0.0,2*pi])
-        p_ax.set_xlabel('$z$')
-        p_ax.set_ylabel('$v_z$')
-        p_ax.set_ylim([-2,2])
-        p_ax.legend()
-            
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
@@ -758,8 +747,6 @@ class kpps_analysis:
             self.scatter_BC(species,mesh,controller)
 
         mesh.rho += mesh.q/mesh.dv
-        print(mesh.q[1,1,:-2])
-        print(np.sum(mesh.q[1,1,:-2]))
         
         return mesh
     
@@ -771,9 +758,7 @@ class kpps_analysis:
                 ci = self.close_index(species.pos[pii],O,mesh.dh)
                 rpos = species.pos[pii] - O - ci*mesh.dh
                 w = self.quadratic_weights_1d(rpos,mesh.dh)
-                print(mesh.dh)
-                print(rpos)
-                print(w)
+
                 mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],1]] += species.q*w[0]
                 mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],2]] += species.q*w[1]
                 mesh.q[ci[0],ci[1],mesh.scatter_nodes[ci[2],3]] += species.q*w[2]
