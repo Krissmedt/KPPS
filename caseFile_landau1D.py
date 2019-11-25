@@ -26,7 +26,7 @@ def particle_pos_init(nq,L,dx_mag,dx_mode):
     
     
     x0 = [(i+0.5)*spacing for i in range(0,nq)]
-    xi = [dx_mag*math.cos(2*math.pi*dx_mode*x0i/L) for x0i in x0]
+    xi = [dx_mag*math.sin(2*math.pi*dx_mode*x0i/L) for x0i in x0]
     x = [x0[i]+xi[i] for i in range(0,nq)]
     
     pos_list = np.zeros((nq,3),dtype=np.float)
@@ -77,7 +77,6 @@ def ion_bck(species_list,mesh,controller=None,q_bk=None):
     threshold = 1e-10
 
     q_bk[1,1,:-2] += mesh.node_charge
-    print(np.sum(q_bk[1,1,:-1]))
     q_bk[np.abs(q_bk) < threshold] = 0
     
     mesh.q_bk = q_bk

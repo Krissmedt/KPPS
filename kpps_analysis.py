@@ -434,7 +434,7 @@ class kpps_analysis:
         fields.rho[:,:,:] = fields.rho_bk[:,:,:]
         fields.E[:,:,:,:] = fields.E_bk[:,:,:,:]
         fields.B[:,:,:,:] = fields.B_bk[:,:,:,:]
-        
+
         return fields
         
     def coulomb_field(self,species,fields,simulationManager,**kwargs):
@@ -743,7 +743,7 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
-        
+
             self.scatter_BC(species,mesh,controller)
 
         mesh.rho += mesh.q/mesh.dv
@@ -1434,7 +1434,7 @@ class kpps_analysis:
         self.solver_post = self.mirrored_boundary_z
 
     def scatter_periodicBC_1d(self,species,mesh,controller):
-        #mesh.q[1,1,0] += mesh.q[1,1,-2]       
+        mesh.q[1,1,0] += mesh.q[1,1,-2]       
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
         
     def rho_mod_1d(self,species,mesh,controller):
