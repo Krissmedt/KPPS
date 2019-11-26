@@ -65,13 +65,13 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [1000]
+steps = [200]
 resolutions = [256]
 
 dataRoot = "../data_landau/"
 
 L = 2*pi
-tend = 100
+tend = 20
 
 dx_mag = 0.2
 dx_mode = 1
@@ -233,7 +233,7 @@ for Nt in steps:
             
             ## Growth rate phi plot setup
             tA = 0
-            tB = tend
+            tB = 10
             
             NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
             NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -242,11 +242,13 @@ for Nt in steps:
             E2 = E*E
             UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0]
             UE_log = np.log(UE)
+            UE_norm = UE/UE[0]
             energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
             energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
             
             max_phi_data = np.amax(np.abs(phi_data),axis=1)
             max_phi_data_log = np.log(max_phi_data)
+            max_phi_data_norm = max_phi_data/max_phi_data[0]
             growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
             growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
              
@@ -322,6 +324,7 @@ for Nt in steps:
             growth_text.set_text(text)
             growth_ax.set_xlabel('$t$')
             growth_ax.set_ylabel('log $\phi_{max}$')
+            #growth_ax.set_yscale('log')
             #growth_ax.set_ylim([-0.001,0.001])
             growth_ax.set_title('Landau electric potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
             growth_ax.legend()
@@ -333,7 +336,9 @@ for Nt in steps:
             energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="slope")
             energy_text = energy_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
             text = (r'$\gamma_E$ = ' + str(energy_fit[0]))
+            energy_text.set_text(text)
             energy_ax.set_xlabel('$t$')
+            #energy_ax.set_yscale('log')
             energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
             energy_ax.set_title('Landau energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
             energy_ax.legend()
