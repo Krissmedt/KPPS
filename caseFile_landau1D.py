@@ -34,16 +34,22 @@ def particle_pos_init(nq,L,dx_mag,dx_mode):
 
     return pos_list
 
-def particle_pos_init_2sp(ppc,res,L,dist_type='linear'):
-    nq = np.int(ppc*res)
-    dz = L/res
-    spacing = dz/ppc
-    offset = 0.0001
+def ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin'):
+    spacing = L/nq
+    n0 = nq/L
+    
+    x0 = [(i+0.5)*spacing for i in range(0,nq)]
+    
+    if ftype == 'sin':
+        xi = [-dx_mag/(n0*dx_mode)*math.cos(dx_mode*x0i) for x0i in x0]
+    elif ftype == 'cos':
+        xi = [dx_mag/(n0*dx_mode)*math.sin(dx_mode*x0i) for x0i in x0]
+        
+    x = [x0[i]+xi[i] for i in range(0,nq)]
+    
     pos_list = np.zeros((nq,3),dtype=np.float)
+    pos_list[:,2] = np.array(x)
 
-    pos_list[0:np.int(nq/2),2] = np.linspace(0,L-spacing,np.int(nq/2))
-    pos_list[np.int(nq/2):nq,2] = np.linspace(0,L-spacing+offset,np.int(nq/2))
- 
     return pos_list
 
 

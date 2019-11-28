@@ -65,16 +65,16 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [200]
+steps = [500]
 resolutions = [256]
 
 dataRoot = "../data_landau/"
 
-L = 2*pi
-tend = 20
+L = 4*pi
+tend = 50
 
-dx_mag = 0.2
-dx_mode = 1
+dx_mag = 0.01
+dx_mode = 0.5
 
 v = 0
 v_th = 1
@@ -102,7 +102,7 @@ slow_factor = 1
 
 ############################# Linear Analysis ##################################
 k = dx_mode
-n = L/nq
+n = nq/L
 ld = v_th * np.sqrt(1/(n*q*a))
 omega_i = -0.22*sqrt(pi)*(omega_p/(k*v_th))**3 * np.exp(-1/(2 *k**2 *ld**2))
 
