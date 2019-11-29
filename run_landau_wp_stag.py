@@ -65,13 +65,13 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [500]
+steps = [100]
 resolutions = [256]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 50
+tend = 10
 
 dx_mag = 0.01
 dx_mode = 0.5
@@ -85,10 +85,11 @@ dv_mode = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 2**14
+nq = 8000
 a = -1
 omega_p = 1
-q = omega_p**2 * L / (nq*a*1)
+#q = omega_p**2 * L / (nq*a*1)
+q = L/nq
 
 prefix = 'TE'+str(tend)
 simulate = True
@@ -170,7 +171,7 @@ for Nt in steps:
         hot_params['nq'] = np.int(nq)
         hot_params['mq'] = -q
         hot_params['q'] = q
-        hotLoader_params['pos'] = particle_pos_init(nq,L,dx_mag,dx_mode)
+        hotLoader_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
         hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
         
         mLoader_params['resolution'] = [2,2,res]
@@ -232,8 +233,8 @@ for Nt in steps:
             phi_data = mData_dict['phi'][:,1,1,:-1]
             
             ## Growth rate phi plot setup
-            tA = 0
-            tB = 10
+            tA = 1
+            tB = 30
             
             NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
             NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -243,14 +244,18 @@ for Nt in steps:
             UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0]
             UE_log = np.log(UE)
             UE_norm = UE/UE[0]
+            
+            EL2 = np.sum(E*E,axis=1)
+            EL2 = np.sqrt(EL2)
+            
             energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
             energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
             
             max_phi_data = np.amax(np.abs(phi_data),axis=1)
             max_phi_data_log = np.log(max_phi_data)
             max_phi_data_norm = max_phi_data/max_phi_data[0]
-            growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
-            growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+            enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
+            enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
              
             
             ## Phase animation setup
@@ -314,18 +319,18 @@ for Nt in steps:
             perturb_ax.set_ylabel('$x_i$')
             perturb_ax.set_ylim([-dx_mag*1.2,dx_mag*1.2])
             
-            ## Growth rate plot
+            ## Electric field norm plot
             fig6 = plt.figure(DH.figureNo+9,dpi=150)
             growth_ax = fig6.add_subplot(1,1,1)
-            growth_ax.plot(tArray,max_phi_data_log,'blue',label="$\phi$ growth")
-            growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="slope")
+            growth_ax.plot(tArray,EL2,'blue',label="$\phi$ growth")
+            growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="slope")
             growth_text = growth_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
             text = (r'$\gamma$ = ' + str(growth_fit[0]))
             growth_text.set_text(text)
             growth_ax.set_xlabel('$t$')
             growth_ax.set_ylabel('log $\phi_{max}$')
-            #growth_ax.set_yscale('log')
-            #growth_ax.set_ylim([-0.001,0.001])
+            growth_ax.set_yscale('log')
+            growth_ax.set_ylim([10**-7,10**-1])
             growth_ax.set_title('Landau electric potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
             growth_ax.legend()
             
