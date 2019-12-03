@@ -9,58 +9,63 @@ import matplotlib.animation as animation
 import random
 from mesh import mesh
 
-def w1(x,H,C):
-    w = (x**2 + 3*H*x + 2*H**2 + C)/(2*H**2)
-    return w
+#def f(x,v,A,k):
+#    f = 1/np.sqrt(2*np.pi) * (1+A*np.cos(k*x))*np.exp(-v**2/2)
+#    return f
+#
+#def n(x,A,k):
+#    n = (1+A*np.cos(k*x))
+#    return n
+#
+#N = 1000
+#L = 4*math.pi
+#x = np.linspace(0,L,N)
+#v = np.linspace(-4,4,N)
+#
+#A = 0.01
+#k = 0.5
+#
+#fmat = np.zeros((len(x),len(v)),dtype=np.float)
+#for i in range(0,len(x)):
+#    for j in range(0,len(v)):
+#        fmat[j,i] = f(x[i],v[j],A,k)
+#
+#
+#fig = plt.figure(1)
+#ax = fig.add_subplot(111)
+#ax.plot(x,n(x,A,k),label='n')
+#ax.legend()
+#
+#fig = plt.figure(2)
+#ax = fig.add_subplot(111)
+#ax.contourf(x,v,fmat)
+
+
+def vel_dist(vel_data_list,res,v_min,v_max):
+    # takes list of 1D velocity data numpy arrays
     
-def w2(x,H,C):
-    w = 1-(x**2+C)/(H**2)
-    return w
+    conc_data = np.array([])
+    for i in range(0,len(vel_data_list)):
+        conc_data = np.concatenate((conc_data,vel_data_list[i]))
 
-def w3(x,H,C):
-    w = (x**2 - 3*H*x + 2*H**2 + C)/(2*H**2)
-    return w
-
-H = 1
-C = H**2/4
-res = 1000
-L = 3*H
-dx = L/res
-X = []
-W1 = []
-W2 = []
-W3 = []
-
-for xi in range(0,res):
-    x = -3*H/2 + xi*dx
-    y1 = w1(x,H,C)
-    y2 = w2(x,H,C)
-    y3 = w3(x,H,C)
+    sorted_data = np.sort(conc_data)
     
-    X.append(x)
-    W1.append(y1)
-    W2.append(y2)
-    W3.append(y3)
+    dv = (v_max-v_min)/res
+    bins = np.floor(sorted_data/dv)
     
+    for i in range(0,res):
+        # assign number in each bin to dv bins
+
+        
     
-sample_x = 0
-h1 = -1 - sample_x
-h2 =  0 - sample_x
-h3 = 1 - sample_x
+    return bins
+        
+        
+        
+a = np.array([1,3,8,1,9,2])
+b = np.array([5,5,5,6,3,7,10])
+c = np.array([9,7,8,6,3,5,4,1,2])
+d = np.array([6,3,4,5,8,9,7,8,2,1,3])
+dist = [a,b,c,d]
 
-w_1 = w1(h1,H,C)
-w_2 = w2(h2,H,C)
-w_3 = w3(h3,H,C)
-
-print(w_1)
-print(w_2)
-print(w_3)
-print(w_1+w_2+w_3)
-
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.plot(X,W1,label='w1')
-ax.plot(X,W2,label='w2')
-ax.plot(X,W3,label='w3')
-
-ax.legend()
+data = vel_dist(dist,10,0,10)

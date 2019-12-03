@@ -36,7 +36,7 @@ def particle_pos_init(nq,L,dx_mag,dx_mode):
 
 def ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin'):
     spacing = L/nq
-    n0 = nq/L
+    n0 = 1
     
     x0 = [(i+0.5)*spacing for i in range(0,nq)]
     
@@ -61,18 +61,6 @@ def particle_vel_init(pos_list,v,dv_mag,dv_mode):
         
     return vel_list
 
-def particle_vel_init_2sp(pos_list,v,k,a):
-    vel_list = np.zeros(pos_list.shape,dtype=np.float)
-    for pii in range(0,np.int(pos_list.shape[0]/2)):
-        z = pos_list[pii,2]
-        vel_list[pii,2] =  v + k*sin(a*z)
-        
-    for pii in range(np.int(pos_list.shape[0]/2),pos_list.shape[0]):
-        z = pos_list[pii,2]
-        vel_list[pii,2] =  -v + k*sin(a*z)
-
-    return vel_list
-
 
 def bc_pot(pos):
     phi = 0
@@ -88,3 +76,13 @@ def ion_bck(species_list,mesh,controller=None,q_bk=None):
     mesh.q_bk = q_bk
     return q_bk
 
+
+def vel_dist(vel_data_list,res,v_off):
+    # takes list of 1D velocity data numpy arrays
+    
+    conc_data = vel_data_list[0]
+    if len(vel_data_list>1):
+    for i in range(1,len(vel_data_list)+):
+        conc_data = conc_data
+    for i in range(0,res):
+        
