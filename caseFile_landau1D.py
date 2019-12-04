@@ -6,6 +6,11 @@ import random
 from mpl_toolkits.mplot3d import Axes3D
 
 def particle_vel_maxwellian(pos_list,v,v_th):
+    # initialise an evenly populated velocity phase-spaced corresponding to:
+    # pos_list: NQx3 array of particle positions
+    # v: Bulk particle velocity (mean vel of all particles together)
+    # v_th: Thermal speed defined as v_th = sqrt(2*k_B*T/mq)
+    
     vel_list = np.zeros(pos_list.shape,dtype=np.float)
     vel_list[:] = v
     for pii in range(0,pos_list.shape[0]-1,2):
@@ -77,12 +82,36 @@ def ion_bck(species_list,mesh,controller=None,q_bk=None):
     return q_bk
 
 
-def vel_dist(vel_data_list,res,v_off):
-    # takes list of 1D velocity data numpy arrays
+def vel_dist(vel_data_list,res,v_min,v_max):
+    # Produce the probability distribution function f, from particle samples
+    # of velocity. 
+    # vel_data: List of 1D arrays of velocity values (each array a species)
+    # res: Resolution desired in plotting (balance vs. total particle count)
+    # v_min: Minimum velocity (smaller than smallest sample)
+    # v_max: Maximum velocity (larger than largest sample)
     
-    conc_data = vel_data_list[0]
-    if len(vel_data_list>1):
-    for i in range(1,len(vel_data_list)+):
-        conc_data = conc_data
-    for i in range(0,res):
+    conc_data = np.array([])
+    for i in range(0,len(vel_data_list)):
+        conc_data = np.concatenate((conc_data,vel_data_list[i]))
+
+    sorted_data = np.sort(conc_data)
+    mapped_data = sorted_data - v_min
+
+    dv = (v_max-v_min)/res
+    v_array = np.linspace(v_min,v_max-dv,res) + dv/2
+    cells = np.floor(mapped_data/dv)
+    unique, counts = np.unique(cells,return_counts=True)
+    
+    vel_dist = np.zeros(res,dtype=np.float)
+    
+    j = 0
+    for i in unique:
+        i = int(i)
+        vel_dist[i] = counts[j]
+        j += 1
         
+    vel_dist = vel_dist/conc_data.shape[0]/dv # probability per unit dv
+    
+    return v_array, vel_dist
+
+
