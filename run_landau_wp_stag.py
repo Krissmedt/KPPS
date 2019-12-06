@@ -18,7 +18,7 @@ def update_line(num, xdata,ydata, line):
 
 def update_lines(num, xdata,ydata, lines):
     for xdat,ydat,line in zip(xdata,ydata,lines):
-        line.set_data(xdat[num,:],ydat[num,:])
+        line.set_data(xdat[0,:],ydat[num,:])
         
     return lines
 
@@ -27,7 +27,8 @@ def update_phase(num,xdata,ydata,lines,KE,dt):
     text = r't = '+ t + '; KE = ' + str(KE[num])
     p_text.set_text(text)
     
-    lines = update_lines(num,xdata,ydata,lines)
+    for xdat,ydat,line in zip(xdata,ydata,lines):
+        line.set_data(xdat[num,:],ydat[num,:])
     
     return lines 
 
@@ -42,22 +43,14 @@ def update_contour(num, xgrid,ygrid,fgrid, contour_obj,f_ax):
     return contour_obj
 
 
-def update_field(num,xdata,ydata,lines):
-    yhs = []
-    for ydat in ydata:
-        ymin = np.min(ydat[num,:])
-        ymax = np.max(ydat[num,:])
-        ydat[num,:] = ydat[num,:] - ymin
-        yh = ymax-ymin + 0.0001
-        ydat[num,:] = ydat[num,:]/yh
-        yhs.append(yh)
-    
-    phitext = '%.2E' % Decimal(str(yhs[1]))
-    rhotext = '%.2E' % Decimal(str(yhs[0]))
-    t = '%.2E' % Decimal(str(num*dt))
+def update_field(num,xdata,ydata,lines,rho_mag,phi_mag):
+
+    phitext = '%.2E' % Decimal(str(phi_mag[num]))
+    rhotext = '%.2E' % Decimal(str(rho_mag[num]))
+    t = '%.2E' % Decimal(str((num)*dt))
     text = (r't = '+ t +r'; $\phi$ = ' + phitext + r'; $\rho$ = ' + rhotext)
     field_text.set_text(text)
-        
+    
     lines = update_lines(num,xdata,ydata,lines)
     
     return lines
@@ -100,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [1]
-resolutions = [100]
+steps = [300]
+resolutions = [256]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 0.1
+tend = 30
 
 dx_mag = 0.01
 dx_mode = 0.5
@@ -115,9 +108,9 @@ v = 0
 v_th = 2
 
 dv_mag = 0
-dv_mode = 1
+dv_mode = 0
 
-v_off = 5
+v_off = 10
 plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
@@ -129,7 +122,7 @@ omega_p = 1
 q = L/nq
 
 prefix = 'TE'+str(tend)
-simulate = True
+simulate = False
 plot = True
 
 restart = False
@@ -217,11 +210,10 @@ for Nt in steps:
         hot_params['mq'] = -q
         hot_params['q'] = q
         hotLoader_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
-        hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
+        hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th,v_off=v_off)
         
         mLoader_params['resolution'] = [2,2,res]
         mesh_params['node_charge'] = -ppc*q
-        mesh_params['node_charge'] = 0
         
         species_params = [hot_params]
         loader_params = [hotLoader_params]
@@ -294,14 +286,24 @@ for Nt in steps:
             EL2 = np.sum(E*E,axis=1)
             EL2 = np.sqrt(EL2)
             
-            energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
-            energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
+            phi_mag = np.max(phi_data,axis=1) - np.min(phi_data,axis=1)
+            rho_mag = np.max(rho_data,axis=1) - np.min(rho_data,axis=1)
+            
+            phi1 = phi_data/phi_mag[:,np.newaxis]
+            rho1 = rho_data/rho_mag[:,np.newaxis]
+
             
             max_phi_data = np.amax(np.abs(phi_data),axis=1)
             max_phi_data_log = np.log(max_phi_data)
             max_phi_data_norm = max_phi_data/max_phi_data[0]
-            enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
-            enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
+            
+            try:
+                energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
+                energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
+                enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
+                enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
+            except:
+                pass
             
             v_array = mData_dict['v_array']
             v_dist = mData_dict['dist']
@@ -309,8 +311,7 @@ for Nt in steps:
             gridx = mData_dict['grid_x'][0,:,:]
             gridv = mData_dict['grid_v'][0,:,:]
             f = mData_dict['f']
-             
-            
+                 
 #            ## Phase animation setup
 #            fig = plt.figure(DH.figureNo+4,dpi=150)
 #            p_ax = fig.add_subplot(1,1,1)
@@ -344,16 +345,21 @@ for Nt in steps:
             ## Field value animation setup
             fig2 = plt.figure(DH.figureNo+6,dpi=150)
             field_ax = fig2.add_subplot(1,1,1)
-            rho_line = field_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
-            #phi_line = field_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
+            rho_line = field_ax.plot(Z[0,:],rho1[0,:],label=r'charge dens. $\rho_z$')[0]
+            phi_line = field_ax.plot(Z[0,:],phi1[0,:],label=r'potential $\phi_z$')[0]
             field_text = field_ax.text(.05,.05,'',transform=field_ax.transAxes,verticalalignment='bottom',fontsize=14)
             field_ax.set_xlim([0.0, L])
             field_ax.set_xlabel('$z$')
             field_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
-            #field_ax.set_ylim([-0.2, 1.2])
+            field_ax.set_ylim([-0.2, 1.2])
             field_ax.set_title('Landau potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
             field_ax.legend()
             fig2.savefig(dataRoot + sim_name + '_rho.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            
+            # Setting data/line lists:
+            xdata = [Z,Z]
+            ydata = [rho1,phi1]
+            lines = [rho_line,phi_line]
             
             ## Velocity distribution animation setup
             fig3 = plt.figure(DH.figureNo+7,dpi=150)
@@ -381,10 +387,7 @@ for Nt in steps:
             fig6 = plt.figure(DH.figureNo+9,dpi=150)
             growth_ax = fig6.add_subplot(1,1,1)
             growth_ax.plot(tArray,EL2,'blue',label="$\phi$ growth")
-            growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="slope")
             growth_text = growth_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
-            text = (r'$\gamma$ = ' + str(enorm_fit[0]))
-            growth_text.set_text(text)
             growth_ax.set_xlabel('$t$')
             growth_ax.set_ylabel('log $\phi_{max}$')
             growth_ax.set_yscale('log')
@@ -392,49 +395,52 @@ for Nt in steps:
             growth_ax.set_title('Landau electric potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
             growth_ax.legend()
             
+            
             ## Energy plot
             fig7 = plt.figure(DH.figureNo+10,dpi=150)
             energy_ax = fig7.add_subplot(1,1,1)
             energy_ax.plot(tArray,UE_log,'blue',label="Energy growth")
-            energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="slope")
             energy_text = energy_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
-            text = (r'$\gamma_E$ = ' + str(energy_fit[0]))
-            energy_text.set_text(text)
             energy_ax.set_xlabel('$t$')
             #energy_ax.set_yscale('log')
             energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
             energy_ax.set_title('Landau energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
             energy_ax.legend()
             
-            
-            # Setting data/line lists:
-            xdata = [Z,Z]
-            ydata = [rho_data,phi_data]
-            lines = [rho_line,phi_line]
-
-            #fps = 1/(sim.dt*DH.samplePeriod)
-            fps = 1
+            try:
+                growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="slope")
+                text = (r'$\gamma$ = ' + str(enorm_fit[0]))
+                growth_text.set_text(text)
+                
+                energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="slope")
+                text = (r'$\gamma_E$ = ' + str(energy_fit[0]))
+                energy_text.set_text(text)
+            except:
+                pass
+                
+            fps = 1/(sim.dt*DH.samplePeriod)
+            #fps = 1
             # Creating the Animation object
-#            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples, 
+#            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples+1, 
 #                                               fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
 #                                               interval=1000/fps)
-            
-            dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples, 
+
+            dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples+1, 
                                                fargs=(gridx,gridv,f,cont,f_ax),
                                                interval=1000/fps)
             
             
-#            field_ani = animation.FuncAnimation(fig2, update_field, DH.samples, 
-#                                               fargs=(xdata,ydata,lines),
-#                                               interval=1000/fps)
+            field_ani = animation.FuncAnimation(fig2, update_field, DH.samples+1, 
+                                               fargs=(xdata,ydata,lines,rho_mag,phi_mag),
+                                               interval=1000/fps)
             
-            vel_dist_ani = animation.FuncAnimation(fig3, update_line, DH.samples, 
+            vel_dist_ani = animation.FuncAnimation(fig3, update_line, DH.samples+1, 
                                                fargs=(v_array,v_dist,dist_line),
                                                interval=1000/fps)
             
 #            phase_ani.save(dataRoot +sim_name+'_phase.mp4')
             dens_dist_ani.save(dataRoot +sim_name+'_density.mp4')
-            #field_ani.save(dataRoot +sim_name+'_field.mp4')
+            field_ani.save(dataRoot +sim_name+'_field.mp4')
             vel_dist_ani.save(dataRoot +sim_name+'_dist.mp4')
             fig6.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             fig7.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

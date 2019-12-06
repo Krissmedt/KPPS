@@ -21,12 +21,12 @@ def particle_vel_maxwellian(pos_list,v,v_th,v_off=4):
         
         V0 = v_th/np.sqrt(2) * Z0
         V1 = v_th/np.sqrt(2) * Z1
-        
-        V0 = -v_off if V0 < -v_off else V0
-        V0 = v_off if V0 > v_off else V0
-        V1 = -v_off if V1 < -v_off else V1
-        V1 = v_off if V1 > v_off else V1
             
+#        V0 = -v_off if V0 < -v_off else V0
+#        V0 = v_off if V0 > v_off else V0
+#        V1 = -v_off if V1 < -v_off else V1
+#        V1 = v_off if V1 > v_off else V1
+
         vel_list[pii,2] += V0
         vel_list[pii+1,2] += V1
 
@@ -95,23 +95,28 @@ def vel_dist(vel_data_list,res,v_min,v_max):
     # res: Resolution desired in plotting (balance vs. total particle count)
     # v_min: Minimum velocity (smaller than smallest sample)
     # v_max: Maximum velocity (larger than largest sample)
+    
 
     conc_data = np.array([])
     for i in range(0,len(vel_data_list)):
         conc_data = np.concatenate((conc_data,vel_data_list[i]))
+        
+    over_max = conc_data > v_max
+    under_min = conc_data < v_min
+
+    conc_data[over_max] = v_max
+    conc_data[under_min] = v_min
 
     sorted_data = np.sort(conc_data)
     mapped_data = sorted_data - v_min
 
     dv = (v_max-v_min)/res
-    v_array = np.linspace(v_min,v_max-dv,res) + dv/2
+    v_array = np.linspace(v_min,v_max-dv,res+1) + dv/2
     cells = np.floor(mapped_data/dv)
     unique, counts = np.unique(cells,return_counts=True)
 
-    vel_dist = np.zeros(res,dtype=np.float)
-#    print(conc_data-v_min)
-#    print(unique)
-#    print(cells)
+    vel_dist = np.zeros(res+1,dtype=np.float)
+    
     j = 0
     for i in unique:
         i = int(i)
@@ -151,7 +156,11 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
         pos_data = np.concatenate((pos_data,pos_data_list[i]))
         vel_data = np.concatenate((vel_data,vel_data_list[i]))
         
+    over_max = vel_data > v_off
+    under_min = vel_data < -v_off
 
+    vel_data[over_max] = v_off
+    vel_data[under_min] = -v_off
 
     for pii in range(0,pos_data.shape[0]):
         lix = np.int(pos_data[pii]/dx)
