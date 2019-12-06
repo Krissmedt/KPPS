@@ -80,48 +80,46 @@ def vel_dist(vel_data_list,res,v_min,v_max):
 
 
 def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
-    # Use griddata library to establish particle density in 1D phase-space
+    # Use linear interpolation to establish particle density in 1D phase-space
     # as mesh data for use in contour plotting (numpy).
     # pos_data: list of 1D arrays of particle position (each array a species)
     # vel_data: list of 1D arrays of particle velocity (each array a species)
     # xres: desired density data resolution in position
     # xres: desired density data resolution in velocity
+    # v_off: cutoff velocity for domain v = [-v_off, v_off]
+    # L: domain length in x for domain x = [0,L]
     
-    xi = np.linspace(-1,1,xres)
-    vi = np.linspace(-1,1,vres)
+    xi = np.linspace(0,L,xres+1)
+    vi = np.linspace(-v_off,v_off,vres+1)
     
     grid_x, grid_v = np.meshgrid(xi,vi)
-    
+    f = np.zeros(grid_x.shape,dtype=np.float)
+
     pos_data = np.array([])
     vel_data = np.array([])
     for i in range(0,len(vel_data_list)):
         pos_data = np.concatenate((pos_data,pos_data_list[i]))
         vel_data = np.concatenate((vel_data,vel_data_list[i]))
         
-    xv = np.array(pos_data,vel_data)
-        
     dx = L/xres
     dv = 2*v_off/vres
 
-    for species in species_list:
-        for pii in range(0,species.nq):
-            li = 
-            rpos = species.pos[pii] - O - li*mesh.dh
-            w = self.trilinear_weights(rpos,mesh.dh)
-
-            mesh.q[li[0],li[1],li[2]] += species.q * w[0]
-            mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
-            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
-            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
-            mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
-            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
-            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
-            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
+    for pii in range(0,pos_data.shape[0]):
+        lix = np.int(pos_data[pii]/dx)
+        liv = np.int((vel_data[pii]+v_off)/dv) 
+        hx = (pos_data[pii] - lix*dx)/dx
+        hv = (vel_data[pii] + v_off - liv*dv)/dv
         
-    return grid_x,grid_v
+        f[liv,lix] += (1-hx)*(1-hv)
+        f[liv+1,lix] += (1-hx)*(hv)
+        f[liv,lix+1] += (hx)*(1-hv)
+        f[liv+1,lix] += (hx)*(hv)
+
+
+    return grid_x,grid_v,f
     
         
-nq = 100000
+nq = 200000
 res = 100
 v_th = 1
 v_off = 4
@@ -141,19 +139,24 @@ vel1 = particle_vel_maxwellian(pos1,0,1)[:,2]
 vel2 = particle_vel_maxwellian(pos2,0,1)[:,2]
 vel_list = [vel1,vel2]
 
-gridx, gridv = calc_density_mesh(pos_list,vel_list,res,res)
+gridx, gridv,dens = calc_density_mesh(pos_list,vel_list,res,res,v_off,1)
+
+fig = plt.figure(1)
+ax_n = fig.add_subplot(111)
+cont = ax_n.contourf(gridx,gridv,dens,cmap='inferno')
+cont.set_clim(0,np.max(dens))
+cbar = plt.colorbar(cont,ax=ax_n)
 
 
-#vs, dist = vel_dist(dist,res,-v_off,v_off)
-#f = np.sqrt(1/np.pi) * 1/v_th * np.exp(-np.power(vs,2)/(v_th**2))
-#
-#dist = dist/nq/dv
-#dist_int = np.sum(dist) * dv
-#
-#fig = plt.figure(1)
-#ax = fig.add_subplot(111)
-#ax.plot(vs,dist)
-#ax.plot(vs,f)
-#ax.legend()
+
+vs, dist = vel_dist(vel_list,res,-v_off,v_off)
+f = np.sqrt(1/np.pi) * 1/v_th * np.exp(-np.power(vs,2)/(v_th**2))
+dist_int = np.sum(dist) * dv
+
+fig = plt.figure(2)
+ax = fig.add_subplot(111)
+ax.plot(vs,dist)
+ax.plot(vs,f)
+ax.legend()
 
 

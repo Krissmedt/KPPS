@@ -285,7 +285,7 @@ class kpps_analysis:
         for method in self.hooks:
             #print(method)
             method(species_list,fields,**kwargs)
-            
+
         return species_list, fields
     
     
@@ -1568,6 +1568,7 @@ class kpps_analysis:
             rhs_eval = 0
             
         return rhs_eval
+    
 
 ############################ Misc. functionality ##############################
         

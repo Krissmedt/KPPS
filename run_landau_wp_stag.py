@@ -31,20 +31,32 @@ def update_phase(num,xdata,ydata,lines,KE,dt):
     
     return lines 
 
+def update_contour(num, xgrid,ygrid,fgrid, contour_obj,f_ax):
+    for c in contour_obj.collections:
+        contour_obj.collections.remove(c)
+        
+    contour_obj.collections = []
+        
+    contour_obj = f_ax.contourf(xgrid,ygrid,fgrid[num,:,:],cmap='inferno')
+        
+    return contour_obj
 
-def update_dist(num,xdata,ydata,lines):
+
+def update_field(num,xdata,ydata,lines):
+    yhs = []
     for ydat in ydata:
         ymin = np.min(ydat[num,:])
         ymax = np.max(ydat[num,:])
         ydat[num,:] = ydat[num,:] - ymin
         yh = ymax-ymin + 0.0001
         ydat[num,:] = ydat[num,:]/yh
+        yhs.append(yh)
     
-    mintext = '%.2E' % Decimal(str(ymin))
-    maxtext = '%.2E' % Decimal(str(ymax))
+    phitext = '%.2E' % Decimal(str(yhs[1]))
+    rhotext = '%.2E' % Decimal(str(yhs[0]))
     t = '%.2E' % Decimal(str(num*dt))
-    text = (r't = '+ t +'; $\phi$ = [' + mintext +' : '+ maxtext + ']')
-    dist_text.set_text(text)
+    text = (r't = '+ t +r'; $\phi$ = ' + phitext + r'; $\rho$ = ' + rhotext)
+    field_text.set_text(text)
         
     lines = update_lines(num,xdata,ydata,lines)
     
@@ -65,27 +77,52 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
-steps = [100]
-resolutions = [256]
+
+def vel_dist_1d(species_list,fields,controller='',**kwargs):
+    plot_res = controller.plot_res
+    v_off = controller.v_off
+    
+    vel_data_list = [species_list[0].vel[:,2]]
+    fields.v_array, fields.dist = vel_dist(vel_data_list,plot_res,-v_off,v_off)
+
+    return species_list,fields
+
+
+def plot_density_1d(species_list,fields,controller='',**kwargs):
+    plot_res = controller.plot_res
+    v_off = controller.v_off
+    
+    pos_data_list = [species_list[0].pos[:,2]]
+    vel_data_list = [species_list[0].vel[:,2]]
+    fields.grid_x,fields.grid_v,fields.f = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    
+    return species_list, fields
+    
+    
+
+steps = [1]
+resolutions = [100]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 10
+tend = 0.1
 
 dx_mag = 0.01
 dx_mode = 0.5
 
 v = 0
-v_th = 1
+v_th = 2
 
 dv_mag = 0
 dv_mode = 1
 
+v_off = 5
+plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 8000
+nq = 2**14
 a = -1
 omega_p = 1
 #q = omega_p**2 * L / (nq*a*1)
@@ -121,10 +158,18 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [0,L]
+sim_params['plot_res'] = plot_res
+sim_params['v_off'] = v_off
 
 hot_params['name'] = 'hot'
 hotLoader_params['load_type'] = 'direct'
 hotLoader_params['speciestoLoad'] = [0]
+
+mesh_params['v_array'] = 0
+mesh_params['dist'] = 0
+mesh_params['grid_x'] = 0
+mesh_params['grid_v'] = 0
+mesh_params['f'] = 0
 
 mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
@@ -140,9 +185,9 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['hooks'] = ['kinetic_energy','field_energy']
+analysis_params['hooks'] = ['kinetic_energy','field_energy',vel_dist_1d,plot_density_1d]
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = ['ES_vel_rewind']
+analysis_params['pre_hook_list'] = ['ES_vel_rewind',vel_dist_1d,plot_density_1d]
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
@@ -176,6 +221,7 @@ for Nt in steps:
         
         mLoader_params['resolution'] = [2,2,res]
         mesh_params['node_charge'] = -ppc*q
+        mesh_params['node_charge'] = 0
         
         species_params = [hot_params]
         loader_params = [hotLoader_params]
@@ -213,7 +259,7 @@ for Nt in steps:
             
             p1Data_dict = pData_list[0]
             
-            mData_dict = DH.load_m(['phi','E','rho','q','dz'],sim_name=sim_name)
+            mData_dict = DH.load_m(['phi','E','rho','q','dz','v_array','dist','grid_x','grid_v','f'],sim_name=sim_name)
             
             tArray = mData_dict['t']
             Z = np.zeros((DH.samples,res+1),dtype=np.float)
@@ -233,8 +279,8 @@ for Nt in steps:
             phi_data = mData_dict['phi'][:,1,1,:-1]
             
             ## Growth rate phi plot setup
-            tA = 1
-            tB = 30
+            tA = 0
+            tB = 0.1
             
             NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
             NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -256,55 +302,67 @@ for Nt in steps:
             max_phi_data_norm = max_phi_data/max_phi_data[0]
             enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
             enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
+            
+            v_array = mData_dict['v_array']
+            v_dist = mData_dict['dist']
+            
+            gridx = mData_dict['grid_x'][0,:,:]
+            gridv = mData_dict['grid_v'][0,:,:]
+            f = mData_dict['f']
              
             
-            ## Phase animation setup
-            fig = plt.figure(DH.figureNo+4,dpi=150)
-            p_ax = fig.add_subplot(1,1,1)
-            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
-            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
-            p_ax.set_xlim([0.0, L])
-            p_ax.set_xlabel('$z$')
-            p_ax.set_ylabel('$v_z$')
-            p_ax.set_ylim([-4,4])
-            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
-            p_ax.legend()
-            
-            # Setting data/line lists:
-            pdata = [p1_data]
-            vdata = [v1_data]
-            phase_lines = [line_p1]
+#            ## Phase animation setup
+#            fig = plt.figure(DH.figureNo+4,dpi=150)
+#            p_ax = fig.add_subplot(1,1,1)
+#            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
+#            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
+#            p_ax.set_xlim([0.0, L])
+#            p_ax.set_xlabel('$z$')
+#            p_ax.set_ylabel('$v_z$')
+#            p_ax.set_ylim([-4,4])
+#            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
+#            p_ax.legend()
+#            
+#            # Setting data/line lists:
+#            pdata = [p1_data]
+#            vdata = [v1_data]
+#            phase_lines = [line_p1]
+#            
+            ## Phase density animation setup
+            fig_f = plt.figure(DH.figureNo+5,dpi=150)
+            f_ax = fig_f.add_subplot(1,1,1)
+            cont = f_ax.contourf(gridx,gridv,f[0,:,:],cmap='inferno')
+            cont.set_clim(0,np.max(f))
+            cbar = plt.colorbar(cont,ax=f_ax)
+            f_ax.set_xlim([0.0, L])
+            f_ax.set_xlabel('$z$')
+            f_ax.set_ylabel('$v_z$')
+            f_ax.set_ylim([-v_off,v_off])
+            f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            f_ax.legend()
             
             ## Field value animation setup
-            fig2 = plt.figure(DH.figureNo+5,dpi=150)
-            dist_ax = fig2.add_subplot(1,1,1)
-            rho_line = dist_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
-            phi_line = dist_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
-            dist_text = dist_ax.text(.05,.05,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
-            dist_ax.set_xlim([0.0, L])
-            dist_ax.set_xlabel('$z$')
-            dist_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
-            dist_ax.set_ylim([-0.2, 1.2])
-            dist_ax.set_title('Landau potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
-            dist_ax.legend()
+            fig2 = plt.figure(DH.figureNo+6,dpi=150)
+            field_ax = fig2.add_subplot(1,1,1)
+            rho_line = field_ax.plot(Z[0,:],rho_data[0,:],label=r'charge dens. $\rho_z$')[0]
+            #phi_line = field_ax.plot(Z[0,:],phi_data[0,:],label=r'potential $\phi_z$')[0]
+            field_text = field_ax.text(.05,.05,'',transform=field_ax.transAxes,verticalalignment='bottom',fontsize=14)
+            field_ax.set_xlim([0.0, L])
+            field_ax.set_xlabel('$z$')
+            field_ax.set_ylabel(r'$\rho_z$/$\phi_z$')
+            #field_ax.set_ylim([-0.2, 1.2])
+            field_ax.set_title('Landau potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            field_ax.legend()
+            fig2.savefig(dataRoot + sim_name + '_rho.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             
-            ## Velocity histogram animation setup
-            hist_data = v1_data
-            fig3 = plt.figure(DH.figureNo+6,dpi=150)
-            hist_ax = fig3.add_subplot(1,1,1)
-            hist_text = hist_ax.text(.75,.75,'',transform=dist_ax.transAxes,verticalalignment='top',fontsize=14)
-            hist_ymax = int(ppc*res/3)
-            hist_xmax = np.max(hist_data)
-            hist_xmin = np.min(hist_data)
-            hist_xmin = -5
-            hist_xmax =5
-            n_bins = 40
-            vmag0 = 0.5*(abs(2*(v+v_th)))
-            min_vel = hist_xmin
-            hist_dv = (hist_xmax-hist_xmin)/n_bins
-            hist_bins = []
-            for b in range(0,n_bins):
-                hist_bins.append(min_vel+b*hist_dv)
+            ## Velocity distribution animation setup
+            fig3 = plt.figure(DH.figureNo+7,dpi=150)
+            dist_ax = fig3.add_subplot(1,1,1)
+            dist_line = dist_ax.plot(v_array[0,:],v_dist[0,:])[0]
+            dist_ax.set_xlim([-v_off, v_off])
+            dist_ax.set_xlabel('$v_z$')
+            dist_ax.set_ylabel(r'$f$')
+            dist_ax.set_title('Landau velocity distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
             
             ## Perturbation plot
             fig5 = plt.figure(DH.figureNo+8,dpi=75)
@@ -312,7 +370,7 @@ for Nt in steps:
             nq = p1_data.shape[1]
             spacing = L/nq
             x0 = [(i+0.5)*spacing for i in range(0,nq)]
-            xi2 = particle_pos_init(nq,L,dx_mag,dx_mode)
+            xi2 = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
             perturb_ax.plot(x0,p1_data[0,:]-x0,'blue')
             perturb_ax.plot(x0,xi2[:,2]-x0,'orange')
             perturb_ax.set_xlabel('$x_{uniform}$')
@@ -325,7 +383,7 @@ for Nt in steps:
             growth_ax.plot(tArray,EL2,'blue',label="$\phi$ growth")
             growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="slope")
             growth_text = growth_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
-            text = (r'$\gamma$ = ' + str(growth_fit[0]))
+            text = (r'$\gamma$ = ' + str(enorm_fit[0]))
             growth_text.set_text(text)
             growth_ax.set_xlabel('$t$')
             growth_ax.set_ylabel('log $\phi_{max}$')
@@ -354,25 +412,30 @@ for Nt in steps:
             ydata = [rho_data,phi_data]
             lines = [rho_line,phi_line]
 
-            fps = 1/(sim.dt*DH.samplePeriod)
+            #fps = 1/(sim.dt*DH.samplePeriod)
+            fps = 1
             # Creating the Animation object
-            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples, 
-                                               fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
+#            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples, 
+#                                               fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
+#                                               interval=1000/fps)
+            
+            dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples, 
+                                               fargs=(gridx,gridv,f,cont,f_ax),
                                                interval=1000/fps)
             
             
-            dist_ani = animation.FuncAnimation(fig2, update_dist, DH.samples, 
-                                               fargs=(xdata,ydata,lines),
+#            field_ani = animation.FuncAnimation(fig2, update_field, DH.samples, 
+#                                               fargs=(xdata,ydata,lines),
+#                                               interval=1000/fps)
+            
+            vel_dist_ani = animation.FuncAnimation(fig3, update_line, DH.samples, 
+                                               fargs=(v_array,v_dist,dist_line),
                                                interval=1000/fps)
             
-            hist_ani = animation.FuncAnimation(fig3, update_hist, DH.samples, 
-                                               fargs=(hist_data,hist_ax,hist_bins,
-                                                      hist_xmin,hist_xmax,hist_ymax),
-                                               interval=1000/fps)
-            
-            phase_ani.save(dataRoot +sim_name+'_phase.mp4')
-            dist_ani.save(dataRoot +sim_name+'_dist.mp4')
-            hist_ani.save(dataRoot +sim_name+'_hist.mp4')
+#            phase_ani.save(dataRoot +sim_name+'_phase.mp4')
+            dens_dist_ani.save(dataRoot +sim_name+'_density.mp4')
+            #field_ani.save(dataRoot +sim_name+'_field.mp4')
+            vel_dist_ani.save(dataRoot +sim_name+'_dist.mp4')
             fig6.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             fig7.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             plt.show()
