@@ -177,8 +177,10 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
     
     f = f/pos_data.shape[0]/(dx*dv)
     
-
-    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1]
+    pn = np.sum(f[0:-1,0:-1],axis=0) * dv
+    pdist = np.sum(f[0:-1,0:-1],axis=1) * dx
+    
+    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],pn,pdist
 
 
 def lit_iv(res,mag,mode,L,v_off):
@@ -197,7 +199,7 @@ def lit_iv(res,mag,mode,L,v_off):
             f[vi,xi] = 1/np.sqrt(2*np.pi) * (1+mag*np.cos(mode*x)) * np.exp(-v**2/2)
             
     n = np.sum(f,axis=0) * dv
-    dist = np.sum(f,axis=1) * dx
+    dist = np.sum(f,axis=1) * dx / L
     
     return grid_x, grid_v, f, n, dist
 
@@ -207,6 +209,15 @@ mag = 0.01
 mode = 0.5
 L = 4*np.pi
 v_off = 4
+nq = 2**14
+v_th = 2
+
+ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
+pvel = particle_vel_maxwellian(ppos,0,v_th)
+
+v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
+grid_x,grid_v, fp, pn, pdist2 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+
 
 grid_x, grid_v, f, n, dist = lit_iv(res,mag,mode,L,v_off)
 
@@ -216,15 +227,27 @@ cont = ax_f.contourf(grid_x,grid_v,f,cmap='inferno')
 #cont.set_clim(0,np.max(f))
 cbar = plt.colorbar(cont,ax=ax_f)
 
-fvel = 1/np.sqrt(2*np.pi)*np.exp(-np.power(grid_v[:,0],2)/2)*L
+
 fig = plt.figure(2)
+ax_f = fig.add_subplot(111)
+cont = ax_f.contourf(grid_x,grid_v,fp,cmap='inferno')
+#cont.set_clim(0,np.max(f))
+cbar = plt.colorbar(cont,ax=ax_f)
+
+fvel = 1/np.sqrt(2*np.pi)*np.exp(-np.power(grid_v[:,0],2)/2)
+fig = plt.figure(3)
 ax_vel = fig.add_subplot(111)
-ax_vel.plot(grid_v[:,0],dist)
+ax_vel.plot(grid_v[:,0],pdist)
+ax_vel.plot(grid_v[:,0],pdist2)
 ax_vel.plot(grid_v[:,0],fvel)
 ax_vel.legend()
 
-fig = plt.figure(3)
+fig = plt.figure(4)
 ax_pos = fig.add_subplot(111)
-ax_pos.plot(grid_x[0,:],n)
-ax_pos.plot(grid_x[0,:],(1+mag*np.cos(mode*grid_x[0,:])))
+#ax_pos.plot(grid_x[0,:],n)
+ax_pos.plot(grid_x[0,:],pn)
+#ax_pos.plot(grid_x[0,:],(1+mag*np.cos(mode*grid_x[0,:])))
 ax_pos.legend()
+
+dist_int = np.sum(dist) * 2*v_off/res
+print(dist_int)

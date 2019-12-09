@@ -12,7 +12,7 @@ import matplotlib.animation as animation
 import cmath as cm
 
 def update_line(num, xdata,ydata, line):
-    line.set_data(xdata[num,:],ydata[num,:])
+    line.set_data(xdata,ydata[num,:])
         
     return line
 
@@ -87,25 +87,25 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     pos_data_list = [species_list[0].pos[:,2]]
     vel_data_list = [species_list[0].vel[:,2]]
-    fields.grid_x,fields.grid_v,fields.f = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
     
     return species_list, fields
     
     
 
-steps = [300]
+steps = [200]
 resolutions = [256]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 30
+tend = 20
 
 dx_mag = 0.01
 dx_mode = 0.5
 
 v = 0
-v_th = 2
+v_th = 1.5
 
 dv_mag = 0
 dv_mode = 0
@@ -158,8 +158,8 @@ hot_params['name'] = 'hot'
 hotLoader_params['load_type'] = 'direct'
 hotLoader_params['speciestoLoad'] = [0]
 
-mesh_params['v_array'] = 0
-mesh_params['dist'] = 0
+mesh_params['pn'] = 0
+mesh_params['vel_dist'] = 0
 mesh_params['grid_x'] = 0
 mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
@@ -178,9 +178,9 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['hooks'] = ['kinetic_energy','field_energy',vel_dist_1d,plot_density_1d]
+analysis_params['hooks'] = ['kinetic_energy','field_energy',plot_density_1d]
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = ['ES_vel_rewind',vel_dist_1d,plot_density_1d]
+analysis_params['pre_hook_list'] = ['ES_vel_rewind',plot_density_1d]
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
@@ -247,11 +247,11 @@ for Nt in steps:
         ####################### Analysis and Visualisation ###########################
         if plot == True:       
             dt = sim.dt
-            pData_list = DH.load_p(['pos','vel','KE_sum'],species=['hot'],sim_name=sim_name)
+            pData_list = DH.load_p(['pos','vel','KE_sum','q'],species=['hot'],sim_name=sim_name)
             
             p1Data_dict = pData_list[0]
             
-            mData_dict = DH.load_m(['phi','E','rho','q','dz','v_array','dist','grid_x','grid_v','f'],sim_name=sim_name)
+            mData_dict = DH.load_m(['phi','E','rho','q','dz','vel_dist','grid_x','grid_v','f'],sim_name=sim_name)
             
             tArray = mData_dict['t']
             Z = np.zeros((DH.samples,res+1),dtype=np.float)
@@ -267,12 +267,12 @@ for Nt in steps:
             
             rho_sum = np.sum(rho_data[1:-1],axis=1)
             q_sum = np.sum(q_data[1:-1],axis=1)
-            
+            print(p1Data_dict['q'])
             phi_data = mData_dict['phi'][:,1,1,:-1]
             
             ## Growth rate phi plot setup
-            tA = 0
-            tB = 0.1
+            tA = 10
+            tB = 30
             
             NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
             NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -286,12 +286,14 @@ for Nt in steps:
             EL2 = np.sum(E*E,axis=1)
             EL2 = np.sqrt(EL2)
             
-            phi_mag = np.max(phi_data,axis=1) - np.min(phi_data,axis=1)
-            rho_mag = np.max(rho_data,axis=1) - np.min(rho_data,axis=1)
+            phi_min = np.min(phi_data,axis=1)
+            rho_min = np.min(rho_data,axis=1)
             
-            phi1 = phi_data/phi_mag[:,np.newaxis]
-            rho1 = rho_data/rho_mag[:,np.newaxis]
-
+            phi_mag = np.max(phi_data,axis=1) - phi_min
+            rho_mag = np.max(rho_data,axis=1) - rho_min
+            
+            phi1 = (phi_data-phi_min[:,np.newaxis])/phi_mag[:,np.newaxis]
+            rho1 = (rho_data-rho_min[:,np.newaxis])/rho_mag[:,np.newaxis]
             
             max_phi_data = np.amax(np.abs(phi_data),axis=1)
             max_phi_data_log = np.log(max_phi_data)
@@ -305,8 +307,7 @@ for Nt in steps:
             except:
                 pass
             
-            v_array = mData_dict['v_array']
-            v_dist = mData_dict['dist']
+            vel_dist = mData_dict['vel_dist']
             
             gridx = mData_dict['grid_x'][0,:,:]
             gridv = mData_dict['grid_v'][0,:,:]
@@ -364,7 +365,7 @@ for Nt in steps:
             ## Velocity distribution animation setup
             fig3 = plt.figure(DH.figureNo+7,dpi=150)
             dist_ax = fig3.add_subplot(1,1,1)
-            dist_line = dist_ax.plot(v_array[0,:],v_dist[0,:])[0]
+            dist_line = dist_ax.plot(gridv[:,0],vel_dist[0,:])[0]
             dist_ax.set_xlim([-v_off, v_off])
             dist_ax.set_xlabel('$v_z$')
             dist_ax.set_ylabel(r'$f$')
@@ -389,9 +390,9 @@ for Nt in steps:
             growth_ax.plot(tArray,EL2,'blue',label="$\phi$ growth")
             growth_text = growth_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
             growth_ax.set_xlabel('$t$')
-            growth_ax.set_ylabel('log $\phi_{max}$')
+            growth_ax.set_ylabel(r'||E||_{L2}$')
             growth_ax.set_yscale('log')
-            growth_ax.set_ylim([10**-7,10**-1])
+            #growth_ax.set_ylim([10**-7,10**-1])
             growth_ax.set_title('Landau electric potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
             growth_ax.legend()
             
@@ -435,7 +436,7 @@ for Nt in steps:
                                                interval=1000/fps)
             
             vel_dist_ani = animation.FuncAnimation(fig3, update_line, DH.samples+1, 
-                                               fargs=(v_array,v_dist,dist_line),
+                                               fargs=(gridv[:,0],vel_dist,dist_line),
                                                interval=1000/fps)
             
 #            phase_ani.save(dataRoot +sim_name+'_phase.mp4')
