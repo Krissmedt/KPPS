@@ -205,7 +205,7 @@ def lit_iv(res,mag,mode,L,v_off):
 
 
 res = 100
-mag = 0.01
+mag = 0.0
 mode = 0.5
 L = 4*np.pi
 v_off = 4

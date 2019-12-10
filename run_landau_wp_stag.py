@@ -116,13 +116,15 @@ plot_res = 100
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
 nq = 2**14
-a = -1
+#a = -1
 omega_p = 1
 #q = omega_p**2 * L / (nq*a*1)
-q = L/nq
+q = - L/nq
+#m = 1
+a = -1
 
 prefix = 'TE'+str(tend)
-simulate = False
+simulate = True
 plot = True
 
 restart = False
@@ -207,7 +209,7 @@ for Nt in steps:
         #nq = ppc*res
 
         hot_params['nq'] = np.int(nq)
-        hot_params['mq'] = -q
+        hot_params['a'] = a
         hot_params['q'] = q
         hotLoader_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
         hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th,v_off=v_off)
