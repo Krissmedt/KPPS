@@ -51,10 +51,13 @@ def ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin'):
     
     x0 = [(i+0.5)*spacing for i in range(0,nq)]
     
-    if ftype == 'sin':
-        xi = [dx_mag/(n0*dx_mode)*math.cos(dx_mode*x0i) for x0i in x0]
-    elif ftype == 'cos':
-        xi = [-dx_mag/(n0*dx_mode)*math.sin(dx_mode*x0i) for x0i in x0]
+    try:
+        if ftype == 'sin':
+            xi = [dx_mag/(n0*dx_mode)*math.cos(dx_mode*x0i) for x0i in x0]
+        elif ftype == 'cos':
+            xi = [-dx_mag/(n0*dx_mode)*math.sin(dx_mode*x0i) for x0i in x0]
+    except:
+        xi = [0*x0i for x0i in x0]
         
     x = [x0[i]+xi[i] for i in range(0,nq)]
     
@@ -69,6 +72,13 @@ def particle_vel_init(pos_list,v,dv_mag,dv_mode):
     for pii in range(0,pos_list.shape[0]):
         z = pos_list[pii,2]
         vel_list[pii,2] =  v + dv_mag*sin(dv_mode*z)
+        
+    return vel_list
+
+def perturb_vel(pos_list,vel_list,dv_mag,dv_mode):
+    for pii in range(0,pos_list.shape[0]):
+        z = pos_list[pii,2]
+        vel_list[pii,2] += dv_mag*sin(dv_mode*z)
         
     return vel_list
 
@@ -249,5 +259,5 @@ ax_pos.plot(grid_x[0,:],pn)
 #ax_pos.plot(grid_x[0,:],(1+mag*np.cos(mode*grid_x[0,:])))
 ax_pos.legend()
 
-dist_int = np.sum(dist) * 2*v_off/res
+dist_int = np.sum(dist[:17]) * 2*v_off/res * nq
 print(dist_int)

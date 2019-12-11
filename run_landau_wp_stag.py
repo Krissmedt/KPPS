@@ -93,39 +93,41 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [200]
+steps = [1]
 resolutions = [256]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 20
+tend = 0.1
 
 dx_mag = 0.01
 dx_mode = 0.5
 
 v = 0
-v_th = 1.5
+v_th = 1
 
 dv_mag = 0
 dv_mode = 0
 
-v_off = 10
+v_off = 4
 plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
 nq = 2**14
-#a = -1
-omega_p = 1
-#q = omega_p**2 * L / (nq*a*1)
-q = - L/nq
-#m = 1
-a = -1
 
-prefix = 'TE'+str(tend)
+
+#q = omega_p**2 * L / (nq*a*1)
+q = L/nq
+#m = 1
+a = 1
+
+omega_p = np.sqrt(q*nq*a*1/L)
+
+prefix = 'TE'+str(tend) + '_weak'
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -135,10 +137,13 @@ slow_factor = 1
 
 ############################# Linear Analysis ##################################
 k = dx_mode
-n = nq/L
-ld = v_th * np.sqrt(1/(n*q*a))
-omega_i = -0.22*sqrt(pi)*(omega_p/(k*v_th))**3 * np.exp(-1/(2 *k**2 *ld**2))
+omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
+vp = omega/k
 
+df_vp = (2*np.pi)**(-1/2)*(1/v_th)**(1/2) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
+damp_rate = - (np.pi*omega_p**3)/(2*k**2*1) * df_vp
+dr2 = damp_rate/omega
+test = np.sqrt(np.pi/2) * (omega_p**2 *omega)/(k**3 * v_th**3) * np.exp(-omega**2/(2*k**3*v_th**2))
 ############################ Setup and Run ####################################
 sim_params = {}
 hot_params = {}
@@ -211,8 +216,11 @@ for Nt in steps:
         hot_params['nq'] = np.int(nq)
         hot_params['a'] = a
         hot_params['q'] = q
-        hotLoader_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
-        hotLoader_params['vel'] = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th,v_off=v_off)
+        
+        pos_list = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
+        hotLoader_params['pos'] = pos_list
+        vel_list = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
+        hotLoader_params['vel'] = perturb_vel(pos_list,vel_list,dv_mag,dv_mode)
         
         mLoader_params['resolution'] = [2,2,res]
         mesh_params['node_charge'] = -ppc*q
@@ -273,8 +281,8 @@ for Nt in steps:
             phi_data = mData_dict['phi'][:,1,1,:-1]
             
             ## Growth rate phi plot setup
-            tA = 10
-            tB = 30
+            tA = 0
+            tB = 5
             
             NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
             NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
