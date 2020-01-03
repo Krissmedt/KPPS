@@ -159,19 +159,22 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
     
     grid_x, grid_v = np.meshgrid(xi,vi)
     f = np.zeros(grid_x.shape,dtype=np.float)
-
+    n = np.zeros((xres+2),dtype=np.float)
+    
     pos_data = np.array([])
     vel_data = np.array([])
     for i in range(0,len(vel_data_list)):
         pos_data = np.concatenate((pos_data,pos_data_list[i]))
         vel_data = np.concatenate((vel_data,vel_data_list[i]))
         
+    nq = pos_data.shape[0]
+        
     over_max = vel_data > v_off
     under_min = vel_data < -v_off
 
     vel_data[over_max] = v_off
     vel_data[under_min] = -v_off
-
+    
     for pii in range(0,pos_data.shape[0]):
         lix = np.int(pos_data[pii]/dx)
         liv = np.int((vel_data[pii]+v_off)/dv) 
@@ -183,14 +186,21 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
         f[liv,lix+1] += (hx)*(1-hv)
         f[liv+1,lix] += (hx)*(hv)
         
-    f[:,0] += f[:,-1]
+        n[lix] += (1-hx)
+        n[lix+1] += hx
+        
+    f[:,0] += f[:,-2]
+    f[-2] = f[0]
     
-    f = f/pos_data.shape[0]/(dx*dv)
+    n[0] += n[-2]
+    n[-2] = n[0]
     
-    pn = np.sum(f[0:-1,0:-1],axis=0) * dv
-    pdist = np.sum(f[0:-1,0:-1],axis=1) * dx
+    n = n/dx
+    f = f/(dx*dv) * L/nq
     
-    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],pn,pdist
+    fv = np.sum(f[0:-1,0:-1],axis=1) * dx
+    
+    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n[0:-1],fv
 
 
 def lit_iv(res,mag,mode,L,v_off):
@@ -215,19 +225,23 @@ def lit_iv(res,mag,mode,L,v_off):
 
 
 res = 100
-mag = 0.0
+mag = 0.01
 mode = 0.5
 L = 4*np.pi
 v_off = 4
 nq = 2**14
-v_th = 2
+v_th = np.sqrt(2)
+q = L/nq
 
+x0 = [(i+0.5)*L/nq for i in range(0,nq)]
 ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
 pvel = particle_vel_maxwellian(ppos,0,v_th)
 
 v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
 grid_x,grid_v, fp, pn, pdist2 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
 
+pn = pn*q
+pn2 = np.sum(fp,axis=0) * L/(res+2)
 
 grid_x, grid_v, f, n, dist = lit_iv(res,mag,mode,L,v_off)
 
@@ -247,16 +261,16 @@ cbar = plt.colorbar(cont,ax=ax_f)
 fvel = 1/np.sqrt(2*np.pi)*np.exp(-np.power(grid_v[:,0],2)/2)
 fig = plt.figure(3)
 ax_vel = fig.add_subplot(111)
-ax_vel.plot(grid_v[:,0],pdist)
-ax_vel.plot(grid_v[:,0],pdist2)
-ax_vel.plot(grid_v[:,0],fvel)
+ax_vel.plot(grid_v[:,0],pdist,label='histogram')
+ax_vel.plot(grid_v[:,0],pdist2,label='int f')
+ax_vel.plot(grid_v[:,0],fvel,label='analyt')
 ax_vel.legend()
 
 fig = plt.figure(4)
 ax_pos = fig.add_subplot(111)
-#ax_pos.plot(grid_x[0,:],n)
 ax_pos.plot(grid_x[0,:],pn)
-#ax_pos.plot(grid_x[0,:],(1+mag*np.cos(mode*grid_x[0,:])))
+ax_pos.plot(grid_x[0,:],pn2)
+#ax_pos.plot(x0,ppos[:,2]-x0)
 ax_pos.legend()
 
 dist_int = np.sum(dist[:17]) * 2*v_off/res * nq
