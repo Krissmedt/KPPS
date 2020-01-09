@@ -9,7 +9,8 @@ def particle_vel_maxwellian(pos_list,v,v_th,v_off=4):
     # initialise an evenly populated velocity phase-spaced corresponding to:
     # pos_list: NQx3 array of particle positions
     # v: Bulk particle velocity (mean vel of all particles together)
-    # v_th: Thermal speed defined as v_th = sqrt(2*k_B*T/mq)
+    # v_th: Thermal speed defined as v_th = sqrt(k_B*T/mq)
+    v_th = v_th*np.sqrt(2)
     
     vel_list = np.zeros(pos_list.shape,dtype=np.float)
     vel_list[:] = v
@@ -185,22 +186,18 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
         f[liv+1,lix] += (1-hx)*(hv)
         f[liv,lix+1] += (hx)*(1-hv)
         f[liv+1,lix] += (hx)*(hv)
-        
-        n[lix] += (1-hx)
-        n[lix+1] += hx
-        
+
     f[:,0] += f[:,-2]
-    f[-2] = f[0]
+    f[:,-2] = f[:,0]
     
-    n[0] += n[-2]
-    n[-2] = n[0]
-    
-    n = n/dx
-    f = f/(dx*dv) * L/nq
-    
+    f = f/(dx*dv)/nq * L 
+
+    n = np.sum(f[0:-1,0:-1],axis=0) * dv
     fv = np.sum(f[0:-1,0:-1],axis=1) * dx
+    f_int = np.sum(fv) * dv
+    print(f_int)
     
-    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n[0:-1],fv
+    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv
 
 
 def lit_iv(res,mag,mode,L,v_off):
@@ -219,59 +216,55 @@ def lit_iv(res,mag,mode,L,v_off):
             f[vi,xi] = 1/np.sqrt(2*np.pi) * (1+mag*np.cos(mode*x)) * np.exp(-v**2/2)
             
     n = np.sum(f,axis=0) * dv
-    dist = np.sum(f,axis=1) * dx / L
+    fvel = np.sum(f,axis=1) * dx
     
-    return grid_x, grid_v, f, n, dist
+    f_int = np.sum(fvel) * dv
+    print(f_int)
+    
+    return grid_x, grid_v, f, n, fvel
 
 
-res = 100
-mag = 0.01
-mode = 0.5
-L = 4*np.pi
-v_off = 4
-nq = 2**14
-v_th = np.sqrt(2)
-q = L/nq
+#res = 100
+#mag = 0.1
+#mode = 0.5
+#L = 4*np.pi
+#v_off = 4
+#nq = 2**14
+#v_th = 1
+#q = L/nq
+#
+#x0 = [(i+0.5)*L/nq for i in range(0,nq)]
+#ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
+#pvel = particle_vel_maxwellian(ppos,0,v_th)
+#
+#v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
+#grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
+#grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#
+#fig = plt.figure(1)
+#ax_f = fig.add_subplot(111)
+#cont = ax_f.contourf(grid_x,grid_v,flit,cmap='inferno')
+##cont.set_clim(0,np.max(f))
+#cbar = plt.colorbar(cont,ax=ax_f)
+#
+#
+#fig = plt.figure(2)
+#ax_f = fig.add_subplot(111)
+#cont = ax_f.contourf(grid_x,grid_v,f,cmap='inferno')
+##cont.set_clim(0,np.max(f))
+#cbar = plt.colorbar(cont,ax=ax_f)
+#
+#fig = plt.figure(3)
+#ax_vel = fig.add_subplot(111)
+#ax_vel.plot(grid_v[:,0],pdist*L,label='histogram')
+#ax_vel.plot(grid_v[:,0],fvel,label='int f')
+#ax_vel.plot(grid_v[:,0],fvlit,label='analyt')
+#ax_vel.legend()
+#
+#fig = plt.figure(4)
+#ax_pos = fig.add_subplot(111)
+#ax_pos.scatter(grid_x[0,:],n)
+#ax_pos.plot(grid_x[0,:],nlit)
+##ax_pos.set_ylim([0.99,1.01])
+#ax_pos.legend()
 
-x0 = [(i+0.5)*L/nq for i in range(0,nq)]
-ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
-pvel = particle_vel_maxwellian(ppos,0,v_th)
-
-v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
-grid_x,grid_v, fp, pn, pdist2 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
-
-pn = pn*q
-pn2 = np.sum(fp,axis=0) * L/(res+2)
-
-grid_x, grid_v, f, n, dist = lit_iv(res,mag,mode,L,v_off)
-
-fig = plt.figure(1)
-ax_f = fig.add_subplot(111)
-cont = ax_f.contourf(grid_x,grid_v,f,cmap='inferno')
-#cont.set_clim(0,np.max(f))
-cbar = plt.colorbar(cont,ax=ax_f)
-
-
-fig = plt.figure(2)
-ax_f = fig.add_subplot(111)
-cont = ax_f.contourf(grid_x,grid_v,fp,cmap='inferno')
-#cont.set_clim(0,np.max(f))
-cbar = plt.colorbar(cont,ax=ax_f)
-
-fvel = 1/np.sqrt(2*np.pi)*np.exp(-np.power(grid_v[:,0],2)/2)
-fig = plt.figure(3)
-ax_vel = fig.add_subplot(111)
-ax_vel.plot(grid_v[:,0],pdist,label='histogram')
-ax_vel.plot(grid_v[:,0],pdist2,label='int f')
-ax_vel.plot(grid_v[:,0],fvel,label='analyt')
-ax_vel.legend()
-
-fig = plt.figure(4)
-ax_pos = fig.add_subplot(111)
-ax_pos.plot(grid_x[0,:],pn)
-ax_pos.plot(grid_x[0,:],pn2)
-#ax_pos.plot(x0,ppos[:,2]-x0)
-ax_pos.legend()
-
-dist_int = np.sum(dist[:17]) * 2*v_off/res * nq
-print(dist_int)

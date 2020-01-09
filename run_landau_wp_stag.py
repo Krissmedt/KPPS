@@ -93,15 +93,15 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [1]
-resolutions = [256]
+steps = [20,100,200,1000]
+resolutions = [1000]
 
 dataRoot = "../data_landau/"
 
 L = 4*pi
-tend = 0.1
+tend = 10
 
-dx_mag = 0.01
+dx_mag = 0.05
 dx_mode = 0.5
 
 v = 0
@@ -116,7 +116,7 @@ plot_res = 100
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
 nq = 2**14
-
+nq = 20000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -125,7 +125,7 @@ a = 1
 
 omega_p = np.sqrt(q*nq*a*1/L)
 
-prefix = 'TE'+str(tend) + '_weak'
+prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
 plot = False
 
@@ -138,12 +138,18 @@ slow_factor = 1
 ############################# Linear Analysis ##################################
 k = dx_mode
 omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
+#omega = 1.4436
 vp = omega/k
+omega2 = 2.8312 * k
+omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
 
-df_vp = (2*np.pi)**(-1/2)*(1/v_th)**(1/2) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-damp_rate = - (np.pi*omega_p**3)/(2*k**2*1) * df_vp
-dr2 = damp_rate/omega
-test = np.sqrt(np.pi/2) * (omega_p**2 *omega)/(k**3 * v_th**3) * np.exp(-omega**2/(2*k**3*v_th**2))
+df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
+
+damp_rate = - (np.pi*omega_p**3)/(2*k**2) * df_vp
+
+c1 = 2
+gamma_lit = 0.1533
+
 ############################ Setup and Run ####################################
 sim_params = {}
 hot_params = {}
@@ -277,7 +283,7 @@ for Nt in steps:
             
             rho_sum = np.sum(rho_data[1:-1],axis=1)
             q_sum = np.sum(q_data[1:-1],axis=1)
-            print(p1Data_dict['q'])
+
             phi_data = mData_dict['phi'][:,1,1,:-1]
             
             ## Growth rate phi plot setup
@@ -314,6 +320,7 @@ for Nt in steps:
                 energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
                 enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
                 enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
+                lit_line = c1*np.exp(-gamma_lit*tArray[NA:NB])
             except:
                 pass
             
@@ -397,10 +404,10 @@ for Nt in steps:
             ## Electric field norm plot
             fig6 = plt.figure(DH.figureNo+9,dpi=150)
             growth_ax = fig6.add_subplot(1,1,1)
-            growth_ax.plot(tArray,EL2,'blue',label="$\phi$ growth")
+            growth_ax.plot(tArray,EL2,'blue',label="$E$")
             growth_text = growth_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
             growth_ax.set_xlabel('$t$')
-            growth_ax.set_ylabel(r'||E||_{L2}$')
+            growth_ax.set_ylabel(r'$||E||_{L2}$')
             growth_ax.set_yscale('log')
             #growth_ax.set_ylim([10**-7,10**-1])
             growth_ax.set_title('Landau electric potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
@@ -419,11 +426,12 @@ for Nt in steps:
             energy_ax.legend()
             
             try:
-                growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="slope")
+                growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="actual damping")
+                growth_ax.plot(tArray[NA:NB],lit_line,'red',label="analytical damping")
                 text = (r'$\gamma$ = ' + str(enorm_fit[0]))
                 growth_text.set_text(text)
                 
-                energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="slope")
+                energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="damping rate")
                 text = (r'$\gamma_E$ = ' + str(energy_fit[0]))
                 energy_text.set_text(text)
             except:
