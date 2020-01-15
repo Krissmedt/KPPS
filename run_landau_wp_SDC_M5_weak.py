@@ -224,7 +224,7 @@ for Nt in steps:
         
         pos_list = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
         hotLoader_params['pos'] = pos_list
-        vel_list = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
+        vel_list = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th,rand_seed=1)
         hotLoader_params['vel'] = perturb_vel(pos_list,vel_list,dv_mag,dv_mode)
         
         mLoader_params['resolution'] = [2,2,res]
@@ -277,8 +277,8 @@ for Nt in steps:
             v1_max = np.max(v1_data)
             KE_data = p1Data_dict['KE_sum']
             
-            rho_data = mData_dict['rho'][:,1,1,:-1]
-            q_data = mData_dict['q'][:,1,1,:-1]
+            rho_data = mData_dict['rho'][:,1,1,:-2]
+            q_data = mData_dict['q'][:,1,1,:-2]
             
             rho_sum = np.sum(rho_data[1:-1],axis=1)
             q_sum = np.sum(q_data[1:-1],axis=1)
@@ -300,6 +300,7 @@ for Nt in steps:
             
             EL2 = np.sum(E*E,axis=1)
             EL2 = np.sqrt(EL2)
+            print(q_sum)
             
             phi_min = np.min(phi_data,axis=1)
             rho_min = np.min(rho_data,axis=1)

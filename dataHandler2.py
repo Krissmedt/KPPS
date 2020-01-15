@@ -170,11 +170,20 @@ class dataHandler2:
         sim = pk.load(sim_file)
 
         if overwrite == True:
+            #Update dataHandler parameters to reflect loaded sim, except for
+            #sim name and location which should correspond to current folder
+            #names not original names (allows renaming folders).
+            
+            actualRootFolder = self.dataRootFolder
+            
             self.controller_obj = sim
             self.set_params(sim.dataSettings)
             self.set_plot_lims(self.plot_limits)
             self.input_translator(sim.dataSettings)
             self.sampling_setup()
+            
+            self.dataRootFolder = actualRootFolder
+            self.dataFoldername = self.dataRootFolder+sim_name
 
                 
         return sim, sim_name
