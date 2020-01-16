@@ -176,6 +176,7 @@ class dataHandler2:
             
             actualRootFolder = self.dataRootFolder
             
+            sim.simID = sim_name
             self.controller_obj = sim
             self.set_params(sim.dataSettings)
             self.set_plot_lims(self.plot_limits)
