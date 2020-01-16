@@ -20,17 +20,18 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 4
+exptype = 1
 prefix = ''
 
 schemes = ['boris_staggered','boris_synced','boris_SDC']
-steps = [1,2,4,8,16,32,64]
-resolutions = [10]
+schemes = ['boris_SDC']
+steps = [2048]
+resolutions = [1]
 
-M = 3
-K = 3
+M = 8
+K = 8
 
-tend = 0.1
+tend = 1
 
 ppc = 20
 
@@ -85,7 +86,7 @@ analysis_params['rhs_check'] = True
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['write_m'] = False
-data_params['dataRootFolder'] = "../data/" 
+data_params['dataRootFolder'] = "../data_nlo/" 
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -135,5 +136,5 @@ for scheme in schemes:
                          mLoaderSettings=mLoader_params,
                          dataSettings=data_params)
             
-            kppsObject = kpps(**model)
-            DH = kppsObject.run()
+            kppsObject = kpps()
+            DH = kppsObject.start(**model)

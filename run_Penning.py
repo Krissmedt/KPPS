@@ -6,20 +6,20 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_SDC']
+schemes = ['boris_synced','boris_SDC']
 node_type = 'lobatto'
 M = 3
 iterations = [3]
-dtwb = [10,1,0.1]
+dtwb = [10,1,0.1,0.01]
 
-
-tend = 16
+tend = 1
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
+dtwb = [1*omegaB,0.1*omegaB,0.01*omegaB,0.001*omegaB]
 
 
 
@@ -68,7 +68,7 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 analysis_params['hooks'] = ['energy_calc_penning']
 analysis_params['H'] = H
 
-analysis_params['centreMass_check'] = True
+analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
 analysis_params['rhs_check'] = True
 
@@ -100,8 +100,6 @@ data_params['plot_params'] = plot_params
 species_params = [species_params]
 loader_params = [ploader_params]
 
-run_times_inner = np.zeros((len(dtwb),len(iterations)),dtype=np.float)
-run_times = []
 
 ## Calculated Params ##
 x0 = ploader_params['pos']

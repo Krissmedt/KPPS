@@ -14,8 +14,6 @@ import h5py as h5
 
 
 def analytical_sol(t,omegaE,omegaB,H,x0,v0,epsilon=-1):
-    print(x0)
-            
     omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
     omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
     Rminus = (omegaPlus*x0[0,0] + v0[0,1])/(omegaPlus - omegaMinus)
@@ -42,12 +40,12 @@ def analytical_sol(t,omegaE,omegaB,H,x0,v0,epsilon=-1):
 
 analyse = True
 plot = True
-snapPlot = True 
+snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-sims['pen_TE10_boris_SDC_NQ1_NT'] = [2500]
-
+sims['pen_TE1_boris_SDC_NQ1_NT'] = [1,10,100,1000]
+sims['pen_TE1_boris_synced_NQ1_NT'] = [1,10,100,1000]
 
 omegaB = 25.0
 omegaE = 4.9
@@ -114,9 +112,10 @@ if analyse == True:
                 xAnalyt[ti] = u_lit[0]
                 hAnalyt[ti] = UE_lit
                 
+            hArray[0] = hAnalyt[0]
             xRel = abs(xArray - xAnalyt)/abs(xAnalyt)
             hRel = abs(hArray - hAnalyt)/abs(hAnalyt)
-            hRel[0] = 0
+            
             
             xErrors.append(xRel)
             hErrors.append(hRel)
@@ -125,13 +124,16 @@ if analyse == True:
             rhs_evals.append(sim.rhs_eval)
             
             if snapPlot == True:
-                DH.trajectory_plot()
+                DH.trajectory_plot(sim_name=sim_name)
                 DH.figureNo += 1
                 
                 fig_H = plt.figure(DH.figureNo)
                 ax_H = fig_H.add_subplot(1, 1, 1)
                 ax_H.plot(tArray,hRel,label=sim_name)
-        
+                #ax_H.set_yscale('log')
+                ax_H.set_xlabel('$t$')
+                ax_H.set_ylabel('$\Delta E_{rel}$')
+    
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
         try:
             file.attrs["M"] = str(3)
@@ -171,6 +173,7 @@ if plot == True:
             label = "Boris-SDC"
             label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
         
+        dts = np.array(dts)
 
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(DH.figureNo+2)
@@ -180,7 +183,7 @@ if plot == True:
         ##Order Plot w/ dt
         fig_dt = plt.figure(DH.figureNo+3)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,xErrors[:-1],label=label)
+        ax_dt.plot(dts*omegaB,xErrors[:,-1],label=label)
         file.close()
         
     ax_list = []  
@@ -194,16 +197,16 @@ if plot == True:
             orderSlope = -1
             ax.set_xlabel('Number of RHS evaluations')
         else:
-            ax.set_xlabel(r'$\Delta t$')
+            ax.set_xlabel(r'$\omega_B \cdot \Delta t $')
             orderSlope = 1
         
         ax.set_xscale('log')
         #ax_rhs.set_xlim(10**3,10**5)
         ax.set_yscale('log')
-        ax.set_ylim(10**(-4),10)
-        ax.set_ylabel('damping rate error')
+        #ax.set_ylim(10**(-4),10)
+        ax.set_ylabel('$\Delta x_{rel}$')
         
-        ax.set_title('Convergence vs. Linear Theory')
+        ax.set_title('Convergence vs. Analytical Solution')
         
         xRange = ax.get_xlim()
         yRange = ax.get_ylim()

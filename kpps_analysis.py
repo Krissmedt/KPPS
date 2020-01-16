@@ -273,8 +273,8 @@ class kpps_analysis:
 
     def fieldGather(self,species,fields,**kwargs):
         #Establish field values at particle positions via methods specified at initialisation.
-        species.E = np.zeros((len(species.E),3),dtype=np.float)
-        species.B = np.zeros((len(species.B),3),dtype=np.float)
+        species.E = np.zeros(species.E.shape,dtype=np.float)
+        species.B = np.zeros(species.B.shape,dtype=np.float)
 
         for method in self.fieldGather_methods:
             method(species,fields)
@@ -302,7 +302,7 @@ class kpps_analysis:
             self.check_boundCross(species,mesh,**kwargs)
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
-            
+
         return species_list, mesh
     
     def run_postAnalyser(self,species_list,fields,simulationManager,**kwargs):
@@ -317,6 +317,7 @@ class kpps_analysis:
 
 ##################### Imposed E-Field Methods #################################
     def eFieldImposed(self,species,fields,**kwargs):
+
         if self.E_type == "transform":
             for pii in range(0,species.nq):
                 direction = np.dot(self.E_transform,species.pos[pii,:])
@@ -328,7 +329,7 @@ class kpps_analysis:
                 
         if self.E_type == "custom":
             fields = self.custom_external_E(species,fields,controller=None)
-                
+
         return species
     
     
@@ -367,7 +368,7 @@ class kpps_analysis:
                 
         if self.E_type == "custom":
             fields = self.custom_external_B(species,fields,controller=None)
-            
+
         return species
         
     
@@ -386,6 +387,7 @@ class kpps_analysis:
 
         self.static_E = np.zeros(np.shape(fields.E))
         self.static_E[:] = fields.E[:]
+        
         return fields
     
     
@@ -841,7 +843,7 @@ class kpps_analysis:
         and x,y,z components for the vector as the columns.
         k = delta_t * alpha / 2
         """ 
-        
+
         k = dt*alpha/2
         
         tau = k*B
@@ -859,7 +861,7 @@ class kpps_analysis:
         vPlus = vMinus + np.cross(vDash,tau)
         
         vel_new = vPlus + dt/2 * (alpha*E + ck)
-        
+
         return vel_new
     
     
@@ -994,7 +996,7 @@ class kpps_analysis:
     def boris_SDC(self, species_list,fields, controller,**kwargs):
         M = self.M
         K = self.K
-        
+
         #Remap collocation weights from [0,1] to [tn,tn+1]
         #nodes = (t-dt) + self.nodes * dt
         weights =  self.coll_params['weights']
@@ -1286,7 +1288,6 @@ class kpps_analysis:
     
     def lorentz_std(self,species,fields):
         F = species.a*(species.E + np.cross(species.vel,species.B))
-
         return F
     
     

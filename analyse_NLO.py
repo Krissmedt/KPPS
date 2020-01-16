@@ -16,25 +16,12 @@ sims = {}
 particle = 0
 
 
-sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512]
+sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type1_boris_staggered_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
 
-sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-
-comp_run = 'NLO__type4_boris_SDC_M5K5_NZ100_TE0.1_NT128'
+comp_run = 'NLO__type1_boris_SDC_M8K8_NZ1_TE1_NT2048'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -49,7 +36,7 @@ plot_params['legend.loc'] = 'upper right'
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
-analyse = False
+analyse = True
 plot = True
 plot_type = 'cross-integrator'
 data_root = "../data_nlo/"
@@ -71,7 +58,7 @@ if analyse == True:
         
         filename = key[:-3] + "_workprec" + ".h5"
         filenames.append(filename)
-        file = h5.File(filename,'w')
+        file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
         
         for tsteps in value:
