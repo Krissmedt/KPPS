@@ -10,21 +10,21 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import h5py as h5
 
-analyse = True
+analyse = False
 plot = True
-snapPlot = True
+snapPlot = False
 compare_reference = True
 
 start_time = 0
-max_time = 10
+max_time = 5
 
 fig_type = 'versus'
-data_root = "../data_tsi_growth/"
+data_root = "../data_tsi_strong/"
 sims = {}
 
 #sims['tsi_TE10_boris_staggered_NZ10_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
 #sims['tsi_TE10_boris_staggered_NZ100_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
-sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
+#sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
 
 #sims['tsi_TE10_boris_SDC_M3K3_NZ10_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
 #sims['tsi_TE10_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
@@ -179,6 +179,7 @@ if analyse == True:
     
     
 if plot == True:
+    DH = dataHandler2(**data_params)
     if len(filenames) == 0:
         for key, value in sims.items():
             filename = key[:-3] + "_workprec_growth_" + str(max_time)+ "s" + ".h5"
