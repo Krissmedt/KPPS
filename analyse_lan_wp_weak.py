@@ -37,6 +37,7 @@ analyse = True
 plot = False
 snapPlot = True
 compare_reference = False
+compare_linear = False
 
 peak_intervals = [[0,2],[2,4],[4,6]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
@@ -45,6 +46,7 @@ peak_intervals = [[0,2],[2,4],[4,6]]
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [1]
 
 fig_type = 'wp'
@@ -52,11 +54,11 @@ data_root = "../data_landau_weak/"
 sims = {}
 
 #sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ20000_NT'] = [20,100,200]
-sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [30,40,50,100,500]
-#sims['lan_TE50_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [1000]
-#sims['lan_TE10_strong_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
+#sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [20,30,40,50,100,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
+sims['lan_TE50_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [1000]
 
-comp_run = 'lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT1000'
+comp_run = 'lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -101,20 +103,26 @@ if analyse == True:
     if compare_reference == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-        mData_comp = DH_comp.load_m(['phi','E','dz'],sim_name=comp_sim_name)
+        mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name)
         
         tArray_comp = mData_comp['t']
         dz_comp = mData_comp['dz'][0] 
-
-        E = mData_comp['E'][:,2,1,1,:-1]
+        
+        rho_comp = mData_comp['rho'][:,1,1,:-2]
+        E = mData_comp['E'][:,2,1,1,:-2]
         E2 = E*E
         UE =  np.sum(E2/2,axis=1)*dz_comp
         UE_log = np.log(UE)
         UE_comp = UE/UE[0]
         
         EL2 = np.sum(E*E,axis=1)
-        EL2_comp = np.sqrt(EL2)
+        EL2_comp = np.sqrt(EL2*dz_comp)
+        #EL2_comp = EL2_comp/EL2_comp[0]
         
+        print('Comp')
+        print(tArray_comp[0])
+        print(np.sum(E2[0,:]))
+        print(EL2_comp)
         comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
         
         comp_fit = np.polyfit(tArray_comp[comp_peaks],
@@ -149,17 +157,26 @@ if analyse == True:
                 NA = np.int(fit1_start/(sim.dt*DH.samplePeriod))
                 NB = np.int(fit1_stop/(sim.dt*DH.samplePeriod))
     
+                analysis_ts = []
+                for time in analysis_times:
+                    analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
+
                 mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name)
                 tArray = mData_dict['t']
-
-                E = mData_dict['E'][:,2,1,1,:-1]
+                
+                NQ = key[key.find('NQ')+2:key.find('_NT')] 
+                rho = mData_dict['rho'][:,1,1,:-2]
+                E = mData_dict['E'][:,2,1,1,:-2]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
                 UE_comp = UE/UE[0]
                 
                 EL2 = np.sum(E*E,axis=1)
-                EL2 = np.sqrt(EL2)  
+                EL2 = np.sqrt(EL2*mData_dict['dz'][0])  
+                #EL2 = EL2/EL2[0]
+                print('Sim')
+                print(tArray[0])
                 print(EL2)
                 peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
                 c1 = EL2[peaks[0]]*1.05
@@ -181,8 +198,11 @@ if analyse == True:
                 avg_errors.append(error_linear)
                 
                 if compare_reference == True:
-                    E_error = abs(EL2_comp-EL2)/EL2_comp
-                    E_errors.append(E_error)
+                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
+                    skip_int = np.int(skip)
+                    E_error = np.abs(EL2_comp[::skip_int]-EL2)/np.abs(EL2_comp[::skip_int])
+                    E_errors.append(E_error[analysis_ts])
+
                 
                 if snapPlot == True:
                     fig = plt.figure(DH.figureNo+sim_no)
@@ -203,7 +223,7 @@ if analyse == True:
                     E_ax.set_ylabel(r'$||E||_{L2}$')
                     E_ax.set_yscale('log')
                     #E_ax.set_ylim([10**-7,10**-1])
-                    E_ax.set_title('Linear Landau damping, a=0.05, NQ=' + str(nq) + ', NZ=' + str(mData_dict['zres'][0]) 
+                    E_ax.set_title('Linear Landau damping, a=0.05, NQ=' + NQ + ', NZ=' + str(mData_dict['zres'][0]) 
                                     + ', NT=' + str(sim.tSteps)) 
                     E_ax.legend()
                     fig.savefig(data_root + sim_name + '_EL2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
@@ -223,7 +243,7 @@ if analyse == True:
             grp.create_dataset('errors',data=avg_errors)
             grp.create_dataset('energy',data=UE)
             grp.create_dataset('energy_reference',data=UE_comp)
-            grp.create_dataset('E_errors',data=E_errors)
+            grp.create_dataset('E_errors',data=np.array(E_errors))
             file.close()
         except Exception as err:
             file.close()
@@ -269,50 +289,53 @@ if plot == True:
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(time) + 's'
-                ax_nl_dt.plot(rhs_evals,E_errors[:,time],label=label_line)
+                ax_nl_dt.plot(dts,E_errors[:,time],label=label_line)
             
-
-        ##Order Plot w/ rhs
-        fig_rhs = plt.figure(12)
-        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,avg_errors,label=label)
+        if compare_linear == True:
+            ##Order Plot w/ rhs
+            fig_rhs = plt.figure(12)
+            ax_rhs = fig_rhs.add_subplot(1, 1, 1)
+            ax_rhs.plot(rhs_evals,avg_errors,label=label)
+                
+            ##Order Plot w/ dt
+            fig_dt = plt.figure(13)
+            ax_dt = fig_dt.add_subplot(1, 1, 1)
+            ax_dt.plot(dts,avg_errors,label=label)
             
-        ##Order Plot w/ dt
-        fig_dt = plt.figure(13)
-        ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,avg_errors,label=label)
         file.close()
         
-    ax_list = []  
-    ax_list.append(ax_rhs)
-    ax_list.append(ax_dt)
+
     
-    i = 0
-    for ax in ax_list:
-        i +=1
-        if i == 1:
-            orderSlope = -1
-            ax.set_xlabel('Number of RHS evaluations')
-        else:
-            ax.set_xlabel(r'$\Delta t$')
-            orderSlope = 1
-        
-        ax.set_xscale('log')
-        #ax_rhs.set_xlim(10**3,10**5)
-        ax.set_yscale('log')
-        ax.set_ylim(10**(-4),10)
-        ax.set_ylabel('damping rate error')
-        
-        ax.set_title('Convergence vs. Linear Theory')
-        
-        xRange = ax.get_xlim()
-        yRange = ax.get_ylim()
-        
-        ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                    ls='dotted',c='0.25',label='2nd Order')
-        ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                    ls='dashed',c='0.75',label='4th Order')
-        
+    if compare_linear == True:
+        ax_list = []  
+        ax_list.append(ax_rhs)
+        ax_list.append(ax_dt)
+        i = 0
+        for ax in ax_list:
+            i +=1
+            if i == 1:
+                orderSlope = -1
+                ax.set_xlabel('Number of RHS evaluations')
+            else:
+                ax.set_xlabel(r'$\Delta t$')
+                orderSlope = 1
+            
+            ax.set_xscale('log')
+            #ax_rhs.set_xlim(10**3,10**5)
+            ax.set_yscale('log')
+            ax.set_ylim(10**(-4),10)
+            ax.set_ylabel('damping rate error')
+            
+            ax.set_title('Convergence vs. Linear Theory')
+            
+            xRange = ax.get_xlim()
+            yRange = ax.get_ylim()
+            
+            ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
+                        ls='dotted',c='0.25',label='2nd Order')
+            ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
+                        ls='dashed',c='0.75',label='4th Order')
+            
         ax.legend()
         
     if compare_reference == True:

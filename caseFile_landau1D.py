@@ -5,12 +5,13 @@ import math
 import random
 from mpl_toolkits.mplot3d import Axes3D
 
-def particle_vel_maxwellian(pos_list,v,v_th,v_off=4):
+def particle_vel_maxwellian(pos_list,v,v_th,rand_seed=None,v_off=4):
     # initialise an evenly populated velocity phase-spaced corresponding to:
     # pos_list: NQx3 array of particle positions
     # v: Bulk particle velocity (mean vel of all particles together)
     # v_th: Thermal speed defined as v_th = sqrt(k_B*T/mq)
     v_th = v_th*np.sqrt(2)
+    random.seed(a=rand_seed)
     
     vel_list = np.zeros(pos_list.shape,dtype=np.float)
     vel_list[:] = v
@@ -161,6 +162,7 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
     grid_x, grid_v = np.meshgrid(xi,vi)
     f = np.zeros(grid_x.shape,dtype=np.float)
     n = np.zeros((xres+2),dtype=np.float)
+    n1 = np.zeros((xres+2),dtype=np.float)
     
     pos_data = np.array([])
     vel_data = np.array([])
@@ -186,18 +188,25 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
         f[liv+1,lix] += (1-hx)*(hv)
         f[liv,lix+1] += (hx)*(1-hv)
         f[liv+1,lix] += (hx)*(hv)
+        
+        n1[lix] += (1-hx)
+        n1[lix+1] += hx
 
     f[:,0] += f[:,-2]
     f[:,-2] = f[:,0]
     
+    n1[0] += n1[-2]
+    n1[-2] = n1[0]
+    
     f = f/(dx*dv)/nq * L 
+    n1 = n1[0:-1]/dx * L/nq
 
     n = np.sum(f[0:-1,0:-1],axis=0) * dv
     fv = np.sum(f[0:-1,0:-1],axis=1) * dx
     f_int = np.sum(fv) * dv
-    print(f_int)
+
     
-    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv
+    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv,n1
 
 
 def lit_iv(res,mag,mode,L,v_off):
@@ -219,27 +228,27 @@ def lit_iv(res,mag,mode,L,v_off):
     fvel = np.sum(f,axis=1) * dx
     
     f_int = np.sum(fvel) * dv
-    print(f_int)
-    
+ 
     return grid_x, grid_v, f, n, fvel
 
 
-#res = 100
-#mag = 0.1
+#res = 1000
+#mag = 0.05
 #mode = 0.5
 #L = 4*np.pi
 #v_off = 4
-#nq = 2**14
+#nq = 20000
 #v_th = 1
 #q = L/nq
 #
 #x0 = [(i+0.5)*L/nq for i in range(0,nq)]
 #ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
-#pvel = particle_vel_maxwellian(ppos,0,v_th)
+#pvel = particle_vel_maxwellian(ppos,0,v_th,rand_seed=1)
 #
 #v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
 #grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
-#grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#grid_x,grid_v, f, n, fvel,n1 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#
 #
 #fig = plt.figure(1)
 #ax_f = fig.add_subplot(111)
@@ -265,6 +274,7 @@ def lit_iv(res,mag,mode,L,v_off):
 #ax_pos = fig.add_subplot(111)
 #ax_pos.scatter(grid_x[0,:],n)
 #ax_pos.plot(grid_x[0,:],nlit)
+#ax_pos.scatter(grid_x[0,:],n1)
 ##ax_pos.set_ylim([0.99,1.01])
 #ax_pos.legend()
-
+#

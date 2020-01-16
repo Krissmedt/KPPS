@@ -93,8 +93,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [1000]
-resolutions = [1000]
+steps = [10,20,30,40,50,100,200,300,400,500,1000]
+resolutions = [100,1000]
 
 dataRoot = "../data_landau_weak/"
 
@@ -213,7 +213,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res
@@ -224,7 +224,7 @@ for Nt in steps:
         
         pos_list = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
         hotLoader_params['pos'] = pos_list
-        vel_list = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th)
+        vel_list = particle_vel_maxwellian(hotLoader_params['pos'],v,v_th,rand_seed=1)
         hotLoader_params['vel'] = perturb_vel(pos_list,vel_list,dv_mag,dv_mode)
         
         mLoader_params['resolution'] = [2,2,res]
