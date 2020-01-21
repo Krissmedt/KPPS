@@ -12,6 +12,7 @@ from mesh import mesh
 from controller import controller
 from meshLoader import meshLoader
 from particleLoader import particleLoader
+import math
 
 class Test_units_analysis:
     def setup(self):
@@ -296,6 +297,32 @@ class Test_units_analysis:
         assert x[13] == 4
         assert x[25] == 5
         
+        
+    def test_external_E(self):
+        spec = species()
+        field = mesh()
+        kpa = kpps_analysis()
+        
+        spec.pos = np.array([[10,0,0]])
+        spec.a = 1
+        spec.nq = spec.pos.shape[0]
+        
+        omegaB = 25
+        omegaE = 4.9
+        epsilon = -1
+
+        kpa.E_type = 'transform'
+        kpa.E_transform = np.array([[1,0,0],[0,1,0],[0,0,-2]])
+        kpa.E_magnitude = -epsilon*omegaE**2/spec.a
+        kpa.B_type = 'uniform'
+        kpa.B_transform = np.array([0,0,1])
+        kpa.B_magnitude = omegaB/spec.a
+        
+        spec = kpa.eFieldImposed(spec,field)
+        
+        assert spec.E.shape == (1,3)
+        assert math.isclose(spec.E[0,0],240.1)
+        
 test = Test_units_analysis()
 test.setup()
-test.test_polyScatter()
+test.test_external_E()

@@ -20,16 +20,15 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 1
+exptype = 4
 prefix = ''
 
 schemes = ['boris_staggered','boris_synced','boris_SDC']
-schemes = ['boris_SDC']
-steps = [2048]
-resolutions = [1]
+steps = [1,5,10,50,100,200,250,500,1000]
+resolutions = [10,100,1000]
 
-M = 8
-K = 8
+M = 3
+K = 3
 
 tend = 1
 

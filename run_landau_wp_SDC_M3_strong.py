@@ -93,8 +93,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [10,20,30,40,50,100,200,300,400,500,1000]
-resolutions = [100,1000]
+steps = [10,20,30,40,50,100,200,300,400,500]
+resolutions = [1000]
 
 dataRoot = "../data_landau_strong/"
 

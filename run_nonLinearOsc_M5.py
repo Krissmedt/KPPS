@@ -23,13 +23,13 @@ exptype = 4
 prefix = ''
 
 schemes = ['boris_SDC']
-steps = [128]
-resolutions = [100]
+steps = [1,5,10,50,100,200,250,500,1000]
+resolutions = [10,100,1000]
 
 M = 5
 K = 5
 
-tend = 0.1
+tend = 1
 
 ppc = 20
 
@@ -86,7 +86,7 @@ analysis_params['rhs_check'] = True
 data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['write_m'] = False
-data_params['dataRootFolder'] = "../data/" 
+data_params['dataRootFolder'] = "../data_nlo/" 
 
 plot_params = {}
 plot_params['legend.fontsize'] = 8
@@ -137,8 +137,8 @@ for scheme in schemes:
                          mLoaderSettings=mLoader_params,
                          dataSettings=data_params)
             
-            kppsObject = kpps(**model)
-            DH = kppsObject.run()
+            kppsObject = kpps()
+            DH = kppsObject.start(**model)
 
             
 """          

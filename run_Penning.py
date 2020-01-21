@@ -6,21 +6,20 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_synced','boris_SDC']
+schemes = ['boris_SDC']
 node_type = 'lobatto'
-M = 3
-iterations = [3]
-dtwb = [10,1,0.1,0.01]
+M = 5
+iterations = [1,2,4,8]
+dtwb = [10,5,1,0.5,0.1,0.05]
 
-tend = 1
+tend = 16
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-dtwb = [1*omegaB,0.1*omegaB,0.01*omegaB,0.001*omegaB]
-
+#dtwb = [0.1*omegaB,0.05*omegaB,0.025*omegaB]
 
 
 sim_params = {}
@@ -70,6 +69,7 @@ analysis_params['H'] = H
 
 analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
+analysis_params['convergence_check'] = False
 analysis_params['rhs_check'] = True
 
 
@@ -124,10 +124,16 @@ for scheme in schemes:
     j = 0
     for K in iterations:
         analysis_params['K'] = K
+        
+        if scheme == 'boris_SDC':
+            suffix = '_M' + str(M) + 'K' + str(K)
+        else:
+            suffix = ""
+            
         for dt in dtwb:
             sim_params['dt'] = dt/omegaB
             Nt = floor(sim_params['tEnd']/sim_params['dt'])
-            data_params['samplePeriod'] = 1
+            data_params['samplePeriod'] = Nt
             
             xMod = Rplus*cos(omegaPlus*dt) + Rminus*cos(omegaMinus*dt) + Iplus*sin(omegaPlus*dt) + Iminus*sin(omegaMinus*dt)
             yMod = Iplus*cos(omegaPlus*dt) + Iminus*cos(omegaMinus*dt) - Rplus*sin(omegaPlus*dt) - Rminus*sin(omegaMinus*dt)
@@ -139,7 +145,7 @@ for scheme in schemes:
             xOne = [xMod,yMod,zMod]
             vHalf = v_half_dt
             
-            sim_name = 'pen_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+            sim_name = 'pen_' + prefix + '_' + analysis_params['particleIntegrator'] + suffix + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             

@@ -37,6 +37,7 @@ analyse = True
 plot = True
 snapPlot = False
 compare_reference = True
+compare_linear = False
 
 peak_intervals = [[0,2],[2,4],[4,6],[6,8],[8,10]]
 peak_intervals2 = [[20,22.5],[22.5,25],[25,27.5],[27.5,30],[30,32.5],[32.5,35],[35,37.5],[37.5,40]]
@@ -49,20 +50,20 @@ fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
 analysis_times = [1,2,3,4,5,6,7,8,9,10]
-compare_times = [4]
+compare_times = [0]
 
 
 fig_type = ''
 data_root = "../data_landau_strong/"
 sims = {}
 
-#sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ20000_NT'] = [20,100,200]
-#sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500,1000]
-#sims['lan_TE10_strong_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
-sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500]
-sims['lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100]
+##sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ20000_NT'] = [20,100,200]
+##sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500,1000]
+##sims['lan_TE10_strong_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
+#sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500]
+sims['lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT'] = [10,20,40,50,100,200,300,400]
 
-comp_run = 'lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT1000'
+comp_run = 'lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT500'
 
 
 ################################ Linear analysis ##############################
@@ -302,58 +303,59 @@ if plot == True:
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(time) + 's'
-                ax_nl_rhs.plot(rhs_evals,E_errors[:,time-1],label=label_line)
+                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(time) + 's'
-                ax_nl_dt.plot(dts,E_errors[:,time-1],label=label_line)
+                ax_nl_dt.plot(dts,E_errors[:,time],label=label_line)
             
-
-        ##Order Plot w/ rhs
-        fig_rhs = plt.figure(12)
-        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,gamma1_errors,label=label)
+        if compare_linear == True:
+            ##Order Plot w/ rhs
+            fig_rhs = plt.figure(12)
+            ax_rhs = fig_rhs.add_subplot(1, 1, 1)
+            ax_rhs.plot(rhs_evals,gamma1_errors,label=label)
+                
+            ##Order Plot w/ dt
+            fig_dt = plt.figure(13)
+            ax_dt = fig_dt.add_subplot(1, 1, 1)
+            ax_dt.plot(dts,gamma1_errors,label=label)
+            file.close()
             
-        ##Order Plot w/ dt
-        fig_dt = plt.figure(13)
-        ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,gamma1_errors,label=label)
-        file.close()
+    if compare_linear == True:
+        ax_list = []  
+        ax_list.append(ax_rhs)
+        ax_list.append(ax_dt)
         
-    ax_list = []  
-    ax_list.append(ax_rhs)
-    ax_list.append(ax_dt)
-    
-    i = 0
-    for ax in ax_list:
-        i +=1
-        if i == 1:
-            orderSlope = -1
-            ax.set_xlabel('Number of RHS evaluations')
-        else:
-            ax.set_xlabel(r'$\Delta t$')
-            orderSlope = 1
-        
-        ax.set_xscale('log')
-        #ax_rhs.set_xlim(10**3,10**5)
-        ax.set_yscale('log')
-        ax.set_ylim(10**(-4),10)
-        ax.set_ylabel('damping rate error')
-        
-        ax.set_title('Convergence vs. Linear Theory')
-        
-        xRange = ax.get_xlim()
-        yRange = ax.get_ylim()
-        
-        ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                    ls='dotted',c='0.25',label='2nd Order')
-        ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                    ls='dashed',c='0.75',label='4th Order')
-        
-        ax.legend()
+        i = 0
+        for ax in ax_list:
+            i +=1
+            if i == 1:
+                orderSlope = -1
+                ax.set_xlabel('Number of RHS evaluations')
+            else:
+                ax.set_xlabel(r'$\Delta t$')
+                orderSlope = 1
+            
+            ax.set_xscale('log')
+            #ax_rhs.set_xlim(10**3,10**5)
+            ax.set_yscale('log')
+            ax.set_ylim(10**(-4),10)
+            ax.set_ylabel('damping rate error')
+            
+            ax.set_title('Convergence vs. Linear Theory')
+            
+            xRange = ax.get_xlim()
+            yRange = ax.get_ylim()
+            
+            ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
+                        ls='dotted',c='0.25',label='2nd Order')
+            ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
+                        ls='dashed',c='0.75',label='4th Order')
+            
+            ax.legend()
         
     if compare_reference == True:
         axnl_list = []

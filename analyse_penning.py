@@ -44,8 +44,10 @@ snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-sims['pen_TE1_boris_SDC_NQ1_NT'] = [1,10,100,1000]
-sims['pen_TE1_boris_synced_NQ1_NT'] = [1,10,100,1000]
+sims['pen_TE16_boris_SDC_M5K1_NQ1_NT'] = [40,80,400,800,4000,8000]
+sims['pen_TE16_boris_SDC_M5K2_NQ1_NT'] = [40,80,400,800,4000,8000]
+sims['pen_TE16_boris_SDC_M5K4_NQ1_NT'] = [40,80,400,800,4000,8000]
+sims['pen_TE16_boris_SDC_M5K8_NQ1_NT'] = [40,80,400,800,4000,8000]
 
 omegaB = 25.0
 omegaE = 4.9
@@ -70,7 +72,6 @@ plot_params['axes.titlepad'] = 10
 data_params['plot_params'] = plot_params
 data_params['dataRootFolder'] = data_root
 
-DH = dataHandler2(**data_params)
 filenames = []
 if analyse == True:
     sim_no = 0
@@ -92,6 +93,8 @@ if analyse == True:
         grp = file.create_group('fields')
         
         for tsteps in value:
+            DH = dataHandler2(**data_params)
+            
             sim_no += 1
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
@@ -116,9 +119,8 @@ if analyse == True:
             xRel = abs(xArray - xAnalyt)/abs(xAnalyt)
             hRel = abs(hArray - hAnalyt)/abs(hAnalyt)
             
-            
-            xErrors.append(xRel)
-            hErrors.append(hRel)
+            xErrors.append(xRel[-1])
+            hErrors.append(hRel[-1])
             dts.append(sim.dt)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)
@@ -136,8 +138,8 @@ if analyse == True:
     
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
         try:
-            file.attrs["M"] = str(3)
-            file.attrs["K"] = str(3)
+            file.attrs["M"] = key[key.find('M')+1]
+            file.attrs["K"] = key[key.find('K')+1]
         except KeyError:
             pass
         
@@ -178,12 +180,12 @@ if plot == True:
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(DH.figureNo+2)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,xErrors[:,-1],label=label)
+        ax_rhs.plot(rhs_evals,xErrors,label=label)
             
         ##Order Plot w/ dt
         fig_dt = plt.figure(DH.figureNo+3)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts*omegaB,xErrors[:,-1],label=label)
+        ax_dt.plot(dts*omegaB,xErrors,label=label)
         file.close()
         
     ax_list = []  
@@ -201,9 +203,8 @@ if plot == True:
             orderSlope = 1
         
         ax.set_xscale('log')
-        #ax_rhs.set_xlim(10**3,10**5)
         ax.set_yscale('log')
-        #ax.set_ylim(10**(-4),10)
+        ax.set_ylim(10**(-14),10**1)
         ax.set_ylabel('$\Delta x_{rel}$')
         
         ax.set_title('Convergence vs. Analytical Solution')
@@ -215,6 +216,8 @@ if plot == True:
                     ls='dotted',c='0.25',label='2nd Order')
         ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                     ls='dashed',c='0.75',label='4th Order')
+        ax.plot(xRange,DH.orderLines(8*orderSlope,xRange,yRange),
+                    ls='dashdot',c='0.5',label='8th Order')
         
         ax.legend()
         
