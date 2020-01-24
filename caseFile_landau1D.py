@@ -231,13 +231,13 @@ def lit_iv(res,mag,mode,L,v_off):
  
     return grid_x, grid_v, f, n, fvel
 
-
+#
 #res = 1000
-#mag = 0.05
+#mag = 0.01
 #mode = 0.5
 #L = 4*np.pi
 #v_off = 4
-#nq = 20000
+#nq = 200000
 #v_th = 1
 #q = L/nq
 #
@@ -247,7 +247,7 @@ def lit_iv(res,mag,mode,L,v_off):
 #
 #v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
 #grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
-#grid_x,grid_v, f, n, fvel,n1 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
 #
 #
 #fig = plt.figure(1)
@@ -274,7 +274,7 @@ def lit_iv(res,mag,mode,L,v_off):
 #ax_pos = fig.add_subplot(111)
 #ax_pos.scatter(grid_x[0,:],n)
 #ax_pos.plot(grid_x[0,:],nlit)
-#ax_pos.scatter(grid_x[0,:],n1)
+##ax_pos.scatter(grid_x[0,:],n1)
 ##ax_pos.set_ylim([0.99,1.01])
 #ax_pos.legend()
 #

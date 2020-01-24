@@ -34,12 +34,12 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     return peaks
 
 analyse = True
-plot = True
-snapPlot = False
-compare_reference = True
+plot = False
+snapPlot = True
+compare_reference = False
 compare_linear = False
 
-peak_intervals = [[0,2],[2,4],[4,6],[6,8],[8,10]]
+peak_intervals = [[0,2],[2,4],[4,6]]
 peak_intervals2 = [[20,22.5],[22.5,25],[25,27.5],[27.5,30],[30,32.5],[32.5,35],[35,37.5],[37.5,40]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
@@ -61,7 +61,8 @@ sims = {}
 ##sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500,1000]
 ##sims['lan_TE10_strong_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
 #sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,40,50,100,500]
-sims['lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT'] = [10,20,40,50,100,200,300,400]
+sims['lan_TE10_a0.5_boris_SDC_NZ100_NQ20000_NT'] = [100]
+#sims['lan_TE10_a0.5_boris_SDC_NZ1000_NQ200000_NT'] = [100]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT500'
 

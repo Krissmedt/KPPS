@@ -93,8 +93,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [10,20,30,40,50,100,200,300,400,500]
-resolutions = [1000]
+steps = [100]
+resolutions = [100,1000]
 
 dataRoot = "../data_landau_strong/"
 
@@ -115,7 +115,7 @@ plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -126,7 +126,7 @@ omega_p = np.sqrt(q*nq*a*1/L)
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -213,7 +213,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res

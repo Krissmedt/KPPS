@@ -39,7 +39,7 @@ snapPlot = True
 compare_reference = False
 compare_linear = False
 
-peak_intervals = [[0,2],[2,4],[4,6]]
+peak_intervals = [[0,2],[2,4],[4,6],[6,8]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
 
@@ -56,7 +56,9 @@ sims = {}
 #sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ20000_NT'] = [20,100,200]
 #sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [20,30,40,50,100,500,1000]
 #sims['lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
-sims['lan_TE50_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [1000]
+sims['lan_TE20_a0.05_boris_SDC_NZ100_NQ200000_NT'] = [200]
+sims['lan_TE20_a0.05_boris_SDC_M5K5_NZ100_NQ200000_NT'] = [200]
+sims['lan_TE20_a0.05_boris_staggered_NZ100_NQ200000_NT'] = [200]
 
 comp_run = 'lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT5000'
 
@@ -119,10 +121,6 @@ if analyse == True:
         EL2_comp = np.sqrt(EL2*dz_comp)
         #EL2_comp = EL2_comp/EL2_comp[0]
         
-        print('Comp')
-        print(tArray_comp[0])
-        print(np.sum(E2[0,:]))
-        print(EL2_comp)
         comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
         
         comp_fit = np.polyfit(tArray_comp[comp_peaks],
@@ -175,9 +173,7 @@ if analyse == True:
                 EL2 = np.sum(E*E,axis=1)
                 EL2 = np.sqrt(EL2*mData_dict['dz'][0])  
                 #EL2 = EL2/EL2[0]
-                print('Sim')
-                print(tArray[0])
-                print(EL2)
+
                 peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
                 c1 = EL2[peaks[0]]*1.05
                 

@@ -9,8 +9,8 @@ from dataHandler2 import dataHandler2
 schemes = ['boris_SDC']
 node_type = 'lobatto'
 M = 5
-iterations = [1,2,4,8]
-dtwb = [10,5,1,0.5,0.1,0.05]
+iterations = [5]
+dtwb = [0.1]
 
 tend = 16
 
@@ -133,7 +133,7 @@ for scheme in schemes:
         for dt in dtwb:
             sim_params['dt'] = dt/omegaB
             Nt = floor(sim_params['tEnd']/sim_params['dt'])
-            data_params['samplePeriod'] = Nt
+            data_params['samplePeriod'] = 1
             
             xMod = Rplus*cos(omegaPlus*dt) + Rminus*cos(omegaMinus*dt) + Iplus*sin(omegaPlus*dt) + Iminus*sin(omegaMinus*dt)
             yMod = Iplus*cos(omegaPlus*dt) + Iminus*cos(omegaMinus*dt) - Rplus*sin(omegaPlus*dt) - Rminus*sin(omegaMinus*dt)
