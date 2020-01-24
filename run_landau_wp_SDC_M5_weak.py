@@ -93,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [200]
-resolutions = [100]
+steps = [5000]
+resolutions = [10000]
 
 dataRoot = "../data_landau_weak/"
 
 L = 4*pi
-tend = 20
+tend = 10
 
 dx_mag = 0.05
 dx_mode = 0.5
@@ -181,8 +181,7 @@ mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_SDC'
-analysis_params['M'] = 5
-analysis_params['K'] = 5
+analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 
 analysis_params['fieldIntegration'] = True
@@ -214,7 +213,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res
@@ -234,7 +233,7 @@ for Nt in steps:
         species_params = [hot_params]
         loader_params = [hotLoader_params]
 
-        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M5K5' + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

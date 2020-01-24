@@ -34,9 +34,9 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     return peaks
 
 analyse = True
-plot = True
-snapPlot = False
-compare_reference = True
+plot = False
+snapPlot = True
+compare_reference = False
 compare_linear = False
 
 peak_intervals = [[0,2],[2,4],[4,6],[6,8],[8,10]]
@@ -61,8 +61,8 @@ sims = {}
 #sims['lan_TE10_a0.5_boris_staggered_NZ100_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
 #sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE10_a0.5_boris_SDC_NZ100_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_NZ1000_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE20_a0.05_boris_SDC_M5K5_NZ100_NQ200000_NT'] = [200]
+sims['lan_TE20_a0.05_boris_staggered_NZ100_NQ200000_NT'] = [200]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_NZ10000_NQ200000_NT5000'
 
