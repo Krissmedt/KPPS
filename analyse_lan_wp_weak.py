@@ -34,31 +34,30 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     return peaks
 
 analyse = True
-plot = False
-snapPlot = True
-compare_reference = False
+plot = True
+snapPlot = False
+compare_reference = True
 compare_linear = False
 
-peak_intervals = [[0,2],[2,4],[4,6],[6,8]]
+peak_intervals = [[0,2],[2,4],[4,6]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
 
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [1]
+analysis_times = [0,1,2,3,4]
+compare_times = [4]
 
-fig_type = 'wp'
+fig_type = 'nz1000'
 data_root = "../data_landau_weak/"
 sims = {}
 
-#sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ20000_NT'] = [20,100,200]
-#sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [20,30,40,50,100,500,1000]
-#sims['lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT'] = [5000]
-sims['lan_TE20_a0.05_boris_SDC_NZ100_NQ200000_NT'] = [200]
-sims['lan_TE20_a0.05_boris_SDC_M5K5_NZ100_NQ200000_NT'] = [200]
-sims['lan_TE20_a0.05_boris_staggered_NZ100_NQ200000_NT'] = [200]
+#sims['lan_TE10_a0.05_boris_staggered_NZ100_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
+
+#sims['lan_TE10_a0.05_boris_SDC_NZ100_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_NZ1000_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
 comp_run = 'lan_TE10_a0.05_boris_SDC_NZ10000_NQ200000_NT5000'
 
@@ -105,7 +104,7 @@ if analyse == True:
     if compare_reference == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-        mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name)
+        mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name,max_t=analysis_times[-1])
         
         tArray_comp = mData_comp['t']
         dz_comp = mData_comp['dz'][0] 
@@ -121,11 +120,12 @@ if analyse == True:
         EL2_comp = np.sqrt(EL2*dz_comp)
         #EL2_comp = EL2_comp/EL2_comp[0]
         
-        comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
-        
-        comp_fit = np.polyfit(tArray_comp[comp_peaks],
-                             EL2_comp[comp_peaks],1)
-        
+        try:
+            comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
+            comp_fit = np.polyfit(tArray_comp[comp_peaks],
+                                 EL2_comp[comp_peaks],1)
+        except:
+            pass
 
     sim_no = 0
     for key, value in sims.items():
@@ -159,7 +159,7 @@ if analyse == True:
                 for time in analysis_times:
                     analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
 
-                mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name)
+                mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
                 
                 NQ = key[key.find('NQ')+2:key.find('_NT')] 
@@ -173,25 +173,28 @@ if analyse == True:
                 EL2 = np.sum(E*E,axis=1)
                 EL2 = np.sqrt(EL2*mData_dict['dz'][0])  
                 #EL2 = EL2/EL2[0]
-
-                peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
-                c1 = EL2[peaks[0]]*1.05
                 
-                E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
-                E_fit = np.around(E_fit,decimals=6)
-                E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
-                
-                gamma_line = c1*np.exp(gamma*tArray[NA:NB])
-                lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
-                
-                error_linear = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
+                try:
+                    peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
+                    c1 = EL2[peaks[0]]*1.05
+                    
+                    E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
+                    E_fit = np.around(E_fit,decimals=6)
+                    E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
+                    
+                    gamma_line = c1*np.exp(gamma*tArray[NA:NB])
+                    lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
+                    
+                    error_linear = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
+                    avg_slopes.append(E_fit[0])
+                    avg_errors.append(error_linear)
+                except:
+                    pass
         
-                
                 dts.append(sim.dt)
                 Nts.append(sim.tSteps)
                 rhs_evals.append(sim.rhs_eval)
-                avg_slopes.append(E_fit[0])
-                avg_errors.append(error_linear)
+
                 
                 if compare_reference == True:
                     skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)

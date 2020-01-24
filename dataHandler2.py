@@ -189,13 +189,19 @@ class dataHandler2:
                 
         return sim, sim_name
 
-    def load(self,dataType,variables,sim_name=None,overwrite=False,load_limit=None):
+    def load(self,dataType,variables,sim_name=None,overwrite=False,load_limit=None,max_t='all'):
         # Will load specified variables for all dumps for data objects 'species'
         # or 'mesh' identified by dataType input, strings 'p' and 'm' for 
         # species and mesh objects respectively.
         # 'load_limit' can be used to load fewer than the max time-steps
-        
+        print(max_t)
         sim, sim_name = self.load_sim(sim_name,overwrite)
+        
+        if max_t == 'all':
+            max_ti = sim.tSteps
+        else:
+            max_ti = np.int(max_t/(sim.dt*self.samplePeriod))
+        
         try:
             skip = np.int(sim.tSteps/load_limit)
         except TypeError:
@@ -217,23 +223,26 @@ class dataHandler2:
             return_dict['t'].append(t)
             for var in variables:
                 return_dict[var].append(getattr(dataObject,var))
+                
+            if ti >= max_ti:
+                break
         
         for key, value in return_dict.items():
             return_dict[key] = np.array(value)
             
         return return_dict, sim
         
-    def load_p(self,variables,species=['none'],sim_name=None,overwrite=False,load_limit=None):
+    def load_p(self,variables,species=['none'],sim_name=None,overwrite=False,load_limit=None,max_t='all'):
         species_list = []
         for spec in species:
             dtype = 'p_' + spec
-            species_dict, sim = self.load(dtype,variables,sim_name=sim_name)
+            species_dict, sim = self.load(dtype,variables,sim_name=sim_name,max_t=max_t)
             species_list.append(species_dict)
             
         return species_list
     
-    def load_m(self,variables,sim_name=None,overwrite=False,load_limit=None):
-        return_dict, sim = self.load('m',variables,sim_name=sim_name)
+    def load_m(self,variables,sim_name=None,overwrite=False,load_limit=None,max_t='all'):
+        return_dict, sim = self.load('m',variables,sim_name=sim_name,max_t=max_t)
         return return_dict
         
     def load_parameters(self,modules=None,sim_name=None):
@@ -336,12 +345,6 @@ class dataHandler2:
         
     def vector_plot(self,variables=0):
         pass
-    
-    
-    def get_cmap(self,n,name='tab10'):
-        '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
-        RGB color; the keyword argument name must be a standard mpl colormap name.'''
-        return plt.cm.get_cmap(name, n)
     
     
 ######################### Setup Functionality #################################
