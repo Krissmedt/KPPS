@@ -37,6 +37,9 @@ max_time = 1
 sims = {}
 
 
+#sims['tsi_TE1_boris_SDC_M3K3_NZ_NQ20000_NT64'] = [5,10,20,40,80]
+#sims['tsi_TE1_boris_staggered_NZ_NQ20000_NT64'] = [5,10,20,40,80]
+
 sims['tsi_TE1_boris_SDC_M3K3_NZ_NQ20000_NT64'] = [5,10,20,40,80]
 sims['tsi_TE1_boris_staggered_NZ_NQ20000_NT64'] = [5,10,20,40,80]
 
@@ -168,6 +171,7 @@ if analyse == True:
         file.close()
 
 if plot == True:
+    DH = dataHandler2(**data_params)
     plt.rcParams.update(plot_params)
     if len(filenames) == 0:
         for key, value in sims.items():

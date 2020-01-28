@@ -65,6 +65,17 @@ def update_hist(num, data, histogram_axis,bins,xmin,xmax,ymax):
 
     return histogram_axis
 
+def plot_density_1d(species_list,fields,controller='',**kwargs):
+    plot_res = controller.plot_res
+    v_off = controller.v_off
+    
+    pos_data_list = [species_list[0].pos[:,2]]
+    vel_data_list = [species_list[0].vel[:,2]]
+    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    
+    return species_list, fields
+
+
 steps = [1000]
 resolutions = [100]
 iterations = [3]
@@ -265,8 +276,6 @@ for Nt in steps:
                 energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
                 energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
                 
-                max_phi_data = np.amax(np.abs(phi_data),axis=1)
-                max_phi_data_log = np.log(max_phi_data)
                 g_slope = (max_phi_data_log[2:] - max_phi_data_log[1:-1])/dt
                 growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
                 growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]

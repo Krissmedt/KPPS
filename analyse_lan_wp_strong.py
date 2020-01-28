@@ -34,12 +34,12 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     return peaks
 
 analyse = True
-plot = False
-snapPlot = True
-compare_reference = False
+plot = True
+snapPlot = False
+compare_reference = True
 compare_linear = False
 
-peak_intervals = [[0,2],[2,4],[4,6],[6,8],[8,10]]
+peak_intervals = [[0,2],[2,4],[4,6]]
 peak_intervals2 = [[20,22.5],[22.5,25],[25,27.5],[27.5,30],[30,32.5],[32.5,35],[35,37.5],[37.5,40]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
@@ -49,22 +49,23 @@ fit1_stop = peak_intervals[-1][-1]
 fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
-analysis_times = [0,1,2,3,4]
-compare_times = [4]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+compare_times = [5]
 
 
-fig_type = 'SDC'
+fig_type = ''
 data_root = "../data_landau_strong/"
 sims = {}
 
+sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50]
+sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50]
+#
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50]
 
-#sims['lan_TE10_a0.5_boris_staggered_NZ100_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
-#sims['lan_TE10_a0.5_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,40,50,80,100,200,500,1000]
-
-sims['lan_TE20_a0.05_boris_SDC_M5K5_NZ100_NQ200000_NT'] = [200]
-sims['lan_TE20_a0.05_boris_staggered_NZ100_NQ200000_NT'] = [200]
-
-comp_run = 'lan_TE10_a0.5_boris_SDC_NZ10000_NQ200000_NT5000'
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT80'
 
 
 ################################ Linear analysis ##############################
@@ -121,17 +122,13 @@ if analyse == True:
         UE_log = np.log(UE)
         UE_comp = UE/UE[0]
         
-        EL2 = np.sum(E*E,axis=1)
-        EL2_comp = np.sqrt(EL2*dz_comp)
+        EL2 = np.sum(E*E,axis=1)*dz_comp
+        EL2_comp = np.sqrt(EL2)
         
+        comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
         
-        try:
-            comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
-            
-            comp_fit = np.polyfit(tArray_comp[comp_peaks],
-                                 EL2_comp[comp_peaks],1)
-        except Exception:
-            pass
+        comp_fit = np.polyfit(tArray_comp[comp_peaks],
+                             EL2_comp[comp_peaks],1)
 
     sim_no = 0
     for key, value in sims.items():
@@ -149,7 +146,6 @@ if analyse == True:
         except OSError:
             file.close()
             file = h5.File(data_root+filename,'w')
-            
         grp = file.create_group('fields')
         try:
             for tsteps in value:
@@ -174,15 +170,15 @@ if analyse == True:
 
                 mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
-                print(mData_dict['dz'])
+    
                 E = mData_dict['E'][:,2,1,1,:-1]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
                 UE_comp = UE/UE[0]
                 
-                EL2 = np.sum(E*E,axis=1)
-                EL2 = np.sqrt(EL2*mData_dict['dz'][0])  
+                EL2 = np.sum(E*E,axis=1) * mData_dict['dz'][0]
+                EL2 = np.sqrt(EL2)  
 
                 try:
                     peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
@@ -258,11 +254,12 @@ if analyse == True:
                     
                     
             
+            file.attrs["reference"] = comp_run
             file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
             file.attrs["res"] = str(mData_dict['zres'][0])
             try:
-                file.attrs["M"] = str(3)
-                file.attrs["K"] = str(3)
+                file.attrs["M"] = str(sim.analysisSettings['M'])
+                file.attrs["K"] = str(sim.analysisSettings['K'])
             except KeyError:
                 pass
             
@@ -398,5 +395,5 @@ if plot == True:
                         ls='dashed',c='0.75',label='4th Order')
             
             ax.legend(loc = 'best')
-            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

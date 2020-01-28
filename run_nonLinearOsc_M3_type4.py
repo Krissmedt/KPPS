@@ -11,6 +11,7 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 from caseFile_nonLinearOsc import *
 
+
 """
 Experiment type:
     1 Direct E
@@ -19,15 +20,15 @@ Experiment type:
     4 Scatter q -> Solve for E -> Gather E from mesh
 """
 
-exptype = 1
+exptype = 4
 prefix = ''
 
-schemes = ['boris_SDC']
-steps = [5000]
-resolutions = [1]
+schemes = ['boris_staggered','boris_synced','boris_SDC']
+steps = [1,5,10,50,100,200,250,500,1000]
+resolutions = [10,100,1000,10000,100000,1000000]
 
-M = 8
-K = 8
+M = 3
+K = 3
 
 tend = 1
 
@@ -52,18 +53,16 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [-1,1]
-sim_params['nlo_type'] = exptype
+
 
 spec1_params['name'] = 'spec1'
-spec1_params['nq'] = 1
-spec1_params['q'] = 1
-spec1_params['mq'] = 1
+spec1_params['nq'] = 2
 
 
 loader1_params['load_type'] = 'direct'
 loader1_params['speciestoLoad'] = [0]
-loader1_params['pos'] = np.array([[0,0,0.5]])
-loader1_params['vel'] = np.array([[0,0,0]])
+loader1_params['pos'] = np.array([[0,0,0.5],[0,0,0.75]])
+loader1_params['vel'] = np.array([[0,0,0],[0,0,0]])
 
 #mesh_params['node_charge'] = -2*ppc*q
 mLoader_params['load_type'] = 'box'
@@ -100,7 +99,7 @@ data_params['plot_params'] = plot_params
 
 
 analysis_params = type_setup(exptype,analysis_params)
-
+sim_params['nlo_type'] = exptype
 for scheme in schemes:
     analysis_params['particleIntegrator'] = scheme
     
@@ -122,7 +121,6 @@ for scheme in schemes:
             data_params['samples'] = 1
 
             species_params, loader_params = type_setup_spec(exptype,res,ppc,spec1_params,loader1_params,spec2_params,loader2_params)
-    
             sim_name = 'NLO_' + prefix + '_' + 'type' + str(exptype) + '_' + scheme + '_NZ' + str(res) + '_TE' + str(tend) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
@@ -137,5 +135,3 @@ for scheme in schemes:
             
             kppsObject = kpps()
             DH = kppsObject.start(**model)
-
-            
