@@ -294,18 +294,22 @@ class kpps_analysis:
     
     
     def run_preAnalyser(self,species_list,mesh,**kwargs):
-        print("Running pre-processing...")
+        print("Running pre-processing:")
+        print("Checking for boundary crossings...")
         for species in species_list:
             self.check_boundCross(species,mesh,**kwargs)
         
+        print("Performing pre-run analysis...")
         for method in self.preAnalysis_methods:
             #print(method)
             method(species_list, mesh,**kwargs)
-            
+
         for species in species_list:
+            print("Evaluating initial field for " + species.name + " species.")
             self.check_boundCross(species,mesh,**kwargs)
             self.fieldGather(species,mesh,**kwargs)
             species.E_half = species.E
+            species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
 
         return species_list, mesh
     
@@ -750,10 +754,9 @@ class kpps_analysis:
                 mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
                 mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
 
-            self.scatter_BC(species,mesh,controller)
+        self.scatter_BC(species_list,mesh,controller)
 
         mesh.rho += mesh.q/mesh.dv
-        
         return mesh
     
     
@@ -1018,7 +1021,6 @@ class kpps_analysis:
             ## Populate node solutions with x0, v0, F0 ##
             species.x0[:,0] = self.toVector(species.pos)
             species.v0[:,0] = self.toVector(species.vel)
-            species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
             species.F[:,0] = self.toVector(species.lntz)
             species.En_m0 = species.E
 
@@ -1309,8 +1311,9 @@ class kpps_analysis:
         self.solver_post = self.mirrored_boundary_z
 
     def scatter_periodicBC_1d(self,species,mesh,controller):
-        mesh.q[1,1,0] += mesh.q[1,1,-2]       
+        mesh.q[1,1,0] += (mesh.q[1,1,-2]-mesh.q_bk[1,1,-2])
         mesh.q[1,1,-2] = mesh.q[1,1,0] 
+        
         
     def rho_mod_1d(self,species,mesh,controller):
         j = 0

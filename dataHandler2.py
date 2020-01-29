@@ -194,7 +194,7 @@ class dataHandler2:
         # or 'mesh' identified by dataType input, strings 'p' and 'm' for 
         # species and mesh objects respectively.
         # 'load_limit' can be used to load fewer than the max time-steps
-        print(max_t)
+
         sim, sim_name = self.load_sim(sim_name,overwrite)
         
         if max_t == 'all':

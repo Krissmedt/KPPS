@@ -388,18 +388,6 @@ for Nt in steps:
             dist_ax.set_ylabel(r'$f$')
             dist_ax.set_title('Landau velocity distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
             
-            ## Perturbation plot
-            fig5 = plt.figure(DH.figureNo+8,dpi=75)
-            perturb_ax = fig5.add_subplot(1,1,1)
-            nq = p1_data.shape[1]
-            spacing = L/nq
-            x0 = [(i+0.5)*spacing for i in range(0,nq)]
-            xi2 = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
-            perturb_ax.plot(x0,p1_data[0,:]-x0,'blue')
-            perturb_ax.plot(x0,xi2[:,2]-x0,'orange')
-            perturb_ax.set_xlabel('$x_{uniform}$')
-            perturb_ax.set_ylabel('$x_i$')
-            perturb_ax.set_ylim([-dx_mag*1.2,dx_mag*1.2])
             
             ## Electric field norm plot
             fig6 = plt.figure(DH.figureNo+9,dpi=150)

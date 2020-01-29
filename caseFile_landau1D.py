@@ -203,9 +203,7 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
 
     n = np.sum(f[0:-1,0:-1],axis=0) * dv
     fv = np.sum(f[0:-1,0:-1],axis=1) * dx
-    f_int = np.sum(fv) * dv
 
-    
     return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv
 
 
