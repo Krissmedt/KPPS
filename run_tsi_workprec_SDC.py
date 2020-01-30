@@ -310,17 +310,15 @@ for Nt in steps:
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0]
                 UE_log = np.log(UE)
                 
-                c1 = 10e-4
+                c1 = 10e-5
                 E_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
                 E_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
                 
                 max_phi_data = np.amax(np.abs(phi_data),axis=1)
-                max_phi_data_log = np.log(max_phi_data)
-                    
-                growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
-                growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+                growth_fit = np.polyfit(tArray[NA:NB],np.log(max_phi_data[NA:NB]),1)
+                growth_line = c1*np.exp(growth_fit[0]*tArray[NA:NB])
                 
-                exact_line = real_slope*tArray[NA:NB] + growth_fit[1]
+                exact_line = c1*np.exp(real_slope*tArray[NA:NB])
                 
                 linear_g_error = abs(real_slope - growth_fit[0])/real_slope
                 
@@ -408,13 +406,15 @@ for Nt in steps:
                 ## Growth rate plot
                 fig_gr = plt.figure(DH.figureNo+9,dpi=150)
                 growth_ax = fig_gr.add_subplot(1,1,1)
-                growth_ax.plot(tArray,max_phi_data_log,'blue',label="$\phi$ growth")
-                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="slope")
+                growth_ax.plot(tArray,max_phi_data,'blue',label="$\phi$ growth")
+                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="Fitted growth")
+                growth_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth")
                 growth_text = growth_ax.text(.5,0,'',transform=growth_ax.transAxes,verticalalignment='bottom',fontsize=14)
                 text = (r'$\gamma$ = ' + str(growth_fit[0]))
                 growth_text.set_text(text)
                 growth_ax.set_xlabel('$t$')
-                growth_ax.set_ylabel('log $\phi_{max}$')
+                growth_ax.set_ylabel('$\phi_{max}$')
+                growth_ax.set_yscale('log')
                 #growth_ax.set_ylim([-0.001,0.001])
                 growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 growth_ax.legend()
@@ -422,13 +422,15 @@ for Nt in steps:
                 fig_el2 = plt.figure(DH.figureNo+10,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
                 el2_ax.plot(tArray,EL2,'blue',label="$E$")
-                el2_ax.plot(tArray[NA:NB],E_line,'orange',label="slope")
-                el2_text = el2_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                el2_ax.plot(tArray[NA:NB],E_line,'orange',label="Fitted growth, $\gamma = $" + str(E_fit[0]))
+                el2_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth, $\gamma = $" + str(real_slope))
+#                el2_text = el2_ax.text(.5,0,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=14)
+#                growth_text.set_text("$\gamma = $" + str(E_fit[0]))
                 el2_ax.set_xlabel('$t$')
                 el2_ax.set_ylabel(r'log $||E||_{L2}$')
                 el2_ax.set_yscale('log')
                 #el2_ax.set_ylim([10**-7,10**-1])
-                el2_ax.set_title('Two-stream E-field L2 norm, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                el2_ax.set_title('Two-stream E-field growth, NT=' + str(Nt) +', NZ=' + str(res+1) + ', NQ=' + str(nq))
                 el2_ax.legend()
                 
                 ## Energy plot
