@@ -86,7 +86,7 @@ steps = [5000]
 resolutions = [5000]
 iterations = [3]
 
-dataRoot = "../data_tsi_weak/"
+dataRoot = "../data_tsi_strong/"
 
 L = 2*pi
 tend = 10
