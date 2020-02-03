@@ -46,27 +46,26 @@ peak_intervals = [[2,4],[4,5]]
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [10]
+analysis_times = [0,2,4,6,8,10]
+compare_times = [5]
 
-fig_type = 'boris'
+fig_type = 'versus3'
 data_root = "../data_landau_weak/"
 sims = {}
 
-#sims['lan_TE10_a0.05_boris_staggered_NZ10_NQ200000_NT'] = [10,20,40,80,100,200,500,1000]
-#sims['lan_TE10_a0.05_boris_staggered_NZ100_NQ200000_NT'] = [10,20,40,80,100,200,500,1000]
-#sims['lan_TE10_a0.05_boris_staggered_NZ1000_NQ200000_NT'] = [10,20,40,80,100,200,500,1000]
 
-sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200]
-sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200]
-sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200]
+sims['lan_TE10_a0.05_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80]
+#sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
+sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
 
 
-comp_run = 'lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT500'
+comp_run = 'lan_TE20_a0.05_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -112,12 +111,17 @@ if analyse == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
         mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name,max_t=analysis_times[-1])
+        
+        analysis_ts = []
+        for time in analysis_times:
+            analysis_ts.append(np.int(time/(comp_sim.dt*DH_comp.samplePeriod)))
+        analysis_ts = np.array(analysis_ts)
 
         tArray_comp = mData_comp['t']
         dz_comp = mData_comp['dz'][0] 
         
-        rho_comp = mData_comp['rho'][:,1,1,:-2]
-        E = mData_comp['E'][:,2,1,1,:-2]
+        rho_comp = mData_comp['rho'][analysis_ts,1,1,:-2]
+        E = mData_comp['E'][analysis_ts,2,1,1,:-2]
         E2 = E*E
         UE =  np.sum(E2/2,axis=1)*dz_comp
         UE_log = np.log(UE)
@@ -127,10 +131,12 @@ if analyse == True:
         EL2_comp = np.sqrt(EL2*dz_comp)
         #EL2_comp = EL2_comp/EL2_comp[0]
         
-        comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
-        
-        comp_fit = np.polyfit(tArray_comp[comp_peaks],
-                             EL2_comp[comp_peaks],1)
+        try:
+            comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
+            comp_fit = np.polyfit(tArray_comp[comp_peaks],
+                                 EL2_comp[comp_peaks],1)
+        except:
+            pass
         
 
     sim_no = 0
@@ -168,13 +174,14 @@ if analyse == True:
                 analysis_ts = []
                 for time in analysis_times:
                     analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
+                analysis_ts = np.array(analysis_ts)
 
                 mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
                 
                 NQ = key[key.find('NQ')+2:key.find('_NT')] 
-                rho = mData_dict['rho'][:,1,1,:-2]
-                E = mData_dict['E'][:,2,1,1,:-2]
+                rho = mData_dict['rho'][analysis_ts,1,1,:-2]
+                E = mData_dict['E'][analysis_ts,2,1,1,:-2]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
@@ -182,31 +189,35 @@ if analyse == True:
                 
                 EL2 = np.sum(E*E,axis=1)
                 EL2 = np.sqrt(EL2*mData_dict['dz'][0])  
-                #EL2 = EL2/EL2[0]
 
-                peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
-                c1 = EL2[peaks[0]]*1.05
-                
-                E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
-                E_fit = np.around(E_fit,decimals=6)
-                E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
-                
-                gamma_line = c1*np.exp(gamma*tArray[NA:NB])
-                lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
-                
-                error_linear = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
+
+                try:
+                    peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
+                    c1 = EL2[peaks[0]]*1.05
+                    
+                    E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
+                    E_fit = np.around(E_fit,decimals=6)
+                    E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
+                    
+                    gamma_line = c1*np.exp(gamma*tArray[NA:NB])
+                    lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
+                    
+                    error_linear = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
+                    avg_slopes.append(E_fit[0])
+                    avg_errors.append(error_linear)
+                except:
+                    pass
         
                 dts.append(sim.dt)
                 Nts.append(sim.tSteps)
                 rhs_evals.append(sim.rhs_eval)
-                avg_slopes.append(E_fit[0])
-                avg_errors.append(error_linear)
+
                 
                 if compare_reference == True:
-                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-                    skip_int = np.int(skip)
-                    E_error = np.abs(EL2_comp[::skip_int]-EL2)/np.abs(EL2_comp[::skip_int])
-                    E_errors.append(E_error[analysis_ts])
+#                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
+#                    skip_int = np.int(skip)
+                    E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                    E_errors.append(E_error)
 
                 
                 if snapPlot == True:
@@ -271,7 +282,6 @@ if plot == True:
         avg_errors = file["fields/errors"][:]
         E_errors = file["fields/E_errors"][:]
         E_errors = np.array(E_errors)
-        print(file.attrs["reference"])
 
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
@@ -280,21 +290,25 @@ if plot == True:
             label = "Boris Synced" + ", Nz=" + file.attrs["res"]
         elif file.attrs["integrator"] == "boris_SDC":
             label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
-            label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
+            try:
+                label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
+            except:
+                label += ", M=3, K=1"
+                
         
         if compare_reference == True:
             ##Order Plot w/ rhs
             fig_nl_rhs = plt.figure(10)
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
             for time in compare_times:
-                label_line = label + ', ' + str(time) + 's'
+                label_line = label + ', ' + str(analysis_times[time]) + 's'
                 ax_nl_rhs.plot(rhs_evals,E_errors[:,time],label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
-                label_line = label + ', ' + str(time) + 's'
+                label_line = label + ', ' + str(analysis_times[time]) + 's'
                 ax_nl_dt.plot(dts,E_errors[:,time],label=label_line)
             
         if compare_linear == True:
@@ -367,7 +381,7 @@ if plot == True:
             ax.set_ylim(10**(-5),10)
             ax.set_ylabel(r'E L2 Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
             
-            ax.set_title('Convergence vs. Ref Solution at '+ str(compare_times) + 's')
+            ax.set_title('Convergence vs. Ref Solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
@@ -379,5 +393,7 @@ if plot == True:
                         ls='dashed',c='0.75',label='4th Order')
             
             ax.legend(loc = 'best')
+            
+            compare_times = np.array(compare_times,dtype=np.int)
             fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

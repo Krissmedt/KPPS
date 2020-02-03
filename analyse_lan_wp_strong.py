@@ -33,7 +33,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
+analyse = False
 plot = True
 snapPlot = False
 compare_reference = True
@@ -49,23 +49,24 @@ fit1_stop = peak_intervals[-1][-1]
 fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [5]
+analysis_times = [0,1,2,3,4,5,6,7,8]
+compare_times = [1]
 
 
-fig_type = ''
+fig_type = 'versus'
 data_root = "../data_landau_strong/"
 sims = {}
 
-sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50]
-sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50]
-#
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50]
+#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT80'
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
+
+
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -111,25 +112,35 @@ if analyse == True:
     if compare_reference == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-        mData_comp = DH_comp.load_m(['phi','E','dz'],sim_name=comp_sim_name,max_t=analysis_times[-1])
+        mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name,max_t=analysis_times[-1])
+
+        analysis_ts = []
+        for time in analysis_times:
+            analysis_ts.append(np.int(time/(comp_sim.dt*DH_comp.samplePeriod)))
+        analysis_ts = np.array(analysis_ts)
 
         tArray_comp = mData_comp['t']
         dz_comp = mData_comp['dz'][0] 
-
-        E = mData_comp['E'][:,2,1,1,:-1]
+        
+        rho_comp = mData_comp['rho'][analysis_ts,1,1,:-2]
+        E = mData_comp['E'][analysis_ts,2,1,1,:-2]
         E2 = E*E
         UE =  np.sum(E2/2,axis=1)*dz_comp
         UE_log = np.log(UE)
         UE_comp = UE/UE[0]
         
-        EL2 = np.sum(E*E,axis=1)*dz_comp
-        EL2_comp = np.sqrt(EL2)
+        EL2 = np.sum(E*E,axis=1)
+        EL2_comp = np.sqrt(EL2*dz_comp)
+        #EL2_comp = EL2_comp/EL2_comp[0]
         
-        comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
+        try:
+            comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
+            comp_fit = np.polyfit(tArray_comp[comp_peaks],
+                                 EL2_comp[comp_peaks],1)
+        except:
+            pass
         
-        comp_fit = np.polyfit(tArray_comp[comp_peaks],
-                             EL2_comp[comp_peaks],1)
-
+        
     sim_no = 0
     for key, value in sims.items():
         dts = []
@@ -146,6 +157,7 @@ if analyse == True:
         except OSError:
             file.close()
             file = h5.File(data_root+filename,'w')
+            
         grp = file.create_group('fields')
         try:
             for tsteps in value:
@@ -166,12 +178,13 @@ if analyse == True:
                 analysis_ts = []
                 for time in analysis_times:
                     analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
+                analysis_ts = np.array(analysis_ts)
                     
 
                 mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
     
-                E = mData_dict['E'][:,2,1,1,:-1]
+                E = mData_dict['E'][analysis_ts,2,1,1,:-1]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
@@ -211,10 +224,10 @@ if analyse == True:
                 rhs_evals.append(sim.rhs_eval)
 
                 if compare_reference == True:
-                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-                    skip_int = np.int(skip)
-                    E_error = np.abs(EL2_comp[::skip_int]-EL2)/np.abs(EL2_comp[::skip_int])
-                    E_errors.append(E_error[analysis_ts])
+#                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
+#                    skip_int = np.int(skip)
+                    E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                    E_errors.append(E_error)
 
                     
                 if snapPlot == True:
@@ -281,7 +294,7 @@ if analyse == True:
 if plot == True:
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key[:-3] + "_wp_"  + "_strong.h5"
+            filename = key[:-3] + "_wp"  + "_strong.h5"
             filenames.append(filename)
             
 
@@ -309,14 +322,14 @@ if plot == True:
             fig_nl_rhs = plt.figure(10)
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
             for time in compare_times:
-                label_line = label + ', ' + str(time) + 's'
+                label_line = label + ', ' + str(analysis_times[time]) + 's'
                 ax_nl_rhs.plot(rhs_evals,E_errors[:,time],label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
-                label_line = label + ', ' + str(time) + 's'
+                label_line = label + ', ' + str(analysis_times[time]) + 's'
                 ax_nl_dt.plot(dts,E_errors[:,time],label=label_line)
             
         if compare_linear == True:
@@ -382,10 +395,10 @@ if plot == True:
             ax.set_xscale('log')
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
-            ax.set_ylim(10**(-5),10)
+            ax.set_ylim(10**(-8),10)
             ax.set_ylabel(r'E L2 Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
             
-            ax.set_title('Convergence vs. Ref Solution at '+ str(compare_times) + 's')
+            ax.set_title('Convergence vs. Ref Solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
@@ -395,5 +408,7 @@ if plot == True:
                         ls='dashed',c='0.75',label='4th Order')
             
             ax.legend(loc = 'best')
-            fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            
+            compare_times = np.array(compare_times,dtype=np.int)
+            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
