@@ -18,7 +18,7 @@ class controller:
         self.setupTime = 0
         self.runTime = 0
 
-        self.percentBar = False
+        self.percentBar = True
         self.restarted = False
         
         self.xlimits = np.array([-1,1],dtype=np.float)
@@ -88,11 +88,8 @@ class controller:
         
         self.tArray = []
         self.tArray.append(self.t)
+        self.percentStep = self.tSteps/100
         
-        self.percentTime = self.tEnd/100
-        self.percentCounter = self.percentTime
-        
-    
         
     def updateTime(self):
         self.ts += 1
@@ -111,9 +108,8 @@ class controller:
                 + str(self.dt) + ".")    
             
     def displayProgress(self):
-        if self.t >= self.percentCounter:
+        if self.ts % self.percentStep == 0:
             print("Simulation progress: " 
-                  + str(int(self.t/self.percentTime)) + "%" 
+                  + str(int(self.ts/self.percentStep)) + "%" 
                   + " - " + str(self.ts) + "/" + str(self.tSteps)
                   + " - at " + time.strftime("%d/%m/%y  %H:%M:%S",time.localtime()))
-            self.percentCounter += self.percentTime

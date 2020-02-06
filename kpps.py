@@ -29,7 +29,6 @@ class kpps:
         print("Restarting ' "+sim_name+" ' at time "+str(tstep*sim.dt)+"s...")
         
         sim.ts = tstep
-        sim.t = tstep*sim.dt
         sim.restarted = True
         
         p = species_class()
