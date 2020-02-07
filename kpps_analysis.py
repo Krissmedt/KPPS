@@ -663,26 +663,6 @@ class kpps_analysis:
         return fields
     
     
-        
-#    def trilinear_gather(self,species,mesh):
-#        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
-#    
-#        li = self.lower_index(species.pos,O,mesh.dh)
-#        rpos = species.pos - O - li*mesh.dh
-#        w = self.trilinear_weights(rpos,mesh.dh)
-#        for pii in range(0,species.nq):
-#            i,j,k = li[pii,:]
-#            species.E[pii] = (w[pii,0]*mesh.E[:,i,j,k] +
-#                              w[pii,1]*mesh.E[:,i,j,k+1] +
-#                              w[pii,2]*mesh.E[:,i,j+1,k] + 
-#                              w[pii,3]*mesh.E[:,i,j+1,k+1] +
-#                              w[pii,4]*mesh.E[:,i+1,j,k] +
-#                              w[pii,5]*mesh.E[:,i+1,j,k+1] +
-#                              w[pii,6]*mesh.E[:,i+1,j+1,k] + 
-#                              w[pii,7]*mesh.E[:,i+1,j+1,k+1])
-#
-#        return species
-    
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
     
@@ -1053,15 +1033,6 @@ class kpps_analysis:
         
         self.coll_params['SX'] = SX
         self.coll_params['SQ'] = Smat @ Qmat
-        
-#        self.coll_params['x0'] = np.zeros((d,M+1),dtype=np.float)
-#        self.coll_params['v0'] = np.zeros((d,M+1),dtype=np.float)
-#        
-#        self.coll_params['xn'] = np.zeros((d,M+1),dtype=np.float)
-#        self.coll_params['vn'] = np.zeros((d,M+1),dtype=np.float)
-#        
-#        self.coll_params['F'] = np.zeros((d,M+1),dtype=np.float)
-#        self.coll_params['Fn'] = np.zeros((d,M+1),dtype=np.float)
 
         for species in species_list:
             d = 3*species.nq
@@ -1315,14 +1286,13 @@ class kpps_analysis:
         self.periodic_particles(species,2,mesh.zlimits)
     
     def periodic_particles(self,species,axis,limits,**kwargs):
-        for pii in range(0,species.nq):
-            if species.pos[pii,axis] < limits[0]:
-                overshoot = limits[0]-species.pos[pii,axis]
-                species.pos[pii,axis] = limits[1] - overshoot % (limits[1]-limits[0])
-
-            elif species.pos[pii,axis] >= limits[1]:
-                overshoot = species.pos[pii,axis] - limits[1]
-                species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
+            undershoot = limits[0]-species.pos[:,axis]
+            cross = np.argwhere(undershoot>0)
+            species.pos[cross,axis] = limits[1] - undershoot[cross] % (limits[1]-limits[0])
+    
+            overshoot = species.pos[:,axis] - limits[1]
+            cross = np.argwhere(overshoot>=0)
+            species.pos[cross,axis] = limits[0] + overshoot[cross] % (limits[1]-limits[0])
         
         
     def simple_1d(self,species,mesh,controller):

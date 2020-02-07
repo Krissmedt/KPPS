@@ -33,10 +33,10 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
-plot = True
+analyse = False
+plot = False
 snapPlot = False
-compare_reference = True
+compare_reference = False
 compare_linear = False
 
 peak_intervals = [[2,4],[4,5]]
@@ -80,10 +80,12 @@ omega_p = np.sqrt(q*nq*a*1/L)
 omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
 #omega = 1.4436
 vp = omega/k
+vp = 2.84
 #omega2 = 2.8312 * k
 #omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-
-df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
+#
+#df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
+df_vp = -vp/np.sqrt(2*np.pi) * np.exp(-vp**2/2)
 
 gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
 

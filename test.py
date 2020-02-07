@@ -2,79 +2,61 @@ import io
 import pickle as pk
 import numpy as np
 import time
+import copy
 import cmath as cm
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import random
 from mesh import mesh
-from caseFile_landau1D import *
+from species import species
 import scipy.interpolate as scint
 from math import sqrt, fsum, pi, exp, cos, sin, floor
 
-def lower_index(pos,O,dh):
-    li = np.floor((pos-O)/dh)
-    li = np.array(li,dtype=np.int)
-    
-    return li
+def periodic_particles2(species,axis,limits,**kwargs):
+    for pii in range(0,species.nq):
+        if species.pos[pii,axis] < limits[0]:
+            overshoot = limits[0]-species.pos[pii,axis]
+            species.pos[pii,axis] = limits[1] - overshoot % (limits[1]-limits[0])
 
-def trilinear_weights(rpos,dh):
-    h = rpos/dh
-    
-    w = np.zeros((rpos.shape[0],8),dtype=np.float)
-    w[:,0] = (1-h[:,0])*(1-h[:,1])*(1-h[:,2])
-    w[:,1] = (1-h[:,0])*(1-h[:,1])*(h[:,2])
-    w[:,2] = (1-h[:,0])*(h[:,1])*(1-h[:,2])
-    w[:,3] = (1-h[:,0])*(h[:,1])*(h[:,2])
-    w[:,4] = (h[:,0])*(1-h[:,1])*(1-h[:,2])
-    w[:,5] = (h[:,0])*(1-h[:,1])*(h[:,2])
-    w[:,6] = (h[:,0])*(h[:,1])*(1-h[:,2])
-    w[:,7] = (h[:,0])*(h[:,1])*(h[:,2])
-    
-    return w
+        elif species.pos[pii,axis] >= limits[1]:
+            overshoot = species.pos[pii,axis] - limits[1]
+            species.pos[pii,axis] = limits[0] + overshoot % (limits[1]-limits[0])
+            
+def periodic_particles(species,axis,limits,**kwargs):
+        undershoot = limits[0]-species.pos[:,axis]
+        cross = np.argwhere(undershoot>0)
+        species.pos[cross,axis] = limits[1] - undershoot[cross] % (limits[1]-limits[0])
+
+        overshoot = species.pos[:,axis] - limits[1]
+        cross = np.argwhere(overshoot>=0)
+        species.pos[cross,axis] = limits[0] + overshoot[cross] % (limits[1]-limits[0])
+            
+            
+
+prtls = species()
+limits = np.array([0,1])
+prtls.pos = np.random.rand(200000,3)*1.5 - 0.2
+prtls.nq = prtls.pos.shape[0]
+
+pos_out_pre = copy.deepcopy(prtls.pos)
+
+t1 = time.time()
+periodic_particles(prtls,0,limits)
+t2 = time.time()
+
+pos_out = prtls.pos
+prtls.pos[:,0] = pos_out_pre[:,0]
+
+t3 = time.time()
+periodic_particles2(prtls,0,limits)
+t4 = time.time()
+
+pos_out2 = prtls.pos
 
 
-pos = np.random.rand(20,3)
-field = np.zeros((11,11,11),dtype=np.float)
-field2 = np.zeros((11,11,11),dtype=np.float)
-O = np.array([0,0,0])
-dh = 0.1
-li = lower_index(pos,O,dh)
-rpos = pos - O - li*dh
 
-rpos = pos - O - li*dh
-w = trilinear_weights(rpos,dh)
-nq = pos.shape[0]
+run_time_opt = t2-t1
+run_time_unopt = t4-t3
 
-i = li[:,0]
-j = li[:,1]
-k = li[:,2]
-
-mE = np.random.rand(3,11,11,11)
-E = np.zeros((nq,3),dtype=np.float)
-
-for pii in range(0,nq):
-    i,j,k = li[pii,:]
-    E[pii] = (w[pii,0]*mE[:,i,j,k] +
-              w[pii,1]*mE[:,i,j,k+1] +
-              w[pii,2]*mE[:,i,j+1,k] + 
-              w[pii,3]*mE[:,i,j+1,k+1] +
-              w[pii,4]*mE[:,i+1,j,k] +
-              w[pii,5]*mE[:,i+1,j,k+1] +
-              w[pii,6]*mE[:,i+1,j+1,k] + 
-              w[pii,7]*mE[:,i+1,j+1,k+1])
-    
-E2 = np.zeros((nq,3),dtype=np.float)
-i = li[:,0]
-j = li[:,1]
-k = li[:,2]
-
-for comp in range(0,3):
-    E2[:,comp] += w[:,0]*mE[comp,i,j,k]
-    E2[:,comp] += w[:,1]*mE[comp,i,j,k+1]
-    E2[:,comp] += w[:,2]*mE[comp,i,j+1,k]
-    E2[:,comp] += w[:,3]*mE[comp,i,j+1,k+1]
-    E2[:,comp] += w[:,4]*mE[comp,i+1,j,k]
-    E2[:,comp] += w[:,5]*mE[comp,i+1,j,k+1]
-    E2[:,comp] += w[:,6]*mE[comp,i+1,j+1,k]
-    E2[:,comp] += w[:,7]*mE[comp,i+1,j+1,k+1]
+print(run_time_opt/run_time_unopt * 100)
