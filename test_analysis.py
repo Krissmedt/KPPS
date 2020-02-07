@@ -80,7 +80,7 @@ class Test_units_analysis:
         
         self.kpa.trilinear_qScatter([p],m,self.sim)
         charge_sum = np.sum(m.q)
-
+        
         assert 19.99 <= charge_sum <= 20.01
         
         # 2D test - does the function work just in the plane?
@@ -325,4 +325,4 @@ class Test_units_analysis:
         
 test = Test_units_analysis()
 test.setup()
-test.test_external_E()
+test.test_trilinearGather()

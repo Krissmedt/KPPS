@@ -663,23 +663,47 @@ class kpps_analysis:
         return fields
     
     
+        
+#    def trilinear_gather(self,species,mesh):
+#        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
+#    
+#        li = self.lower_index(species.pos,O,mesh.dh)
+#        rpos = species.pos - O - li*mesh.dh
+#        w = self.trilinear_weights(rpos,mesh.dh)
+#        for pii in range(0,species.nq):
+#            i,j,k = li[pii,:]
+#            species.E[pii] = (w[pii,0]*mesh.E[:,i,j,k] +
+#                              w[pii,1]*mesh.E[:,i,j,k+1] +
+#                              w[pii,2]*mesh.E[:,i,j+1,k] + 
+#                              w[pii,3]*mesh.E[:,i,j+1,k+1] +
+#                              w[pii,4]*mesh.E[:,i+1,j,k] +
+#                              w[pii,5]*mesh.E[:,i+1,j,k+1] +
+#                              w[pii,6]*mesh.E[:,i+1,j+1,k] + 
+#                              w[pii,7]*mesh.E[:,i+1,j+1,k+1])
+#
+#        return species
+    
     def trilinear_gather(self,species,mesh):
         O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])
     
         li = self.lower_index(species.pos,O,mesh.dh)
         rpos = species.pos - O - li*mesh.dh
-        for pii in range(0,species.nq):
-            w = self.trilinear_weights(rpos[pii,:],mesh.dh)
-            i,j,k = li[pii,:]
-            species.E[pii] = (w[0]*mesh.E[:,i,j,k] +
-                              w[1]*mesh.E[:,i,j,k+1] +
-                              w[2]*mesh.E[:,i,j+1,k] + 
-                              w[3]*mesh.E[:,i,j+1,k+1] +
-                              w[4]*mesh.E[:,i+1,j,k] +
-                              w[5]*mesh.E[:,i+1,j,k+1] +
-                              w[6]*mesh.E[:,i+1,j+1,k] + 
-                              w[7]*mesh.E[:,i+1,j+1,k+1])
+        w = self.trilinear_weights(rpos,mesh.dh)
+        
+        i = li[:,0]
+        j = li[:,1]
+        k = li[:,2]
 
+        for comp in range(0,3):
+            species.E[:,comp] += w[:,0]*mesh.E[comp,i,j,k]
+            species.E[:,comp] += w[:,1]*mesh.E[comp,i,j,k+1]
+            species.E[:,comp] += w[:,2]*mesh.E[comp,i,j+1,k]
+            species.E[:,comp] += w[:,3]*mesh.E[comp,i,j+1,k+1]
+            species.E[:,comp] += w[:,4]*mesh.E[comp,i+1,j,k]
+            species.E[:,comp] += w[:,5]*mesh.E[comp,i+1,j,k+1]
+            species.E[:,comp] += w[:,6]*mesh.E[comp,i+1,j+1,k]
+            species.E[:,comp] += w[:,7]*mesh.E[comp,i+1,j+1,k+1]
+    
         return species
     
     
@@ -761,18 +785,20 @@ class kpps_analysis:
         for species in species_list:
             li = self.lower_index(species.pos,O,mesh.dh)
             rpos = species.pos - O - li*mesh.dh
-            for pii in range(0,species.nq):
-                w = self.trilinear_weights(rpos[pii],mesh.dh)
+            w = self.trilinear_weights(rpos,mesh.dh)
 
-                i,j,k = li[pii,:]
-                mesh.q[i,j,k] += species.q * w[0]
-                mesh.q[i,j,k+1] += species.q * w[1]
-                mesh.q[i,j+1,k] += species.q * w[2]
-                mesh.q[i,j+1,k+1] += species.q * w[3]
-                mesh.q[i+1,j,k] += species.q * w[4]
-                mesh.q[i+1,j,k+1] += species.q * w[5]
-                mesh.q[i+1,j+1,k] += species.q * w[6]
-                mesh.q[i+1,j+1,k+1] += species.q * w[7]
+            i = li[:,0]
+            j = li[:,1]
+            k = li[:,2]
+            
+            np.add.at(mesh.q,[i,j,k],species.q*w[:,0])
+            np.add.at(mesh.q,[i,j,k+1],species.q*w[:,1])
+            np.add.at(mesh.q,[i,j+1,k],species.q*w[:,2])
+            np.add.at(mesh.q,[i,j+1,k+1],species.q*w[:,3])
+            np.add.at(mesh.q,[i+1,j,k],species.q*w[:,4])
+            np.add.at(mesh.q,[i+1,j,k+1],species.q*w[:,5])
+            np.add.at(mesh.q,[i+1,j+1,k],species.q*w[:,6])
+            np.add.at(mesh.q,[i+1,j+1,k+1],species.q*w[:,7])
 
         self.scatter_BC(species_list,mesh,controller)
 
@@ -780,33 +806,6 @@ class kpps_analysis:
         
         controller.runTimeDict['scatter'] += time.time() - tst
         return mesh
-    
-#    def trilinear_qScatter_opt(self,species_list,mesh,controller):
-#        tst = time.time()
-#        
-#        O = np.array([mesh.xlimits[0],mesh.ylimits[0],mesh.zlimits[0]])        
-#        for species in species_list:
-#            li = self.lower_index(species.pos,O,mesh.dh)
-#            rpos = species.pos - O - li*mesh.dh
-#            
-#            w = self.trilinear_weights(rpos,mesh.dh)
-#            i,j,k = li[pii,:]
-#            mesh.q[li[0],li[1],li[2]] += species.q * w[0]
-#            mesh.q[li[0],li[1],li[2]+1] += species.q * w[1]
-#            mesh.q[li[0],li[1]+1,li[2]] += species.q * w[2]
-#            mesh.q[li[0],li[1]+1,li[2]+1] += species.q * w[3]
-#            mesh.q[li[0]+1,li[1],li[2]] += species.q * w[4]
-#            mesh.q[li[0]+1,li[1],li[2]+1] += species.q * w[5]
-#            mesh.q[li[0]+1,li[1]+1,li[2]] += species.q * w[6]
-#            mesh.q[li[0]+1,li[1]+1,li[2]+1] += species.q * w[7]
-#
-#        self.scatter_BC(species_list,mesh,controller)
-#
-#        mesh.rho += mesh.q/mesh.dv
-#        
-#        controller.runTimeDict['scatter'] += time.time() - tst
-#        print("Scatter time {0}".format(time.time() - tst))
-#        return mesh
     
     
     def quadratic_qScatter_1d(self,species_list,mesh,controller):
@@ -840,21 +839,22 @@ class kpps_analysis:
         mesh.rho += mesh.q/mesh.dv
         return mesh
             
-            
+    
     def trilinear_weights(self,rpos,dh):
         h = rpos/dh
         
-        w = np.zeros(8,dtype=np.float)
-        w[0] = (1-h[0])*(1-h[1])*(1-h[2])
-        w[1] = (1-h[0])*(1-h[1])*(h[2])
-        w[2] = (1-h[0])*(h[1])*(1-h[2])
-        w[3] = (1-h[0])*(h[1])*(h[2])
-        w[4] = (h[0])*(1-h[1])*(1-h[2])
-        w[5] = (h[0])*(1-h[1])*(h[2])
-        w[6] = (h[0])*(h[1])*(1-h[2])
-        w[7] = (h[0])*(h[1])*(h[2])
+        w = np.zeros((rpos.shape[0],8),dtype=np.float)
+        w[:,0] = (1-h[:,0])*(1-h[:,1])*(1-h[:,2])
+        w[:,1] = (1-h[:,0])*(1-h[:,1])*(h[:,2])
+        w[:,2] = (1-h[:,0])*(h[:,1])*(1-h[:,2])
+        w[:,3] = (1-h[:,0])*(h[:,1])*(h[:,2])
+        w[:,4] = (h[:,0])*(1-h[:,1])*(1-h[:,2])
+        w[:,5] = (h[:,0])*(1-h[:,1])*(h[:,2])
+        w[:,6] = (h[:,0])*(h[:,1])*(1-h[:,2])
+        w[:,7] = (h[:,0])*(h[:,1])*(h[:,2])
         
         return w
+    
     
     def quadratic_weights_1d(self,rpos,dh):
         h = rpos/dh
