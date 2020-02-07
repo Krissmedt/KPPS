@@ -1162,7 +1162,7 @@ class kpps_analysis:
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
                     
-                    controller.runTimeDict['check_bound_cross'] += time.time() - t_bc
+                    controller.runTimeDict['bound_cross_check'] += time.time() - t_bc
                     controller.runTimeDict['pos_push'] += t_bc - t_pos
                     
                 controller.runTimeDict['particle_push'] += time.time() - t_pos
