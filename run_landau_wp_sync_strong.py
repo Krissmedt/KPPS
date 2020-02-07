@@ -93,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [100,200,300,400,500,1000]
-resolutions = [10,100,1000]
+steps = [10]
+resolutions = [100]
 
-dataRoot = "../data_landau_strong/"
+dataRoot = "./"
 
 L = 4*pi
-tend = 10
+tend = 1
 
 dx_mag = 0.5
 dx_mode = 0.5
@@ -116,7 +116,7 @@ plot_res = 100
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
 nq = 2**14
-nq = 200000
+nq = 20000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -127,7 +127,7 @@ omega_p = np.sqrt(q*nq*a*1/L)
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -465,5 +465,6 @@ for Nt in steps:
             fig7.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             plt.show()
     
-    print("Setup time = " + str(sim.setupTime))
-    print("Run time = " + str(sim.runTime))
+    runtimes = sim.runTimeDict
+    print("Setup time = {0}".format(sim.runTimeDict['setup']))
+    print("Run time = {0}".format(sim.runTimeDict['main_loop']))

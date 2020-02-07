@@ -30,7 +30,20 @@ class controller:
         self.caseSettings = {}
         self.analysisSettings = {}
         self.dataSettings = {}
-
+        
+        self.runTimeDict = {}
+        self.runTimeDict['object_instantiation'] = 0.
+        self.runTimeDict['particle_load'] = 0.
+        self.runTimeDict['mesh_load'] = 0.
+        self.runTimeDict['pre_processing'] = 0.
+        self.runTimeDict['bound_cross_check'] = 0.
+        self.runTimeDict['gather'] = 0.
+        self.runTimeDict['scatter'] = 0.
+        self.runTimeDict['FD_setup'] = 0.
+        self.runTimeDict['field_solve'] = 0.
+        self.runTimeDict['particle_push'] = 0.
+        self.runTimeDict['pos_push'] = 0.
+        self.runTimeDict['boris'] = 0.
         
         ## Dummy values, must be set in parameters or elsewhere!
         self.rhs_dt = None
@@ -91,7 +104,7 @@ class controller:
         self.percentStep = self.tSteps/100
         
         
-    def updateTime(self):
+    def update(self):
         self.ts += 1
         self.t += self.dt
         self.tArray.append(self.t)
