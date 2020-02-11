@@ -83,21 +83,21 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,500]
-resolutions = [10,100,1000]
-iterations = [1,3]
+steps = [1000]
+resolutions = [5000]
+iterations = [3]
 
-dataRoot = "../data_tsi_strong/"
+dataRoot = "../data_tsi_weak/"
 
 L = 2*pi
 tend = 10
 
-dx_mag = 0.1
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
 dv_mag = 0
-dv_mode = 1
+dv_mode = 0
 
 a = -1
 omega_p = 1
@@ -201,7 +201,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]

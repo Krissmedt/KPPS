@@ -72,20 +72,18 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     plot_res = controller.plot_res
     v_off = controller.v_off
     
-    pos_data_list = []
-    vel_data_list = []
+    pos_data_list = [species_list[0].pos[:,2]]
+    vel_data_list = [species_list[0].vel[:,2]]
+    pos_data_list.append(species_list[1].pos[:,2])
+    vel_data_list.append(species_list[1].vel[:,2])
+    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
     
-    for species in species_list:
-        pos_data_list.append(species.pos[:,2])
-        vel_data_list.append(species.vel[:,2])
-        fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
-        
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,500]
+steps = [10,20,40,50,80,100,200,500,1000]
 resolutions = [10,100,1000]
-iterations = [1,3]
+iterations = [1]
 
 dataRoot = "../data_tsi_strong/"
 
@@ -163,7 +161,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
@@ -229,7 +227,7 @@ for Nt in steps:
             species_params = [beam1_params,beam2_params]
             loader_params = [loader1_params,loader2_params]
     
-            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
+            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             ## Numerical solution ##
@@ -297,8 +295,8 @@ for Nt in steps:
                 rho1 = (rho_data-rho_min[:,np.newaxis])/rho_mag[:,np.newaxis]
 
                 ## Growth rate phi plot setup
-                tA = 0
-                tB = 10
+                tA = 12.5
+                tB = 17.5
                 
                 NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
                 NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -311,7 +309,17 @@ for Nt in steps:
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0]
                 UE_log = np.log(UE)
                 
+                c1 = 10e-5
+                E_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
+                E_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
+                
                 max_phi_data = np.amax(np.abs(phi_data),axis=1)
+                growth_fit = np.polyfit(tArray[NA:NB],np.log(max_phi_data[NA:NB]),1)
+                growth_line = c1*np.exp(growth_fit[0]*tArray[NA:NB])
+                
+                exact_line = c1*np.exp(real_slope*tArray[NA:NB])
+                
+                linear_g_error = abs(real_slope - growth_fit[0])/real_slope
                 
                 vel_dist = mData_dict['vel_dist']
             
@@ -353,7 +361,8 @@ for Nt in steps:
                 field_ax.set_ylim([-0.2, 1.2])
                 field_ax.set_title('Two-stream instability potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 field_ax.legend()
-
+                fig_field.savefig(dataRoot + sim_name + '_rho.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                
                 ## Velocity histogram animation setup
                 hist_data = np.concatenate((v1_data,v2_data),axis=1)
                 fig_hist = plt.figure(DH.figureNo+6,dpi=150)
@@ -391,11 +400,31 @@ for Nt in steps:
                 f_ax.set_ylim([-v_off,v_off])
                 f_ax.set_title('Two-stream density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 f_ax.legend()
-
-                ## E field plot
+                
+                
+                ## Growth rate plot
+                fig_gr = plt.figure(DH.figureNo+9,dpi=150)
+                growth_ax = fig_gr.add_subplot(1,1,1)
+                growth_ax.plot(tArray,max_phi_data,'blue',label="$\phi$ growth")
+                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="Fitted growth")
+                growth_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth")
+                growth_text = growth_ax.text(.5,0,'',transform=growth_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                text = (r'$\gamma$ = ' + str(growth_fit[0]))
+                growth_text.set_text(text)
+                growth_ax.set_xlabel('$t$')
+                growth_ax.set_ylabel('$\phi_{max}$')
+                growth_ax.set_yscale('log')
+                #growth_ax.set_ylim([-0.001,0.001])
+                growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                growth_ax.legend()
+                
                 fig_el2 = plt.figure(DH.figureNo+10,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
                 el2_ax.plot(tArray,EL2,'blue',label="$E$")
+                el2_ax.plot(tArray[NA:NB],E_line,'orange',label="Fitted growth, $\gamma = $" + str(E_fit[0]))
+                el2_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth, $\gamma = $" + str(real_slope))
+#                el2_text = el2_ax.text(.5,0,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=14)
+#                growth_text.set_text("$\gamma = $" + str(E_fit[0]))
                 el2_ax.set_xlabel('$t$')
                 el2_ax.set_ylabel(r'log $||E||_{L2}$')
                 el2_ax.set_yscale('log')
@@ -451,7 +480,7 @@ for Nt in steps:
                 phase_ani.save(dataRoot + sim_name+'_phase.mp4')
                 field_ani.save(dataRoot + sim_name+'_field.mp4')
                 hist_ani.save(dataRoot + sim_name+'_hist.mp4')
-                
+                fig_gr.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 fig_el2.savefig(dataRoot + sim_name + '_el2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 fig_UE.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 plt.show()
