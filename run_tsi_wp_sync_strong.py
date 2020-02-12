@@ -81,8 +81,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,500,1000]
-resolutions = [10,100,1000]
+steps = [300]
+resolutions = [100]
 iterations = [1]
 
 dataRoot = "../data_tsi_strong/"
@@ -102,11 +102,11 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200000
+nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
-simulate = True
-plot = False
+simulate = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -295,8 +295,8 @@ for Nt in steps:
                 rho1 = (rho_data-rho_min[:,np.newaxis])/rho_mag[:,np.newaxis]
 
                 ## Growth rate phi plot setup
-                tA = 12.5
-                tB = 17.5
+                tA = 0
+                tB = 1
                 
                 NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
                 NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
