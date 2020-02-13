@@ -102,7 +102,7 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
