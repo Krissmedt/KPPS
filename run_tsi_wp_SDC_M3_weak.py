@@ -83,7 +83,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,300,400,500,1000]
+steps = [10,20,40,50,80,100,200,300,400,500]
 resolutions = [10,100,1000]
 iterations = [1,3]
 
