@@ -81,7 +81,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,500,1000]
+steps = [10,20,40,50,80,100,200,300,400,500,1000]
 resolutions = [10,100,1000]
 iterations = [1]
 
@@ -102,7 +102,7 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200000
+nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
@@ -180,6 +180,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 

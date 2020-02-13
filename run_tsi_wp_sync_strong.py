@@ -24,7 +24,7 @@ def update_lines(num, xdata,ydata, lines):
 
 def update_phase(num,xdata,ydata,lines,KE,dt):
     t = '%.2E' % Decimal(str(num*dt))
-    text = r't = '+ t + '; KE = ' + str(KE[num])
+    text = r't = '+ t + '; KE = ' + str(np.around(KE[num],decimals=2))
     p_text.set_text(text)
     
     lines = update_lines(num,xdata,ydata,lines)
@@ -81,8 +81,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [300]
-resolutions = [100]
+steps = [10,20,40,50,80,100,200,300,400,500,1000]
+resolutions = [10,100,1000]
 iterations = [1]
 
 dataRoot = "../data_tsi_strong/"
@@ -105,8 +105,8 @@ omega_p = 1
 nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
-simulate = False
-plot = True
+simulate = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -181,6 +181,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 
@@ -199,7 +200,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -333,14 +334,14 @@ for Nt in steps:
                 # Phase animation setup
                 fig = plt.figure(DH.figureNo+4,dpi=150)
                 p_ax = fig.add_subplot(1,1,1)
-                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
-                line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
+                line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=3,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
+                line_p2 = p_ax.plot(p2_data[0,0:1],v2_data[0,0:1],'ro',ms=3,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
                 p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
                 p_ax.set_xlim([0.0, L])
                 p_ax.set_xlabel('$z$')
                 p_ax.set_ylabel('$v_z$')
                 p_ax.set_ylim([-v_off,v_off])
-                p_ax.set_title('Two stream instability phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                #p_ax.set_title('Two stream instability phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 p_ax.legend()
                 
                 # Setting data/line lists:
@@ -361,23 +362,22 @@ for Nt in steps:
                 field_ax.set_ylim([-0.2, 1.2])
                 field_ax.set_title('Two-stream instability potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 field_ax.legend()
-                fig_field.savefig(dataRoot + sim_name + '_rho.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 
-                ## Velocity histogram animation setup
-                hist_data = np.concatenate((v1_data,v2_data),axis=1)
-                fig_hist = plt.figure(DH.figureNo+6,dpi=150)
-                hist_ax = fig_hist.add_subplot(1,1,1)
-                hist_text = hist_ax.text(.95,.95,'',transform=hist_ax.transAxes,verticalalignment='top',fontsize=14)
-                hist_ymax = ppc*res
-                hist_xmax = np.max(hist_data)
-                hist_xmin = np.min(hist_data)
-                n_bins = 40
-                vmag0 = 0.5*(abs(2*v))
-                min_vel = -3*vmag0
-                hist_dv = (-2*min_vel)/n_bins
-                hist_bins = []
-                for b in range(0,n_bins):
-                    hist_bins.append(min_vel+b*hist_dv)
+#                ## Velocity histogram animation setup
+#                hist_data = np.concatenate((v1_data,v2_data),axis=1)
+#                fig_hist = plt.figure(DH.figureNo+6,dpi=150)
+#                hist_ax = fig_hist.add_subplot(1,1,1)
+#                hist_text = hist_ax.text(.95,.95,'',transform=hist_ax.transAxes,verticalalignment='top',fontsize=14)
+#                hist_ymax = ppc*res
+#                hist_xmax = np.max(hist_data)
+#                hist_xmin = np.min(hist_data)
+#                n_bins = 40
+#                vmag0 = 0.5*(abs(2*v))
+#                min_vel = -3*vmag0
+#                hist_dv = (-2*min_vel)/n_bins
+#                hist_bins = []
+#                for b in range(0,n_bins):
+#                    hist_bins.append(min_vel+b*hist_dv)
                     
                 ## Velocity distribution animation setup
                 fig_dist = plt.figure(DH.figureNo+7,dpi=150)
@@ -388,29 +388,29 @@ for Nt in steps:
                 dist_ax.set_ylabel(r'$f$')
                 dist_ax.set_title('Two-stream velocity distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 
-                ## Phase density animation setup
-                fig_f = plt.figure(DH.figureNo+8,dpi=150)
-                f_ax = fig_f.add_subplot(1,1,1)
-                cont = f_ax.contourf(gridx,gridv,f[0,:,:],cmap='inferno')
-                cont.set_clim(0,np.max(f))
-                cbar = plt.colorbar(cont,ax=f_ax)
-                f_ax.set_xlim([0.0, L])
-                f_ax.set_xlabel('$z$')
-                f_ax.set_ylabel('$v_z$')
-                f_ax.set_ylim([-v_off,v_off])
-                f_ax.set_title('Two-stream density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
-                f_ax.legend()
+#                ## Phase density animation setup
+#                fig_f = plt.figure(DH.figureNo+8,dpi=150)
+#                f_ax = fig_f.add_subplot(1,1,1)
+#                cont = f_ax.contourf(gridx,gridv,f[0,:,:],cmap='inferno')
+#                cont.set_clim(0,np.max(f))
+#                cbar = plt.colorbar(cont,ax=f_ax)
+#                f_ax.set_xlim([0.0, L])
+#                f_ax.set_xlabel('$z$')
+#                f_ax.set_ylabel('$v_z$')
+#                f_ax.set_ylim([-v_off,v_off])
+#                f_ax.set_title('Two-stream density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
+#                f_ax.legend()
                 
                 
                 ## Growth rate plot
                 fig_gr = plt.figure(DH.figureNo+9,dpi=150)
                 growth_ax = fig_gr.add_subplot(1,1,1)
                 growth_ax.plot(tArray,max_phi_data,'blue',label="$\phi$ growth")
-                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="Fitted growth")
-                growth_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth")
-                growth_text = growth_ax.text(.5,0,'',transform=growth_ax.transAxes,verticalalignment='bottom',fontsize=14)
-                text = (r'$\gamma$ = ' + str(growth_fit[0]))
-                growth_text.set_text(text)
+#                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="Fitted growth")
+#                growth_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth")
+#                growth_text = growth_ax.text(.5,0,'',transform=growth_ax.transAxes,verticalalignment='bottom',fontsize=14)
+#                text = (r'$\gamma$ = ' + str(growth_fit[0]))
+#                growth_text.set_text(text)
                 growth_ax.set_xlabel('$t$')
                 growth_ax.set_ylabel('$\phi_{max}$')
                 growth_ax.set_yscale('log')
@@ -421,26 +421,26 @@ for Nt in steps:
                 fig_el2 = plt.figure(DH.figureNo+10,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
                 el2_ax.plot(tArray,EL2,'blue',label="$E$")
-                el2_ax.plot(tArray[NA:NB],E_line,'orange',label="Fitted growth, $\gamma = $" + str(E_fit[0]))
-                el2_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth, $\gamma = $" + str(real_slope))
+                #el2_ax.plot(tArray[NA:NB],E_line,'orange',label="Fitted growth, $\gamma = $" + str(E_fit[0]))
+                #el2_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth, $\gamma = $" + str(real_slope))
 #                el2_text = el2_ax.text(.5,0,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=14)
 #                growth_text.set_text("$\gamma = $" + str(E_fit[0]))
                 el2_ax.set_xlabel('$t$')
                 el2_ax.set_ylabel(r'log $||E||_{L2}$')
                 el2_ax.set_yscale('log')
                 #el2_ax.set_ylim([10**-7,10**-1])
-                el2_ax.set_title('Two-stream E-field growth, NT=' + str(Nt) +', NZ=' + str(res+1) + ', NQ=' + str(nq))
+                #el2_ax.set_title('Two-stream E-field growth, NT=' + str(Nt) +', NZ=' + str(res+1) + ', NQ=' + str(nq))
                 el2_ax.legend()
                 
                 ## Energy plot
                 fig_UE = plt.figure(DH.figureNo+11,dpi=150)
                 energy_ax = fig_UE.add_subplot(1,1,1)
                 energy_ax.plot(tArray,UE_log,'blue')
-                energy_text = energy_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                #energy_text = energy_ax.text(.5,0,'',transform=dist_ax.transAxes,verticalalignment='bottom',fontsize=14)
                 energy_ax.set_xlabel('$t$')
                 energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
                 #energy_ax.set_ylim([-20,1])
-                energy_ax.set_title('Two stream instability energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                #energy_ax.set_title('Two stream instability energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 energy_ax.legend()
                 
                 print("Drawing animations...")
@@ -457,14 +457,14 @@ for Nt in steps:
                                                    interval=1000/fps)
                 
                 
-                hist_ani = animation.FuncAnimation(fig_hist, update_hist, DH.samples+1, 
-                                                   fargs=(hist_data,hist_ax,hist_bins,
-                                                          hist_xmin,hist_xmax,hist_ymax),
-                                                   interval=1000/fps)
+#                hist_ani = animation.FuncAnimation(fig_hist, update_hist, DH.samples+1, 
+#                                                   fargs=(hist_data,hist_ax,hist_bins,
+#                                                          hist_xmin,hist_xmax,hist_ymax),
+#                                                   interval=1000/fps)
                                                    
-                dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples+1, 
-                                                   fargs=(gridx,gridv,f,cont,f_ax),
-                                                   interval=1000/fps)
+#                dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples+1, 
+#                                                   fargs=(gridx,gridv,f,cont,f_ax),
+#                                                   interval=1000/fps)
 #                
                 
                 field_ani = animation.FuncAnimation(fig_field, update_field, DH.samples+1, 
@@ -475,12 +475,12 @@ for Nt in steps:
                                                    fargs=(gridv[:,0],vel_dist,dist_line),
                                                    interval=1000/fps)
                 
-                dens_dist_ani.save(dataRoot + sim_name+'_dens.mp4')
+#                dens_dist_ani.save(dataRoot + sim_name+'_dens.mp4')
                 vel_dist_ani.save(dataRoot + sim_name+'_veldist.mp4')
                 phase_ani.save(dataRoot + sim_name+'_phase.mp4')
                 field_ani.save(dataRoot + sim_name+'_field.mp4')
-                hist_ani.save(dataRoot + sim_name+'_hist.mp4')
-                fig_gr.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+#                hist_ani.save(dataRoot + sim_name+'_hist.mp4')
+#                fig_gr.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 fig_el2.savefig(dataRoot + sim_name + '_el2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 fig_UE.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 plt.show()
