@@ -73,21 +73,42 @@ nq = 20000
 k = 0.5
 v_th = 1
 L = 4*np.pi
-a = 1
+qm = 1
 q = L/nq
+nq = 1
 
-omega_p = np.sqrt(q*nq*a*1/L)
-omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-#omega = 1.4436
-vp = omega/k
-vp = 2.84
-#omega2 = 2.8312 * k
-#omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
+omega_p = np.sqrt(4*np.pi*nq*qm)
+#omega_p = 1
+
+a = v_th * np.sqrt(1/(4*np.pi*nq*qm))
+#a = v_th * np.sqrt(1/(nq*qm))
+
+omega = omega_p * (1 + 3/2*a**2*k**2)
+gamma = - omega_p * np.sqrt(np.pi/8) * (k*a)**-3 * np.exp(-1/(2*k**2 * a**2))
+
+omega_R = omega_p**2 + 3*k**2*v_th**2 + (6*k**4*v_th**4)/(omega_p**2)
+omega_R = np.sqrt(omega_R)
+
+the_R = omega_R/(np.sqrt(2)*k*v_th)
+gamma4 = - np.sqrt(np.pi) * the_R**3 * (1 - 3/(the_R**2))*np.exp(-the_R**2)
+error_gamma = the_R**(-4)*np.exp(-the_R**2)
+
+omega_L2 = omega_p**2  + 3*k**2*v_th**2
+gamma2 = - np.sqrt(np.pi/8) * (omega_p**6/(k**3*v_th**3*omega_L2)) *np.exp(-omega_L2/(2*k**2*v_th**2))
+
+gamma3 = - np.sqrt(np.pi/8) * (omega_p**2*omega_L2/(k**3*v_th**3)) *np.exp(-omega_L2/(2*k**2*v_th**2))
+
+#omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
+##omega = 1.4436
+#vp = omega/k
+#vp = 2.84
+##omega2 = 2.8312 * k
+##omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
+##
+##df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
+#df_vp = -vp/np.sqrt(2*np.pi) * np.exp(-vp**2/2)
 #
-#df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-df_vp = -vp/np.sqrt(2*np.pi) * np.exp(-vp**2/2)
-
-gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
+#gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
 
 gamma_lit1 = -0.1533
 
