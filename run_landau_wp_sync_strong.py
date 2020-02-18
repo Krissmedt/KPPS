@@ -93,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [100]
-resolutions = [100]
+steps = [20,40,50,80,100,200,400,500,1000,2000]
+resolutions = [100,1000]
 
-dataRoot = "./"
+dataRoot = "../data_landau_strong/"
 
 L = 4*pi
-tend = 10
+tend = 20 
 
 dx_mag = 0.5
 dx_mode = 0.5
@@ -116,7 +116,7 @@ plot_res = 100
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
 nq = 2**14
-nq = 2000
+nq = 200000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -127,7 +127,7 @@ omega_p = np.sqrt(q*nq*a*1/L)
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -191,12 +191,17 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['hooks'] = ['kinetic_energy','field_energy',plot_density_1d]
+analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = [plot_density_1d]
+analysis_params['pre_hook_list'] = []
+
+if plot == True:
+    analysis_params['hooks'].append(plot_density_1d)
+    analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
@@ -214,7 +219,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 20
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res

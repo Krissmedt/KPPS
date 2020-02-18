@@ -99,7 +99,7 @@ resolutions = [5000]
 dataRoot = "../data_landau_weak/"
 
 L = 4*pi
-tend = 20
+tend = 10
 
 dx_mag = 0.05
 dx_mode = 0.5
@@ -195,8 +195,13 @@ analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = []
 
+if plot == True:
+    analysis_params['hooks'].append(plot_density_1d)
+    analysis_params['pre_hook_list'].append(plot_density_1d)
+
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}

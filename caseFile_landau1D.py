@@ -230,51 +230,51 @@ def lit_iv(res,mag,mode,L,v_off):
     return grid_x, grid_v, f, n, fvel
 
 
-res = 100
-mag = 0.01
-mode = 0.5
-L = 4*np.pi
-v_off = 4
-nq = 20000
-v_th = 1
-q = L/nq
-
-x0 = [(i+0.5)*L/nq for i in range(0,nq)]
-ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
-pvel = particle_vel_maxwellian(ppos,0,v_th,rand_seed=1)
-
-v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
-grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
-grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
-
-dv = 2*v_off/res
-fv_int = np.sum(fvel) * dv
-
-fig = plt.figure(1)
-ax_f = fig.add_subplot(111)
-cont = ax_f.contourf(grid_x,grid_v,flit,cmap='inferno')
-#cont.set_clim(0,np.max(f))
-cbar = plt.colorbar(cont,ax=ax_f)
-
-
-fig = plt.figure(2)
-ax_f = fig.add_subplot(111)
-cont = ax_f.contourf(grid_x,grid_v,f,cmap='inferno')
-#cont.set_clim(0,np.max(f))
-cbar = plt.colorbar(cont,ax=ax_f)
-
-fig = plt.figure(3)
-ax_vel = fig.add_subplot(111)
-ax_vel.plot(grid_v[:,0],pdist*L,label='histogram')
-ax_vel.plot(grid_v[:,0],fvel,label='int f')
-ax_vel.plot(grid_v[:,0],fvlit,label='analyt')
-ax_vel.legend()
-
-fig = plt.figure(4)
-ax_pos = fig.add_subplot(111)
-ax_pos.scatter(grid_x[0,:],n)
-ax_pos.plot(grid_x[0,:],nlit)
-#ax_pos.scatter(grid_x[0,:],n1)
-#ax_pos.set_ylim([0.99,1.01])
-ax_pos.legend()
+#res = 100
+#mag = 0.01
+#mode = 0.5
+#L = 4*np.pi
+#v_off = 4
+#nq = 20000
+#v_th = 1
+#q = L/nq
+#
+#x0 = [(i+0.5)*L/nq for i in range(0,nq)]
+#ppos = ppos_init_sin(nq,L,mag,mode,ftype='cos')
+#pvel = particle_vel_maxwellian(ppos,0,v_th,rand_seed=1)
+#
+#v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
+#grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
+#grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#
+#dv = 2*v_off/res
+#fv_int = np.sum(fvel) * dv
+#
+#fig = plt.figure(1)
+#ax_f = fig.add_subplot(111)
+#cont = ax_f.contourf(grid_x,grid_v,flit,cmap='inferno')
+##cont.set_clim(0,np.max(f))
+#cbar = plt.colorbar(cont,ax=ax_f)
+#
+#
+#fig = plt.figure(2)
+#ax_f = fig.add_subplot(111)
+#cont = ax_f.contourf(grid_x,grid_v,f,cmap='inferno')
+##cont.set_clim(0,np.max(f))
+#cbar = plt.colorbar(cont,ax=ax_f)
+#
+#fig = plt.figure(3)
+#ax_vel = fig.add_subplot(111)
+#ax_vel.plot(grid_v[:,0],pdist*L,label='histogram')
+#ax_vel.plot(grid_v[:,0],fvel,label='int f')
+#ax_vel.plot(grid_v[:,0],fvlit,label='analyt')
+#ax_vel.legend()
+#
+#fig = plt.figure(4)
+#ax_pos = fig.add_subplot(111)
+#ax_pos.scatter(grid_x[0,:],n)
+#ax_pos.plot(grid_x[0,:],nlit)
+##ax_pos.scatter(grid_x[0,:],n1)
+##ax_pos.set_ylim([0.99,1.01])
+#ax_pos.legend()
 
