@@ -12,6 +12,7 @@ import matplotlib.animation as animation
 import h5py as h5
 import sys
 import traceback
+from collections import OrderedDict
 
 def plot_density_1d(species_list,fields,controller='',**kwargs):
     plot_res = controller.plot_res
@@ -33,7 +34,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = False
+analyse = True
 plot = True
 snapPlot = False
 compare_reference = True
@@ -49,24 +50,24 @@ fit1_stop = peak_intervals[-1][-1]
 fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [1]
 
 
-fig_type = 'versus'
+fig_type = 'test'
 data_root = "../data_landau_strong/"
 sims = {}
 
-#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 
-comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ1000000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -96,13 +97,13 @@ gamma_lit2 = 0.086126
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 12
+plot_params['legend.fontsize'] = 14
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 14
-plot_params['axes.titlesize'] = 14
-plot_params['xtick.labelsize'] = 10
-plot_params['ytick.labelsize'] = 10
-plot_params['lines.linewidth'] = 3
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 4
 plot_params['axes.titlepad'] = 5
 plot_params['legend.loc'] = 'upper right'
 plt.rcParams.update(plot_params)
@@ -112,7 +113,7 @@ if analyse == True:
     if compare_reference == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-        mData_comp = DH_comp.load_m(['phi','rho','E','dz'],sim_name=comp_sim_name,max_t=analysis_times[-1])
+        mData_comp = DH_comp.load_m(['phi','rho','E','dz','q'],sim_name=comp_sim_name,max_t=analysis_times[-1])
 
         analysis_ts = []
         for time in analysis_times:
@@ -132,6 +133,7 @@ if analyse == True:
         EL2 = np.sum(E*E,axis=1)
         EL2_comp = np.sqrt(EL2*dz_comp)
         #EL2_comp = EL2_comp/EL2_comp[0]
+        print(np.sum(mData_comp['q'][analysis_ts,1,1,:-2],axis=1))
         
         try:
             comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
@@ -181,7 +183,7 @@ if analyse == True:
                 analysis_ts = np.array(analysis_ts)
                     
 
-                mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
+                mData_dict = DH.load_m(['phi','E','rho','zres','dz','q'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
     
                 E = mData_dict['E'][analysis_ts,2,1,1,:-1]
@@ -192,7 +194,7 @@ if analyse == True:
                 
                 EL2 = np.sum(E*E,axis=1) * mData_dict['dz'][0]
                 EL2 = np.sqrt(EL2)  
-
+                print(np.sum(mData_dict['q'][analysis_ts,1,1,:-2],axis=1))
                 try:
                     peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
                     c1 = EL2[peaks[0]]*1.05
@@ -298,7 +300,7 @@ if plot == True:
             filenames.append(filename)
             
 
-
+    plt.rcParams.update(plot_params)
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
@@ -310,11 +312,14 @@ if plot == True:
 
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
-            label = "Boris" + ", Nz=" + file.attrs["res"]
+            label = "Boris"
+            c = '#0080FF'
         elif file.attrs["integrator"] == "boris_synced":
-            label = "Boris Synced" + ", Nz=" + file.attrs["res"]
+            c = '#0080FF'
+            label = "Boris"
         elif file.attrs["integrator"] == "boris_SDC":
-            label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
+            c = '#F9004B'
+            label = "Boris-SDC"
             label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
         
         if compare_reference == True:
@@ -323,59 +328,23 @@ if plot == True:
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
-                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],label=label_line)
+                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],marker="o",color=c,label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
-                ax_nl_dt.plot(dts,E_errors[:,time],label=label_line)
-            
-        if compare_linear == True:
-            ##Order Plot w/ rhs
-            fig_rhs = plt.figure(12)
-            ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-            ax_rhs.plot(rhs_evals,gamma1_errors,label=label)
+                ax_nl_dt.plot(dts,E_errors[:,time],marker="o",color=c,label=label_line)
                 
-            ##Order Plot w/ dt
-            fig_dt = plt.figure(13)
-            ax_dt = fig_dt.add_subplot(1, 1, 1)
-            ax_dt.plot(dts,gamma1_errors,label=label)
-            file.close()
+    handles, labels = fig_nl_rhs.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_rhs.legend(by_label.values(), by_label.keys(),loc='best')
+    
+    handles, labels = fig_nl_dt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_dt.legend(by_label.values(), by_label.keys(),loc='best')
             
-    if compare_linear == True:
-        ax_list = []  
-        ax_list.append(ax_rhs)
-        ax_list.append(ax_dt)
-        
-        i = 0
-        for ax in ax_list:
-            i +=1
-            if i == 1:
-                orderSlope = -1
-                ax.set_xlabel('Number of RHS evaluations')
-            else:
-                ax.set_xlabel(r'$\Delta t$')
-                orderSlope = 1
-            
-            ax.set_xscale('log')
-            #ax_rhs.set_xlim(10**3,10**5)
-            ax.set_yscale('log')
-            ax.set_ylim(10**(-4),10)
-            ax.set_ylabel('damping rate error')
-            
-            ax.set_title('Convergence vs. Linear Theory')
-            
-            xRange = ax.get_xlim()
-            yRange = ax.get_ylim()
-            
-            ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                        ls='dotted',c='0.25',label='2nd Order')
-            ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                        ls='dashed',c='0.75',label='4th Order')
-            
-            ax.legend()
         
     if compare_reference == True:
         axnl_list = []
@@ -395,20 +364,18 @@ if plot == True:
             ax.set_xscale('log')
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
-            ax.set_ylim(10**(-8),10)
-            ax.set_ylabel(r'E L2 Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
+            ax.set_ylim(10**(-6),1)
+            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta x}$')
             
-            ax.set_title('Convergence vs. Ref Solution')
+            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
             ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                        ls='dotted',c='0.25',label='2nd Order')
+                        ls='dotted',c='0.25')
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                        ls='dashed',c='0.75',label='4th Order')
-            
-            ax.legend(loc = 'best')
+                        ls='dashed',c='0.75')
             
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

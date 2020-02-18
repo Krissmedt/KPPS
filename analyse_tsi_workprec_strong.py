@@ -9,6 +9,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import h5py as h5
+from collections import OrderedDict
+
 
 analyse = False
 plot = True
@@ -16,7 +18,7 @@ snapPlot = False
 compare_reference = True
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [10]
+compare_times = [8]
 
 fit_start = analysis_times[0]
 fit_stop = analysis_times[-1]
@@ -25,13 +27,17 @@ fig_type = 'versus'
 data_root = "../data_tsi_strong/"
 sims = {}
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+
+sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -213,30 +219,46 @@ if plot == True:
         energy_errors = file["fields/energy_errors"][:]
         E_errors = file["fields/E_errors"][:]
         E_errors = np.array(E_errors)
-
+        
+        K = filename[filename.find('K')+1]
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
-            label = "Boris" + ", Nz=" + file.attrs["res"]
+            label = "Boris"
+            c = '#0080FF'
         elif file.attrs["integrator"] == "boris_synced":
-            label = "Boris Synced" + ", Nz=" + file.attrs["res"]
+            c = '#0080FF'
+            label = "Boris"
         elif file.attrs["integrator"] == "boris_SDC":
-            label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
-            label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
-        
+            label = "Boris-SDC"
+            if K == '1':
+                c = '#00d65d'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+            elif K == '3':
+                c = '#F9004B'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+                
         if compare_reference == True:
             ##Order Plot w/ rhs
             fig_nl_rhs = plt.figure(10)
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
-                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],marker="o",label=label_line)
+                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],marker="o",color=c,label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
-                ax_nl_dt.plot(dts,E_errors[:,time],marker="o",label=label_line)
+                ax_nl_dt.plot(dts,E_errors[:,time],marker="o",color=c,label=label_line)
+                
+    handles, labels = fig_nl_rhs.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_rhs.legend(by_label.values(), by_label.keys(),loc='best')
+    
+    handles, labels = fig_nl_dt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_dt.legend(by_label.values(), by_label.keys(),loc='best')
             
         
     if compare_reference == True:
@@ -257,19 +279,18 @@ if plot == True:
             ax.set_xscale('log')
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
-            ax.set_ylim(10**(-5),10)
-            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta x}$')
+            ax.set_ylim(10**(-6),1)
+            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
             
-            ax.set_title('Convergence vs. Ref Solution')
+            ax.set_title('Strong two-stream instability, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
             ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                        ls='dotted',c='0.25',label='2nd Order')
+                        ls='dotted',c='0.25')
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                        ls='dashed',c='0.75',label='4th Order')
+                        ls='dashed',c='0.75')
             
-            ax.legend(loc = 'best')
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
