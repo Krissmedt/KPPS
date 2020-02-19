@@ -129,7 +129,7 @@ simulate = True
 plot = False
 
 restart = False
-restart_ts = 14
+restart_ts = 3500
 
 
 slow_factor = 1

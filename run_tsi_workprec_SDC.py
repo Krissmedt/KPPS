@@ -82,14 +82,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [300]
+steps = [600]
 resolutions = [100]
-iterations = [1]
+iterations = [3]
 
 dataRoot = "../data_tsi_weak/"
 
 L = 2*pi
-tend = 30
+tend = 60
 
 dx_mag = 1e-4
 dx_mode = 1
@@ -103,10 +103,10 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 2000
+nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
-simulate = False
+simulate = True
 plot = True
 
 restart = False

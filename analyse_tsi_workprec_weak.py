@@ -10,18 +10,22 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import h5py as h5
 from collections import OrderedDict
-
+from caseFile_landau1D import *
 
 analyse = False
-plot = True
+fieldPlot = True
 snapPlot = False
 compare_reference = True
+plot = True
+
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [10]
 
 fit_start = analysis_times[0]
 fit_stop = analysis_times[-1]
+
+snaps = [0,60,120,180,240,300]
 
 fig_type = 'versus'
 data_root = "../data_tsi_weak/"
@@ -38,6 +42,8 @@ sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100
 sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+
+#sims['tsi_TE50_a0.0001_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [500]
 
 comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT1000'
 
@@ -152,12 +158,14 @@ if analyse == True:
             ## Growth rate phi plot setup
             max_phi_data = np.amax(np.abs(phi_data),axis=1)
             max_phi_data_log = np.log(max_phi_data)
-    
             try:
-                growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
-                growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+                c1 = EL2[NA]*0.8
+                E_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
+                E_line = c1*np.exp(tArray[NA:NB]*E_fit[0])
                 
-                error_linear = abs(real_slope - growth_fit[0])/real_slope
+                lit_line = c1*np.exp(tArray[NA:NB]*real_slope)
+                
+                error_linear = abs(real_slope - E_fit[0])/real_slope
                 linear_errors.append(error_linear)
             except:
                 pass
@@ -168,21 +176,49 @@ if analyse == True:
             rhs_evals.append(sim.rhs_eval)
             
             if compare_reference == True:
-                E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                 E_errors.append(E_error)
             
+            if fieldPlot == True:
+                print("Drawing field plot...")
+                fig_el2 = plt.figure(DH.figureNo+5,dpi=150)
+                el2_ax = fig_el2.add_subplot(1,1,1)
+                el2_ax.plot(tArray,EL2,'blue',label="$E$")
+#                el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
+#                el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
+                el2_ax.set_xlabel('$t$')
+                el2_ax.set_ylabel(r'log $||E||_{L2}$')
+                el2_ax.set_yscale('log')
+                fig_el2.savefig(data_root + 'tsi_weak_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            
+                
             if snapPlot == True:
-                fig = plt.figure(DH.figureNo+3)
-                gphi_ax = fig.add_subplot(1,1,1)
-                line_gphi = gphi_ax.plot(tArray,max_phi_data_log,label=sim_name)
-                #text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
-                 #                        verticalalignment='bottom',fontsize=8)
-                #g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
-                gphi_ax.set_xlabel('$t$')
-                gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
-                #g_ax.set_ylim([0,2])
-                gphi_ax.set_title('Electric Potential Growth')
-                #gphi_ax.legend()
+                print("Loading particle data...")
+                pData_list = DH.load_p(['pos','vel'],species=['beam1','beam2'],sim_name=sim_name)
+                
+                p1Data_dict = pData_list[0]
+                p2Data_dict = pData_list[1]
+    
+                
+                p1_data = p1Data_dict['pos'][:,:,2]
+                p2_data = p2Data_dict['pos'][:,:,2]
+                
+                v1_data = p1Data_dict['vel'][:,:,2] 
+                v2_data = p2Data_dict['vel'][:,:,2] 
+                
+                no = 0
+                for snap in snaps:
+                    no +=1
+                    print("Drawing snap no. {0}...".format(no))
+                    fig_snap = plt.figure(DH.figureNo+10+no,dpi=150)
+                    p_ax = fig_snap.add_subplot(1,1,1)
+                    line_p1 = p_ax.plot(p1_data[snap,:],v1_data[snap,:],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
+                    line_p2 = p_ax.plot(p2_data[snap,:],v2_data[snap,:],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
+                    p_ax.set_xlim([0.0, sim.zlimits[1]])
+                    p_ax.set_xlabel('$z$')
+                    p_ax.set_ylabel('$v_z$')
+                    p_ax.set_ylim([-3,3])
+                    fig_snap.savefig(data_root + 'tsi_weak_snap_ts{0}.pdf'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             
             
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -280,9 +316,10 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
+#            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
+            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
             
-            ax.set_title('Weak two-stream instability, convergence vs. ref solution')
+#            ax.set_title('Weak two-stream instability, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
@@ -291,6 +328,6 @@ if plot == True:
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                         ls='dashed',c='0.75')
             
-            compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'tsi_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'tsi_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+        compare_times = np.array(compare_times,dtype=np.int)
+        fig_nl_rhs.savefig(data_root + 'tsi_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+        fig_nl_dt.savefig(data_root + 'tsi_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')

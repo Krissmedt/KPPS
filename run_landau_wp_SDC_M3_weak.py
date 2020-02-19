@@ -93,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [10,20,40,50,80,100,200,400,500,1000]
-resolutions = [10,100,1000]
+steps = [300]
+resolutions = [100]
 
 dataRoot = "../data_landau_weak/"
 
 L = 4*pi
-tend = 10
+tend = 30
 
 dx_mag = 0.05
 dx_mode = 0.5
@@ -126,7 +126,7 @@ omega_p = np.sqrt(q*nq*a*1/L)
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -202,7 +202,7 @@ if plot == True:
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
-data_params['write_p'] = False
+data_params['write_p'] = True
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
@@ -220,7 +220,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res

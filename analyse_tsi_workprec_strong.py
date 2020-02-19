@@ -10,34 +10,41 @@ from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import h5py as h5
 from collections import OrderedDict
+from caseFile_landau1D import *
 
 
-analyse = False
-plot = True
+analyse = True
+fieldPlot = True
 snapPlot = False
-compare_reference = True
+compare_reference = False
+plot = False
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,20]
 compare_times = [8]
 
-fit_start = analysis_times[0]
-fit_stop = analysis_times[-1]
+fit_start = 10
+fit_stop = 16
+
+snaps = [0,60,120,180,240,300]
 
 fig_type = 'versus'
 data_root = "../data_tsi_strong/"
 sims = {}
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#
+#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-
-sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -118,6 +125,7 @@ if analyse == True:
             file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
         
+        print("Loading mesh data...")
         for tsteps in value:
             DH = dataHandler2(**data_params)
             sim_name = key + str(tsteps)
@@ -135,12 +143,11 @@ if analyse == True:
                 analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
             analysis_ts = np.array(analysis_ts)
                 
-
             mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
             tArray = mData_dict['t']
 
             phi_data = mData_dict['phi'][analysis_ts,1,1,:-1]
-            E = mData_dict['E'][analysis_ts,2,1,1,:-1]
+            E = mData_dict['E'][:,2,1,1,:-1]
             E2 = E*E
             UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
             UE_log = np.log(UE)
@@ -154,10 +161,13 @@ if analyse == True:
             max_phi_data_log = np.log(max_phi_data)
     
             try:
-                growth_fit = np.polyfit(tArray[NA:NB],max_phi_data_log[NA:NB],1)
-                growth_line = growth_fit[0]*tArray[NA:NB] + growth_fit[1]
+                c1 = EL2[NA]*0.8
+                E_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
+                E_line = c1*np.exp(tArray[NA:NB]*E_fit[0])
                 
-                error_linear = abs(real_slope - growth_fit[0])/real_slope
+                lit_line = c1*np.exp(tArray[NA:NB]*real_slope)
+                
+                error_linear = abs(real_slope - E_fit[0])/real_slope
                 linear_errors.append(error_linear)
             except:
                 pass
@@ -168,21 +178,52 @@ if analyse == True:
             rhs_evals.append(sim.rhs_eval)
             
             if compare_reference == True:
-                E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                 E_errors.append(E_error)
             
+            if fieldPlot == True:
+                print("Drawing field plot...")
+                fig_el2 = plt.figure(DH.figureNo+5,dpi=150)
+                el2_ax = fig_el2.add_subplot(1,1,1)
+                el2_ax.plot(tArray,EL2,'blue',label="$E$")
+#                el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
+#                el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
+                el2_ax.set_xlabel('$t$')
+                el2_ax.set_ylabel(r'log $||E||_{L2}$')
+                el2_ax.set_yscale('log')
+                fig_el2.savefig(data_root + 'tsi_strong_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            
+                
             if snapPlot == True:
-                fig = plt.figure(DH.figureNo+3)
-                gphi_ax = fig.add_subplot(1,1,1)
-                line_gphi = gphi_ax.plot(tArray,max_phi_data_log,label=sim_name)
-                #text_gphi = gphi_ax.text(.25,.05,transform=gphi_ax.transAxes,
-                 #                        verticalalignment='bottom',fontsize=8)
-                #g_ax.set_xlim([0.0, sim.dt*sim.tSteps])
-                gphi_ax.set_xlabel('$t$')
-                gphi_ax.set_ylabel(r'$\log(|\phi|_{max}$)')
-                #g_ax.set_ylim([0,2])
-                gphi_ax.set_title('Electric Potential Growth')
-                #gphi_ax.legend()
+                print("Loading particle data...")
+                pData_list = DH.load_p(['pos','vel'],species=['beam1','beam2'],sim_name=sim_name)
+                
+                p1Data_dict = pData_list[0]
+                p2Data_dict = pData_list[1]
+    
+                
+                p1_data = p1Data_dict['pos'][:,:,2]
+                p2_data = p2Data_dict['pos'][:,:,2]
+                
+                v1_data = p1Data_dict['vel'][:,:,2] 
+                v2_data = p2Data_dict['vel'][:,:,2] 
+                
+                no = 0
+                for snap in snaps:
+                    no +=1
+                    print("Drawing snap no. {0}...".format(no))
+                    fig_f = plt.figure(DH.figureNo+5,dpi=150)
+                    f_ax = fig_f.add_subplot(1,1,1)
+                    cont = f_ax.contourf(gridx,gridv,f[0,:,:],cmap='inferno')
+                    cont.set_clim(0,np.max(f))
+                    cbar = plt.colorbar(cont,ax=f_ax)
+                    f_ax.set_xlim([0.0, L])
+                    f_ax.set_xlabel('$z$')
+                    f_ax.set_ylabel('$v_z$')
+                    f_ax.set_ylim([-v_off,v_off])
+                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                    f_ax.legend()
+                    fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.pdf'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             
             
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -280,7 +321,7 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
+            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
             
             ax.set_title('Strong two-stream instability, convergence vs. ref solution')
             xRange = ax.get_xlim()

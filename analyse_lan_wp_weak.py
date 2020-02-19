@@ -34,33 +34,38 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = False
-plot = True
+analyse = True
+fieldPlot = True
 snapPlot = False
-compare_reference = True
-compare_linear = False
+compare_reference = False
+plot = False
 
-peak_intervals = [[2,4],[4,5]]
+
+peak_intervals = [[0,1],[2,4],[4,5],[6,8],[8,10],[10,12.5],[12.5,15]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
 
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
 compare_times = [5]
+
+snaps = [0,60,120,180,240,300]
 
 fig_type = 'versus'
 data_root = "../data_landau_weak/"
 sims = {}
 
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#
+#sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE30_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.05_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -114,7 +119,7 @@ gamma_lit1 = -0.1533
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 14
+plot_params['legend.fontsize'] = 16
 plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 20
 plot_params['axes.titlesize'] = 20
@@ -196,12 +201,12 @@ if analyse == True:
                     analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
                 analysis_ts = np.array(analysis_ts)
 
-                mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
+                mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','vel_dist','grid_x','grid_v','f'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
                 
                 NQ = key[key.find('NQ')+2:key.find('_NT')] 
                 rho = mData_dict['rho'][analysis_ts,1,1,:-2]
-                E = mData_dict['E'][analysis_ts,2,1,1,:-2]
+                E = mData_dict['E'][:,2,1,1,:-2]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
@@ -213,12 +218,12 @@ if analyse == True:
 
                 try:
                     peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
-                    c1 = EL2[peaks[0]]*1.05
+                    c1 = EL2[peaks[0]]*0.85
                     
                     E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
-                    E_fit = np.around(E_fit,decimals=6)
+                    E_fit = np.around(E_fit,decimals=4)
                     E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
-                    
+
                     gamma_line = c1*np.exp(gamma*tArray[NA:NB])
                     lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
                     
@@ -236,33 +241,53 @@ if analyse == True:
                 if compare_reference == True:
 #                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
 #                    skip_int = np.int(skip)
-                    E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                    E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                     E_errors.append(E_error)
 
                 
-                if snapPlot == True:
+                if fieldPlot == True:
+                    plt.rcParams.update(plot_params)
+                    print("Drawing field plot...")
                     fig = plt.figure(DH.figureNo+sim_no)
                     E_ax = fig.add_subplot(1,1,1)
                     E_ax.plot(tArray,EL2,'blue',label="$E$-field")
                     
                     E_ax.scatter(tArray[peaks],EL2[peaks])
                     E_ax.plot(tArray[NA:NB],E_fit_line,'orange',label="Fitted $\gamma$")
-                    #E_ax.plot(tArray[NA:NB],gamma_line,'red',label="$Analyt$")
                     E_ax.plot(tArray[NA:NB],lit_line,'green',label="Literature $\gamma$")
                     
-                    E_text1 = E_ax.text(.05,0,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                    E_text1 = E_ax.text(.02,0.025,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=16)
                     text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit1))
                     E_text1.set_text(text1)
                     
-                    
-                    E_ax.set_xlabel('$t$')
-                    E_ax.set_ylabel(r'$||E||_{L2}$')
                     E_ax.set_yscale('log')
-                    #E_ax.set_ylim([10**-7,10**-1])
-                    E_ax.set_title('Linear Landau damping, a=0.05, NQ=' + NQ + ', NZ=' + str(mData_dict['zres'][0]) 
-                                    + ', NT=' + str(sim.tSteps)) 
+                    E_ax.set_xlabel(r'$\Delta t$')
+                    E_ax.set_ylabel(r'$||E||_{L2}$')
                     E_ax.legend()
-                    fig.savefig(data_root + sim_name + '_EL2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    fig.savefig(data_root + 'landau_strong_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                
+                    
+                if snapPlot == True:
+                    print("Loading density data...")
+                    gridx = mData_dict['grid_x'][0,:,:]
+                    gridv = mData_dict['grid_v'][0,:,:]
+                    f = mData_dict['f']
+                    
+                    no = 0
+                    for snap in snaps:
+                        no +=1
+                        print("Drawing snap no. {0}...".format(no))
+                        fig_f = plt.figure(DH.figureNo+5,dpi=150)
+                        f_ax = fig_f.add_subplot(1,1,1)
+                        cont = f_ax.contourf(gridx,gridv,f[snap,:,:],cmap='inferno')
+                        cont.set_clim(0,np.max(f))
+                        cbar = plt.colorbar(cont,ax=f_ax)
+                        f_ax.set_xlim([0.0, L])
+                        f_ax.set_xlabel('$z$')
+                        f_ax.set_ylabel('$v_z$')
+                        f_ax.set_ylim([-4,4])
+    #                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                        fig.savefig(data_root + sim_name + '_EL2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                     
             file.attrs["reference"] = comp_run
             file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -358,9 +383,9 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-5),1)
-            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
+            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
             
-            ax.set_title('Linear Landau damping, convergence vs. ref solution')
+#            ax.set_title('Linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             

@@ -229,6 +229,18 @@ def lit_iv(res,mag,mode,L,v_off):
  
     return grid_x, grid_v, f, n, fvel
 
+def plot_density_1d(species_list,fields,controller='',**kwargs):
+    plot_res = controller.plot_res
+    v_off = controller.v_off
+    
+    pos_data_list = [species_list[0].pos[:,2]]
+    vel_data_list = [species_list[0].vel[:,2]]
+    pos_data_list.append(species_list[1].pos[:,2])
+    vel_data_list.append(species_list[1].vel[:,2])
+    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    
+    return species_list, fields
+
 
 #res = 100
 #mag = 0.01

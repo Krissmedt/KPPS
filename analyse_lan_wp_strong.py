@@ -35,10 +35,11 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     return peaks
 
 analyse = True
-plot = True
+fieldPlot = True
 snapPlot = False
-compare_reference = True
-compare_linear = False
+compare_reference = False
+plot = False
+
 
 peak_intervals = [[0,2],[2,4],[4,6]]
 peak_intervals2 = [[20,22.5],[22.5,25],[25,27.5],[27.5,30],[30,32.5],[32.5,35],[35,37.5],[37.5,40]]
@@ -50,22 +51,24 @@ fit1_stop = peak_intervals[-1][-1]
 fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
 compare_times = [1]
 
+snaps = [0,60,120,180,240,300]
 
 fig_type = 'test'
 data_root = "../data_landau_strong/"
 sims = {}
 
-sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
+sims['lan_TE30_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ1000000_NT5000'
 
@@ -113,7 +116,7 @@ if analyse == True:
     if compare_reference == True:
         DH_comp = dataHandler2(**data_params)
         comp_sim, comp_sim_name = DH_comp.load_sim(sim_name=comp_run,overwrite=True)
-        mData_comp = DH_comp.load_m(['phi','rho','E','dz','q'],sim_name=comp_sim_name,max_t=analysis_times[-1])
+        mData_comp = DH_comp.load_m(['phi','rho','E','dz','q','vel_dist','grid_x','grid_v','f'],sim_name=comp_sim_name,max_t=analysis_times[-1])
 
         analysis_ts = []
         for time in analysis_times:
@@ -133,7 +136,6 @@ if analyse == True:
         EL2 = np.sum(E*E,axis=1)
         EL2_comp = np.sqrt(EL2*dz_comp)
         #EL2_comp = EL2_comp/EL2_comp[0]
-        print(np.sum(mData_comp['q'][analysis_ts,1,1,:-2],axis=1))
         
         try:
             comp_peaks = find_peaks(peak_intervals,EL2_comp,comp_sim.dt,DH_comp.samplePeriod)
@@ -186,7 +188,7 @@ if analyse == True:
                 mData_dict = DH.load_m(['phi','E','rho','zres','dz','q'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
     
-                E = mData_dict['E'][analysis_ts,2,1,1,:-1]
+                E = mData_dict['E'][:,2,1,1,:-1]
                 E2 = E*E
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0] 
                 UE_log = np.log(UE)
@@ -194,7 +196,7 @@ if analyse == True:
                 
                 EL2 = np.sum(E*E,axis=1) * mData_dict['dz'][0]
                 EL2 = np.sqrt(EL2)  
-                print(np.sum(mData_dict['q'][analysis_ts,1,1,:-2],axis=1))
+
                 try:
                     peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
                     c1 = EL2[peaks[0]]*1.05
@@ -228,7 +230,7 @@ if analyse == True:
                 if compare_reference == True:
 #                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
 #                    skip_int = np.int(skip)
-                    E_error = np.abs(EL2_comp-EL2)/np.abs(EL2_comp)
+                    E_error = np.abs(EL2_comp-EL2p[analysis_ts])/np.abs(EL2_comp)
                     E_errors.append(E_error)
 
                     
@@ -255,15 +257,59 @@ if analyse == True:
                         E_text2.set_text(text2)
                     except Exception:
                         pass
-                        
                     
-                    E_ax.set_xlabel('$t$')
-                    E_ax.set_ylabel(r'$||E||_{L2}$')
-                    E_ax.set_yscale('log')
-                    #E_ax.set_ylim([10**-7,10**-1])
-                    E_ax.set_title('Linear Landau damping, a=0.05, NQ=' + str(nq) + ', NZ=' + str(mData_dict['zres'][0]) 
-                                    + ', NT=' + str(sim.tSteps)) 
-                    E_ax.legend()
+            if fieldPlot == True:
+                plt.rcParams.update(plot_params)
+                print("Drawing field plot...")
+                fig = plt.figure(DH.figureNo+sim_no)
+                E_ax = fig.add_subplot(1,1,1)
+                E_ax.plot(tArray,EL2,'blue',label="$E$-field")
+                
+                E_ax.scatter(tArray[peaks],EL2[peaks])
+                E_ax.plot(tArray[NA:NB],E_fit_line,'orange',label="Fitted $\gamma$")
+                E_ax.plot(tArray[NA:NB],lit_line,'green',label="Literature $\gamma$")
+                
+                E_text1 = E_ax.text(.02,0.025,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=16)
+                text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit1))
+                E_text1.set_text(text1)
+                
+                E_ax.set_yscale('log')
+                E_ax.set_xlabel(r'$\Delta t$')
+                E_ax.set_ylabel(r'$||E||_{L2}$')
+                
+                try:
+                    E_ax.scatter(tArray[peaks2],EL2[peaks2])
+                    E_ax.plot(tArray[NA:NB],E_fit_line2,'orange',label="Fitted $\gamma$")
+                    E_ax.plot(tArray[NA:NB],lit_line2,'green',label="Literature $\gamma$")
+                    
+                    E_text2 = E_ax.text(.05,0,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                    text2 = (r'$\gamma_{fit}$ = ' + str(E_fit2[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit2))
+                    E_text2.set_text(text2)
+                except Exception:
+                    pass
+                fig.savefig(data_root + 'landau_strong_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            
+                
+            if snapPlot == True:
+                print("Loading density data...")
+                gridx = mData_dict['grid_x'][0,:,:]
+                gridv = mData_dict['grid_v'][0,:,:]
+                f = mData_dict['f']
+                
+                no = 0
+                for snap in snaps:
+                    no +=1
+                    print("Drawing snap no. {0}...".format(no))
+                    fig_f = plt.figure(DH.figureNo+5,dpi=150)
+                    f_ax = fig_f.add_subplot(1,1,1)
+                    cont = f_ax.contourf(gridx,gridv,f[snap,:,:],cmap='inferno')
+                    cont.set_clim(0,np.max(f))
+                    cbar = plt.colorbar(cont,ax=f_ax)
+                    f_ax.set_xlim([0.0, L])
+                    f_ax.set_xlabel('$z$')
+                    f_ax.set_ylabel('$v_z$')
+                    f_ax.set_ylim([-4,4])
+#                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
                     fig.savefig(data_root + sim_name + '_EL2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                     
                     
@@ -365,9 +411,9 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta x}$')
+            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
             
-            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
+#            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
