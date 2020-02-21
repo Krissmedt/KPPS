@@ -81,8 +81,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10,20,40,50,80,100,200,300,400,500,1000]
-resolutions = [10,100,1000]
+steps = [10,20,40,50,80,100]
+resolutions = [1000]
 iterations = [1]
 
 dataRoot = "../data_tsi_strong/"
@@ -102,7 +102,7 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
@@ -172,6 +172,8 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
+analysis_params['field_solver'] = 'gmres_solve'
+analysis_params['iter_tol'] = 1e-05
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = []   

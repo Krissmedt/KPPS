@@ -76,6 +76,7 @@ class kpps_analysis:
         self.iter_x0 = None
         self.iter_tol = 1e-05
         self.iter_max = None
+        self.niter = 0
         self.FDMat = None
         self.scatter_order = 1
         self.gather_order = 1
@@ -269,9 +270,11 @@ class kpps_analysis:
         
     def run_fieldIntegrator(self,species_list,fields,simulationManager,**kwargs):     
         fields = self.impose_background(species_list,fields,simulationManager)
+        self.niter = 0
         for method in self.fieldIntegrator_methods:
             method(species_list,fields,simulationManager)
-
+        
+        fields.gmres_iters += self.niter
         return species_list
 
 
@@ -580,12 +583,16 @@ class kpps_analysis:
         phi, self.solver_code = sps.linalg.gmres(FDMat, -rho - BC_vector,
                                                    x0=self.iter_x0,
                                                    tol=self.iter_tol,
-                                                   maxiter=self.iter_max)
+                                                   maxiter=self.iter_max,
+                                                   callback = self.gmres_counter)
         
         self.iter_x0 = phi
         
         return phi
-         
+    
+    def gmres_counter(self,ck=None):
+        self.niter += 1
+
     
     def pot_diff_fixed_x(self,fields):
         ## Differentiate over electric potential for electric field
@@ -771,14 +778,14 @@ class kpps_analysis:
             j = li[:,1]
             k = li[:,2]
             
-            np.add.at(mesh.q,[i,j,k],species.q*w[:,0])
-            np.add.at(mesh.q,[i,j,k+1],species.q*w[:,1])
-            np.add.at(mesh.q,[i,j+1,k],species.q*w[:,2])
-            np.add.at(mesh.q,[i,j+1,k+1],species.q*w[:,3])
-            np.add.at(mesh.q,[i+1,j,k],species.q*w[:,4])
-            np.add.at(mesh.q,[i+1,j,k+1],species.q*w[:,5])
-            np.add.at(mesh.q,[i+1,j+1,k],species.q*w[:,6])
-            np.add.at(mesh.q,[i+1,j+1,k+1],species.q*w[:,7])
+            np.add.at(mesh.q,tuple([i,j,k]),species.q*w[:,0])
+            np.add.at(mesh.q,tuple([i,j,k+1]),species.q*w[:,1])
+            np.add.at(mesh.q,tuple([i,j+1,k]),species.q*w[:,2])
+            np.add.at(mesh.q,tuple([i,j+1,k+1]),species.q*w[:,3])
+            np.add.at(mesh.q,tuple([i+1,j,k]),species.q*w[:,4])
+            np.add.at(mesh.q,tuple([i+1,j,k+1]),species.q*w[:,5])
+            np.add.at(mesh.q,tuple([i+1,j+1,k]),species.q*w[:,6])
+            np.add.at(mesh.q,tuple([i+1,j+1,k+1]),species.q*w[:,7])
 
         self.scatter_BC(species_list,mesh,controller)
 

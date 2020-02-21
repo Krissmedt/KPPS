@@ -29,6 +29,7 @@ class mesh:
                                           -1:1:3*1j]
         
         self.gather_count = 0
+        self.gmres_iters = 0
         
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs

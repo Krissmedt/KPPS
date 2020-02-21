@@ -13,7 +13,7 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 
-analyse = False
+analyse = True
 fieldPlot = False
 snapPlot = False
 compare_reference = True
@@ -32,19 +32,20 @@ fig_type = 'full'
 data_root = "../data_tsi_strong/"
 sims = {}
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+##
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100]
 #
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-
-sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100]
 
 #sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
+#sims['tsi_TE30_a0.1_boris_synced_NZ100_NQ20000_NT'] = [300]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -148,9 +149,9 @@ if analyse == True:
                 analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
             analysis_ts = np.array(analysis_ts)
                 
-            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','gmres_iters'],sim_name=sim_name,max_t=analysis_times[-1])
             tArray = mData_dict['t']
-
+            print(mData_dict['gmres_iters'])
             phi_data = mData_dict['phi'][analysis_ts,1,1,:-1]
             E = mData_dict['E'][:,2,1,1,:-1]
             E2 = E*E
