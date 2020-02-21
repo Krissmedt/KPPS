@@ -34,11 +34,11 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
-fieldPlot = True
+analyse = False
+fieldPlot = False
 snapPlot = False
-compare_reference = False
-plot = False
+compare_reference = True
+plot = True
 
 
 peak_intervals = [[0,1],[2,4],[4,5],[6,8],[8,10],[10,12.5],[12.5,15]]
@@ -49,7 +49,7 @@ fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
-compare_times = [5]
+compare_times = [10]
 
 snaps = [0,60,120,180,240,300]
 
@@ -57,15 +57,15 @@ fig_type = 'versus'
 data_root = "../data_landau_weak/"
 sims = {}
 
-#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-#
-#sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE30_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
+sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+#sims['lan_TE30_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.05_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -264,7 +264,7 @@ if analyse == True:
                     E_ax.set_xlabel(r'$\Delta t$')
                     E_ax.set_ylabel(r'$||E||_{L2}$')
                     E_ax.legend()
-                    fig.savefig(data_root + 'landau_strong_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    fig.savefig(data_root + 'landau_weak_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 
                     
                 if snapPlot == True:
@@ -395,5 +395,5 @@ if plot == True:
                         ls='dashed',c='0.75')
             
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
+            fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')

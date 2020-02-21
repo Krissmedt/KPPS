@@ -34,15 +34,15 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
-fieldPlot = True
+analyse = False
+fieldPlot = False
 snapPlot = False
-compare_reference = False
-plot = False
+compare_reference = True
+plot = True
 
 
 peak_intervals = [[0,2],[2,4],[4,6]]
-peak_intervals2 = [[20,22.5],[22.5,25],[25,27.5],[27.5,30],[30,32.5],[32.5,35],[35,37.5],[37.5,40]]
+peak_intervals2 = [[22.5,25],[25,27.5],[27.5,30]]
 #peak_intervals = [[2,4],[4,6],[6,8]]
 #peak_intervals = [[0,2],[2,4],[4,6]]
 
@@ -52,23 +52,23 @@ fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
-compare_times = [1]
+compare_times = [8]
 
 snaps = [0,60,120,180,240,300]
 
-fig_type = 'test'
+fig_type = 'versus'
 data_root = "../data_landau_strong/"
 sims = {}
 
-#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-sims['lan_TE30_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+#sims['lan_TE30_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ1000000_NT5000'
 
@@ -92,15 +92,15 @@ df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
 
 gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
 
-gamma_lit1 = -0.292285
-gamma_lit2 = 0.086126
+gamma_lit1 = -0.2922
+gamma_lit2 = 0.08612
 
 
 ############################### Setup #########################################
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 14
+plot_params['legend.fontsize'] = 16
 plot_params['figure.figsize'] = (12,8)
 plot_params['axes.labelsize'] = 20
 plot_params['axes.titlesize'] = 20
@@ -108,6 +108,11 @@ plot_params['xtick.labelsize'] = 16
 plot_params['ytick.labelsize'] = 16
 plot_params['lines.linewidth'] = 4
 plot_params['axes.titlepad'] = 5
+plot_params['axes.linewidth'] = 1.5
+plot_params['ytick.major.width'] = 2
+plot_params['ytick.minor.width'] = 2
+plot_params['xtick.major.width'] = 2
+plot_params['xtick.minor.width'] = 2
 plot_params['legend.loc'] = 'upper right'
 plt.rcParams.update(plot_params)
 
@@ -185,7 +190,7 @@ if analyse == True:
                 analysis_ts = np.array(analysis_ts)
                     
 
-                mData_dict = DH.load_m(['phi','E','rho','zres','dz','q'],sim_name=sim_name,max_t=analysis_times[-1])
+                mData_dict = DH.load_m(['phi','E','rho','zres','dz','q','grid_x','grid_v','f'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
     
                 E = mData_dict['E'][:,2,1,1,:-1]
@@ -201,7 +206,7 @@ if analyse == True:
                     peaks = find_peaks(peak_intervals,EL2,sim.dt,DH.samplePeriod)
                     c1 = EL2[peaks[0]]*1.05
                     E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
-                    E_fit = np.around(E_fit,decimals=6)
+                    E_fit = np.around(E_fit,decimals=5)
                     E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
                     gamma_line = c1*np.exp(gamma*tArray[NA:NB])
                     lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
@@ -214,9 +219,9 @@ if analyse == True:
                     peaks2 = find_peaks(peak_intervals2,EL2,sim.dt,DH.samplePeriod)
                     c2 = EL2[peaks2[0]]*0.17
                     E_fit2 = np.polyfit(tArray[peaks2],np.log(EL2[peaks2]),1)
-                    E_fit2 = np.around(E_fit2,decimals=6)
+                    E_fit2 = np.around(E_fit2,decimals=5)
                     E_fit_line2 = c2*np.exp(E_fit2[0]*tArray[NC:ND])
-                    lit_line2 = c2*0.87*np.exp(gamma_lit2*tArray[NC:ND])
+                    lit_line2 = c2*0.7*np.exp(gamma_lit2*tArray[NC:ND])
                     error_gamma2 = abs(gamma_lit2 - E_fit2[0])/abs(gamma_lit2)
                     gamma2_errors.append(error_gamma2)
                 except Exception:
@@ -230,11 +235,13 @@ if analyse == True:
                 if compare_reference == True:
 #                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
 #                    skip_int = np.int(skip)
-                    E_error = np.abs(EL2_comp-EL2p[analysis_ts])/np.abs(EL2_comp)
+                    E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                     E_errors.append(E_error)
 
                     
-                if snapPlot == True:
+                if fieldPlot == True:
+                    plt.rcParams.update(plot_params)
+                    print("Drawing field plot...")
                     fig = plt.figure(DH.figureNo+sim_no)
                     E_ax = fig.add_subplot(1,1,1)
                     E_ax.plot(tArray,EL2,'blue',label="$E$-field")
@@ -243,75 +250,50 @@ if analyse == True:
                     E_ax.plot(tArray[NA:NB],E_fit_line,'orange',label="Fitted $\gamma$")
                     E_ax.plot(tArray[NA:NB],lit_line,'green',label="Literature $\gamma$")
                     
-                    E_text1 = E_ax.text(.05,0,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                    E_text1 = E_ax.text(.02,0.02,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=16)
                     text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit1))
                     E_text1.set_text(text1)
                     
+                    E_ax.set_yscale('log')
+                    E_ax.set_xlabel(r'$\Delta t$')
+                    E_ax.set_ylabel(r'$||E||_{L2}$')
+                    E_ax.legend()
+                    
                     try:
                         E_ax.scatter(tArray[peaks2],EL2[peaks2])
-                        E_ax.plot(tArray[NA:NB],E_fit_line2,'orange',label="Fitted $\gamma$")
-                        E_ax.plot(tArray[NA:NB],lit_line2,'green',label="Literature $\gamma$")
+                        E_ax.plot(tArray[NC:ND],E_fit_line2,'orange')
+                        E_ax.plot(tArray[NC:ND],lit_line2,'green')
                         
-                        E_text2 = E_ax.text(.05,0,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=14)
+                        E_text2 = E_ax.text(.6,0.02,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=16)
                         text2 = (r'$\gamma_{fit}$ = ' + str(E_fit2[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit2))
                         E_text2.set_text(text2)
                     except Exception:
                         pass
+                    fig.savefig(data_root + 'landau_strong_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                
                     
-            if fieldPlot == True:
-                plt.rcParams.update(plot_params)
-                print("Drawing field plot...")
-                fig = plt.figure(DH.figureNo+sim_no)
-                E_ax = fig.add_subplot(1,1,1)
-                E_ax.plot(tArray,EL2,'blue',label="$E$-field")
-                
-                E_ax.scatter(tArray[peaks],EL2[peaks])
-                E_ax.plot(tArray[NA:NB],E_fit_line,'orange',label="Fitted $\gamma$")
-                E_ax.plot(tArray[NA:NB],lit_line,'green',label="Literature $\gamma$")
-                
-                E_text1 = E_ax.text(.02,0.025,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=16)
-                text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit1))
-                E_text1.set_text(text1)
-                
-                E_ax.set_yscale('log')
-                E_ax.set_xlabel(r'$\Delta t$')
-                E_ax.set_ylabel(r'$||E||_{L2}$')
-                
-                try:
-                    E_ax.scatter(tArray[peaks2],EL2[peaks2])
-                    E_ax.plot(tArray[NA:NB],E_fit_line2,'orange',label="Fitted $\gamma$")
-                    E_ax.plot(tArray[NA:NB],lit_line2,'green',label="Literature $\gamma$")
+                if snapPlot == True:
+                    print("Loading density data...")
+                    gridx = mData_dict['grid_x'][0,:,:]
+                    gridv = mData_dict['grid_v'][0,:,:]
+                    f = mData_dict['f']
                     
-                    E_text2 = E_ax.text(.05,0,'',transform=E_ax.transAxes,verticalalignment='bottom',fontsize=14)
-                    text2 = (r'$\gamma_{fit}$ = ' + str(E_fit2[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(gamma_lit2))
-                    E_text2.set_text(text2)
-                except Exception:
-                    pass
-                fig.savefig(data_root + 'landau_strong_field.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            
-                
-            if snapPlot == True:
-                print("Loading density data...")
-                gridx = mData_dict['grid_x'][0,:,:]
-                gridv = mData_dict['grid_v'][0,:,:]
-                f = mData_dict['f']
-                
-                no = 0
-                for snap in snaps:
-                    no +=1
-                    print("Drawing snap no. {0}...".format(no))
-                    fig_f = plt.figure(DH.figureNo+5,dpi=150)
-                    f_ax = fig_f.add_subplot(1,1,1)
-                    cont = f_ax.contourf(gridx,gridv,f[snap,:,:],cmap='inferno')
-                    cont.set_clim(0,np.max(f))
-                    cbar = plt.colorbar(cont,ax=f_ax)
-                    f_ax.set_xlim([0.0, L])
-                    f_ax.set_xlabel('$z$')
-                    f_ax.set_ylabel('$v_z$')
-                    f_ax.set_ylim([-4,4])
-#                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
-                    fig.savefig(data_root + sim_name + '_EL2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-                    
+                    no = 0
+                    for snap in snaps:
+                        no +=1
+                        print("Drawing snap no. {0}...".format(no))
+                        fig_f = plt.figure(DH.figureNo+5+no,dpi=150)
+                        f_ax = fig_f.add_subplot(1,1,1)
+                        cont = f_ax.contourf(gridx,gridv,f[snap,:,:],cmap='inferno')
+                        cont.set_clim(0,np.max(f))
+                        cbar = plt.colorbar(cont,ax=f_ax)
+                        f_ax.set_xlim([0.0, L])
+                        f_ax.set_xlabel('$z$')
+                        f_ax.set_ylabel('$v_z$')
+                        f_ax.set_ylim([-4,4])
+    #                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
+                        fig_f.savefig(data_root + 'landau_strong_snap_ts{}.pdf'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                        
                     
                     
             
@@ -411,7 +393,7 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
+            ax.set_ylabel(r'Rel. $||E||_{L2} Error$')
             
 #            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
@@ -423,5 +405,5 @@ if plot == True:
                         ls='dashed',c='0.75')
             
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'landau_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
+            fig_nl_dt.savefig(data_root + 'landau_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')

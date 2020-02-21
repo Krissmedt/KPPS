@@ -13,11 +13,11 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 
-analyse = True
-fieldPlot = True
+analyse = False
+fieldPlot = False
 snapPlot = False
-compare_reference = False
-plot = False
+compare_reference = True
+plot = True
 
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10,20]
@@ -28,23 +28,23 @@ fit_stop = 16
 
 snaps = [0,60,120,180,240,300]
 
-fig_type = 'versus'
+fig_type = 'full'
 data_root = "../data_tsi_strong/"
 sims = {}
 
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #
-#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#
-#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
+sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+
+#sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -70,15 +70,20 @@ real_slope = roots[1].imag
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 12
+plot_params['legend.fontsize'] = 16
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 14
-plot_params['axes.titlesize'] = 14
-plot_params['xtick.labelsize'] = 10
-plot_params['ytick.labelsize'] = 10
-plot_params['lines.linewidth'] = 3
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 4
 plot_params['axes.titlepad'] = 5
-plot_params['legend.loc'] = 'lower left'
+plot_params['axes.linewidth'] = 1.5
+plot_params['ytick.major.width'] = 2
+plot_params['ytick.minor.width'] = 2
+plot_params['xtick.major.width'] = 2
+plot_params['xtick.minor.width'] = 2
+plot_params['legend.loc'] = 'upper right'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -185,12 +190,13 @@ if analyse == True:
                 print("Drawing field plot...")
                 fig_el2 = plt.figure(DH.figureNo+5,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
-                el2_ax.plot(tArray,EL2,'blue',label="$E$")
+                el2_ax.plot(tArray,EL2,'blue',label="$E-field$")
 #                el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
 #                el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
                 el2_ax.set_xlabel('$t$')
-                el2_ax.set_ylabel(r'log $||E||_{L2}$')
+                el2_ax.set_ylabel(r'$||E||_{L2}$')
                 el2_ax.set_yscale('log')
+                el2_ax.legend()
                 fig_el2.savefig(data_root + 'tsi_strong_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             
                 
@@ -212,18 +218,15 @@ if analyse == True:
                 for snap in snaps:
                     no +=1
                     print("Drawing snap no. {0}...".format(no))
-                    fig_f = plt.figure(DH.figureNo+5,dpi=150)
-                    f_ax = fig_f.add_subplot(1,1,1)
-                    cont = f_ax.contourf(gridx,gridv,f[0,:,:],cmap='inferno')
-                    cont.set_clim(0,np.max(f))
-                    cbar = plt.colorbar(cont,ax=f_ax)
-                    f_ax.set_xlim([0.0, L])
-                    f_ax.set_xlabel('$z$')
-                    f_ax.set_ylabel('$v_z$')
-                    f_ax.set_ylim([-v_off,v_off])
-                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
-                    f_ax.legend()
-                    fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.pdf'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    fig_snap = plt.figure(DH.figureNo+10+no,dpi=150)
+                    p_ax = fig_snap.add_subplot(1,1,1)
+                    line_p1 = p_ax.plot(p1_data[snap,:],v1_data[snap,:],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Beam 1, v=1')[0]
+                    line_p2 = p_ax.plot(p2_data[snap,:],v2_data[snap,:],'ro',ms=2,c=(0.75,0.2,0.2,1),label='Beam 2, v=-1')[0]
+                    p_ax.set_xlim([0.0, sim.zlimits[1]])
+                    p_ax.set_xlabel('$z$')
+                    p_ax.set_ylabel('$v_z$')
+                    p_ax.set_ylim([-3,3])
+                    fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.png'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             
             
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -252,7 +255,7 @@ if plot == True:
             filename = key[:-3] + "_wp_strong.h5"
             filenames.append(filename)
             
-
+    plt.rcParams.update(plot_params)
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
@@ -321,10 +324,10 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'$\Delta (||E||_{L2})_{rel}$')
+            ax.set_ylabel(r'Rel. $||E||_{L2}$ Error')
             
-            ax.set_title('Strong two-stream instability, convergence vs. ref solution')
             xRange = ax.get_xlim()
+#            ax.set_title('Strong two-stream instability, convergence vs. ref solution')
             yRange = ax.get_ylim()
             
             ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
@@ -333,5 +336,5 @@ if plot == True:
                         ls='dashed',c='0.75')
             
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
+            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
