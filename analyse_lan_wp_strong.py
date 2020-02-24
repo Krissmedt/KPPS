@@ -34,7 +34,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = False
+analyse = True
 fieldPlot = False
 snapPlot = False
 compare_reference = True
@@ -51,8 +51,8 @@ fit1_stop = peak_intervals[-1][-1]
 fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
-compare_times = [8]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+compare_times = [10]
 
 snaps = [0,60,120,180,240,300]
 
@@ -68,9 +68,15 @@ sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,
 sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-#sims['lan_TE30_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [300]
 
-comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ1000000_NT5000'
+#sims['lan_TE20_a0.5_boris_synced_NZ100_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
+#sims['lan_TE20_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
+#
+#
+#sims['lan_TE20_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
+#sims['lan_TE20_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
+
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ2000000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -188,7 +194,6 @@ if analyse == True:
                 for time in analysis_times:
                     analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
                 analysis_ts = np.array(analysis_ts)
-                    
 
                 mData_dict = DH.load_m(['phi','E','rho','zres','dz','q','grid_x','grid_v','f'],sim_name=sim_name,max_t=analysis_times[-1])
                 tArray = mData_dict['t']
@@ -393,7 +398,7 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
-            ax.set_ylabel(r'Rel. $||E||_{L2} Error$')
+            ax.set_ylabel(r'Rel. $||E||_{L2}$ Error')
             
 #            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
