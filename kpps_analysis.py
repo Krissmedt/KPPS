@@ -584,13 +584,24 @@ class kpps_analysis:
                                                    x0=self.iter_x0,
                                                    tol=self.iter_tol,
                                                    maxiter=self.iter_max,
-                                                   callback = self.gmres_counter)
+                                                   callback = self.iterative_counter)
         
         self.iter_x0 = phi
         
         return phi
     
-    def gmres_counter(self,ck=None):
+    def bicgstab_solve(self,FDMat,rho,BC_vector):
+        phi, self.solver_code = sps.linalg.bicgstab(FDMat, -rho - BC_vector,
+                                                   x0=self.iter_x0,
+                                                   tol=self.iter_tol,
+                                                   maxiter=self.iter_max,
+                                                   callback = self.iterative_counter)
+        
+        self.iter_x0 = phi
+        
+        return phi
+    
+    def interative_counter(self,ck=None):
         self.niter += 1
 
     
