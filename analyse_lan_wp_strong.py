@@ -34,11 +34,11 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
+analyse = False
 fieldPlot = False
 snapPlot = False
 compare_reference = True
-plot = False
+plot = True
 
 
 peak_intervals = [[0,2],[2,4],[4,6]]
@@ -56,17 +56,17 @@ compare_times = [10]
 
 snaps = [0,60,120,180,240,300]
 
-fig_type = 'versus'
+fig_type = 'high'
 data_root = "../data_landau_strong/"
 sims = {}
 
-sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 
 #sims['lan_TE20_a0.5_boris_synced_NZ100_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
@@ -76,7 +76,7 @@ sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,20
 #sims['lan_TE20_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
 #sims['lan_TE20_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [20,40,80,100,200,400,500,1000,2000]
 
-comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ2000000_NT5000'
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ10000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
@@ -327,6 +327,7 @@ if analyse == True:
     
     
 if plot == True:
+    DH = dataHandler2(**data_params)
     if len(filenames) == 0:
         for key, value in sims.items():
             filename = key[:-3] + "_wp"  + "_strong.h5"
