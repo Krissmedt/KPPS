@@ -13,7 +13,7 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 
-analyse = False
+analyse = True
 fieldPlot = False
 snapPlot = False
 compare_reference = True
@@ -289,7 +289,7 @@ if plot == True:
             print(iters)
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
-                ax_nl_rhs.plot(rhs_evals,E_errors[:,time],marker="o",color=c,label=label_line)
+                ax_nl_rhs.plot(iters,E_errors[:,time],marker="o",color=c,label=label_line)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)

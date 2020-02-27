@@ -38,7 +38,7 @@ analyse = True
 fieldPlot = False
 snapPlot = False
 compare_reference = True
-plot = True
+plot = False
 
 
 peak_intervals = [[0,2],[2,4],[4,6]]
@@ -63,7 +63,7 @@ sims = {}
 sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
+#
 sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]

@@ -13,17 +13,17 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 analyse = True
-fieldPlot = True
+fieldPlot = False
 snapPlot = False
-compare_reference = False
+compare_reference = True
 plot = False
 
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10,60]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [10]
 
-fit_start = 10
-fit_stop = 18
+fit_start = 1
+fit_stop = 10
 
 snaps = [0,120,240,360,480,600]
 
@@ -31,21 +31,21 @@ fig_type = 'versus'
 data_root = "../data_tsi_weak/"
 sims = {}
 
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 ##
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #
-#sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE60_a0.0001_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [600]
+#sims['tsi_TE60_a0.0001_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [600]
 
-comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT1000'
+comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################

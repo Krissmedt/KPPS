@@ -34,7 +34,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = False
+analyse = True
 fieldPlot = False
 snapPlot = False
 compare_reference = True
@@ -48,7 +48,7 @@ peak_intervals = [[0,1],[2,4],[4,5],[6,8],[8,10],[10,12.5],[12.5,15]]
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [10]
 
 snaps = [0,60,120,180,240,300]

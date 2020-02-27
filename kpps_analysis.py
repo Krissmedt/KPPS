@@ -14,7 +14,7 @@ interchanging sequence like [1x,1y,1z,2x,2y,2z,...,Nx,Ny,Nz].
 ## Dependencies
 import numpy as np
 import scipy.sparse as sps
-import scipy.interpolate as scint
+#import scipy.interpolate as scint
 from math import sqrt, fsum, pi
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
@@ -78,6 +78,7 @@ class kpps_analysis:
         self.iter_max = None
         self.niter = 0
         self.FDMat = None
+        self.precon = None
         self.scatter_order = 1
         self.gather_order = 1
         self.mesh_boundary_z = 'fixed'
@@ -275,6 +276,7 @@ class kpps_analysis:
             method(species_list,fields,simulationManager)
         
         fields.gmres_iters += self.niter
+#        print(self.niter)
         return species_list
 
 
@@ -322,7 +324,6 @@ class kpps_analysis:
             
             controller.runTimeDict['bound_cross_check'] += t_fg - t_bc 
             controller.runTimeDict['gather'] += t_lntz - t_fg
-            print(t_lntz-t_fg)
 
         return species_list, mesh
     
@@ -546,6 +547,10 @@ class kpps_analysis:
             self.pot_diff_list.append(self.pot_differentiate_x)
             
         controller.runTimeDict['FD_setup'] = time.time() - tStart
+        
+        ilu = sps.linalg.spilu(self.FDMat,drop_tol=0.5,fill_factor=2,)
+        Mx = lambda x: ilu.solve(x)
+        self.precon = sps.linalg.LinearOperator((self.FDMat.shape[0],self.FDMat.shape[1]), Mx)
 
         return self.FDMat
     
@@ -584,6 +589,7 @@ class kpps_analysis:
                                                    x0=self.iter_x0,
                                                    tol=self.iter_tol,
                                                    maxiter=self.iter_max,
+                                                   M=self.precon,
                                                    callback = self.iterative_counter)
         
         self.iter_x0 = phi
@@ -595,13 +601,14 @@ class kpps_analysis:
                                                    x0=self.iter_x0,
                                                    tol=self.iter_tol,
                                                    maxiter=self.iter_max,
+                                                   M=self.precon,
                                                    callback = self.iterative_counter)
         
         self.iter_x0 = phi
         
         return phi
     
-    def interative_counter(self,ck=None):
+    def iterative_counter(self,ck=None):
         self.niter += 1
 
     
@@ -824,18 +831,18 @@ class kpps_analysis:
         return mesh
     
     
-    def griddata_qScatter(self,species_list,mesh,controller):
-        ## Not working, establishes convex hull around particles and only
-        ## interpolates to mesh nodes within hull.
-        ## Doesn't appear cumulative either or to spread charge over a cell.
-        for species in species_list:
-            mesh.q += scint.griddata(species.pos,species.vals_at_p(species.q),
-                                     (mesh.x,mesh.y,mesh.z),
-                                     method='linear',fill_value=0)
-
-        self.scatter_BC(species,mesh,controller)
-        mesh.rho += mesh.q/mesh.dv
-        return mesh
+#    def griddata_qScatter(self,species_list,mesh,controller):
+#        ## Not working, establishes convex hull around particles and only
+#        ## interpolates to mesh nodes within hull.
+#        ## Doesn't appear cumulative either or to spread charge over a cell.
+#        for species in species_list:
+#            mesh.q += scint.griddata(species.pos,species.vals_at_p(species.q),
+#                                     (mesh.x,mesh.y,mesh.z),
+#                                     method='linear',fill_value=0)
+#
+#        self.scatter_BC(species,mesh,controller)
+#        mesh.rho += mesh.q/mesh.dv
+#        return mesh
             
     
     def trilinear_weights(self,rpos,dh):
@@ -1324,7 +1331,7 @@ class kpps_analysis:
         BC_vector[1:] = mesh.BC_vector
         mesh.BC_vector = BC_vector
 
-        self.FDMat = sps.csr_matrix(FDMat)
+        self.FDMat = sps.csc_matrix(FDMat)
         self.solver_post = self.mirrored_boundary_z
         
 
