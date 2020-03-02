@@ -37,7 +37,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
 analyse = True
 fieldPlot = False
 snapPlot = False
-compare_reference = True
+compare_reference = False
 plot = True
 
 
@@ -52,7 +52,7 @@ fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [7]
+compare_times = [1]
 
 snaps = [0,60,120,180,240,300]
 
@@ -60,22 +60,23 @@ fig_type = 'versus'
 data_root = "../data_landau_strong/"
 sims = {}
 
-sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#
+#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 
 #sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500]
-#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400]
+
+#sims['lan_TE30_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT300] = [300]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -344,7 +345,7 @@ if plot == True:
         gamma2_errors = file["fields/gamma2_errors"][:]
         E_errors = file["fields/E_errors"][:]
         E_errors = np.array(E_errors)
-        
+
         K = filename[filename.find('K')+1]
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]

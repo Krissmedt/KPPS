@@ -15,43 +15,42 @@ from caseFile_landau1D import *
 
 analyse = True
 fieldPlot = False
-snapPlot = False
-compare_reference = True
-plot = True
+snapPlot =True
+compare_reference = False
+plot = False
 
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [6]
+compare_times = [9]
 
 fit_start = 10
 fit_stop = 16
 
-snaps = [0,60,120,180,240,300]
+snaps = [0]
 
-fig_type = 'full'
+fig_type = 'versus'
 data_root = "../data_tsi_strong/"
 sims = {}
 
 #sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
-
-sims['tsi_TE10_a0.1_boris_SDC_dirty_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
-
-sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-
-#sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
-#sims['tsi_TE30_a0.1_boris_synced_NZ100_NQ20000_NT'] = [300]
+#sims['tsi_TE10_a0.1_boris_SDC_dirty_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#
+#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+ 
+sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [100]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -209,7 +208,7 @@ if analyse == True:
                 
             if snapPlot == True:
                 print("Loading particle data...")
-                pData_list = DH.load_p(['pos','vel'],species=['beam1','beam2'],sim_name=sim_name)
+                pData_list = DH.load_p(['pos','vel','x_res'],species=['beam1','beam2'],sim_name=sim_name)
                 
                 p1Data_dict = pData_list[0]
                 p2Data_dict = pData_list[1]
@@ -220,6 +219,20 @@ if analyse == True:
                 
                 v1_data = p1Data_dict['vel'][:,:,2] 
                 v2_data = p2Data_dict['vel'][:,:,2] 
+                
+                res_data = p1Data_dict['x_res']
+                
+                K = 2
+                fig_res = plt.figure(DH.figureNo+6,dpi=150)
+                res_ax = fig_res.add_subplot(1,1,1)
+                for k in range(0,K):
+                    res_ax.plot(tArray,res_data[:,k,-1],label='K = {0}'.format(k+1))
+              
+                res_ax.set_xlabel('$t$')
+                res_ax.set_ylabel('Res')
+                res_ax.set_yscale('log')
+                res_ax.legend()
+                fig_res.savefig(data_root + 'tsi_strong_residual.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')     
                 
                 no = 0
                 for snap in snaps:
@@ -234,6 +247,9 @@ if analyse == True:
                     p_ax.set_ylabel('$v_z$')
                     p_ax.set_ylim([-3,3])
                     fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.png'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    
+
+                
             
             
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -265,6 +281,7 @@ if plot == True:
     plt.rcParams.update(plot_params)
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
+        Nts = file["fields/Nts"][:]
         dts = file["fields/dts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         energy_errors = file["fields/energy_errors"][:]
@@ -273,21 +290,26 @@ if plot == True:
         
         K = filename[filename.find('K')+1]
         if file.attrs["integrator"] == "boris_staggered":
+            rhs_evals = Nts
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
             label = "Boris"
             c = '#0080FF'
         elif file.attrs["integrator"] == "boris_synced":
+            rhs_evals = Nts
             c = '#0080FF'
             label = "Boris"
         elif file.attrs["integrator"] == "boris_SDC":
             label = "Boris-SDC"
             if K == '1':
+                rhs_evals = Nts*2
                 c = '#00d65d'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
             elif K == '2':
+                rhs_evals = Nts*4
                 c = '#FFD738'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
             elif K == '3':
+                rhs_evals = Nts*6
                 c = '#F9004B'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
                 

@@ -1600,6 +1600,10 @@ class kpps_analysis:
         s.x_con[k-1,m] = np.max(np.abs(s.xn[:,m+1] - s.x[:,m+1]))
         s.x_res[k-1,m] = np.max(np.linalg.norm(s.xn[:,m+1]-s.xQuad))
         
+        print(m)
+        print(s.xn[:,m+1])
+        print(s.xQuad)
+        
         s.v_res[k-1,m] = np.max(np.linalg.norm(s.vn[:,m+1]-s.vQuad))
         s.v_con[k-1,m] = np.max(np.abs(s.vn[:,m+1] - s.v[:,m+1]))
     
