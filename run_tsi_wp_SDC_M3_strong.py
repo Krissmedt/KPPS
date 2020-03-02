@@ -83,14 +83,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [1]
-resolutions = [100]
-iterations = [3]
+steps = [10,20,40,50,80,100,200,400,500,1000]
+resolutions = [10,100,1000]
+iterations = [2,3]
 
 dataRoot = "../data_tsi_strong/"
 
 L = 2*pi
-tend = 0.1
+tend = 10
 
 dx_mag = 0.1
 dx_mode = 1
@@ -163,7 +163,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC_dirty'
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
@@ -205,7 +205,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]

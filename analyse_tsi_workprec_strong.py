@@ -20,8 +20,8 @@ compare_reference = True
 plot = True
 
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10,20]
-compare_times = [8]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+compare_times = [6]
 
 fit_start = 10
 fit_stop = 16
@@ -32,17 +32,23 @@ fig_type = 'full'
 data_root = "../data_tsi_strong/"
 sims = {}
 
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-##
-#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100]
-#
-#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+
+sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+
+sims['tsi_TE10_a0.1_boris_SDC_dirty_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
+
+sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 #sims['tsi_TE30_a0.1_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [300]
 #sims['tsi_TE30_a0.1_boris_synced_NZ100_NQ20000_NT'] = [300]
@@ -149,9 +155,9 @@ if analyse == True:
                 analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
             analysis_ts = np.array(analysis_ts)
                 
-            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','gmres_iters'],sim_name=sim_name,max_t=analysis_times[-1])
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
             tArray = mData_dict['t']
-            print(mData_dict['gmres_iters'])
+
             phi_data = mData_dict['phi'][analysis_ts,1,1,:-1]
             E = mData_dict['E'][:,2,1,1,:-1]
             E2 = E*E
@@ -277,6 +283,9 @@ if plot == True:
             label = "Boris-SDC"
             if K == '1':
                 c = '#00d65d'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+            elif K == '2':
+                c = '#FFD738'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
             elif K == '3':
                 c = '#F9004B'
