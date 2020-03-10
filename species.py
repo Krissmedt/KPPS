@@ -65,7 +65,8 @@ class species:
         self.x_res = np.zeros((3,3))
         self.v_con = np.zeros((3,3))
         self.v_res = np.zeros((3,3))
-        
+        self.Rx = np.zeros((3,3))
+        self.Rv = np.zeros((3,3))
         
     def vals_at_p(self,const):
         return self.ones*const

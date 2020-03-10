@@ -12,11 +12,11 @@ import h5py as h5
 from collections import OrderedDict
 from caseFile_landau1D import *
 
-analyse = True
+analyse = False
 fieldPlot = False
 snapPlot = False
 compare_reference = True
-plot = False
+plot = True
 
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
@@ -31,13 +31,17 @@ fig_type = 'versus'
 data_root = "../data_tsi_weak/"
 sims = {}
 
-sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 ##
-sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #
 sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
@@ -281,8 +285,11 @@ if plot == True:
             if K == '1':
                 c = '#00d65d'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
-            elif K == '3':
+            elif K == '2':
                 c = '#F9004B'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+            elif K == '3':
+                c = '#FFD738'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
                 
         if compare_reference == True:

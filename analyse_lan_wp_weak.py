@@ -34,7 +34,7 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
+analyse = False
 fieldPlot = False
 snapPlot = False
 compare_reference = True
@@ -56,10 +56,14 @@ snaps = [0,60,120,180,240,300]
 fig_type = 'versus'
 data_root = "../data_landau_weak/"
 sims = {}
+#
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+#sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
 sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
@@ -323,11 +327,13 @@ if plot == True:
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
+        Nts = file["fields/Nts"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         avg_errors = file["fields/errors"][:]
         E_errors = file["fields/E_errors"][:]
         E_errors = np.array(E_errors)
 
+        K = filename[filename.find('K')+1]
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
             label = "Boris"
@@ -336,10 +342,20 @@ if plot == True:
             c = '#0080FF'
             label = "Boris"
         elif file.attrs["integrator"] == "boris_SDC":
-            c = '#F9004B'
             label = "Boris-SDC"
-            label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
-        
+            if K == '1':
+                rhs_evals = Nts*2
+                c = '#00d65d'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+            elif K == '2':
+                rhs_evals = Nts*4
+                c = '#F9004B'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+            elif K == '3':
+                rhs_evals = Nts*6
+                c = '#FFD738'
+                label += ", M=" + file.attrs["M"] + ", K=" + K
+                
         if compare_reference == True:
             ##Order Plot w/ rhs
             fig_nl_rhs = plt.figure(10)

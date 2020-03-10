@@ -34,10 +34,10 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
         
     return peaks
 
-analyse = True
+analyse = False
 fieldPlot = False
 snapPlot = False
-compare_reference = False
+compare_reference = True
 plot = True
 
 
@@ -52,7 +52,7 @@ fit2_start = peak_intervals2[0][0]
 fit2_stop = peak_intervals2[-1][-1]
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [1]
+compare_times = [10]
 
 snaps = [0,60,120,180,240,300]
 
@@ -60,14 +60,14 @@ fig_type = 'versus'
 data_root = "../data_landau_strong/"
 sims = {}
 
-#sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#
-#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#
+sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
 #sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
@@ -360,10 +360,10 @@ if plot == True:
                 c = '#00d65d'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
             elif K == '2':
-                c = '#FFD738'
+                c = '#F9004B'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
             elif K == '3':
-                c = '#F9004B'
+                c = '#FFD738'
                 label += ", M=" + file.attrs["M"] + ", K=" + K
         
         if compare_reference == True:

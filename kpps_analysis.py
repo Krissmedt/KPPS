@@ -68,6 +68,7 @@ class kpps_analysis:
         self.bound_cross_methods = []
         self.looped_axes = []
         self.calc_residuals = self.calc_residuals_max
+        self.SDC_residual_type = 'nodal'
         self.display_residuals = self.display_residuals_max
         
         self.fieldIntegration = False
@@ -1054,6 +1055,7 @@ class kpps_analysis:
         SX[:,:] = QX[:,:]
         SX[1:,:] = QX[1:,:] - QX[0:-1,:]      
         
+        
         self.coll_params['SX'] = SX
         self.coll_params['SQ'] = Smat @ Qmat
 
@@ -1072,6 +1074,41 @@ class kpps_analysis:
             species.x_res = np.zeros((K,M))
             species.v_con = np.zeros((K,M))
             species.v_res = np.zeros((K,M))
+            
+            # Required residual matrices
+            if self.SDC_residual_type == 'matrix':
+                species.U0 = np.zeros((2*d*(M+1),1),dtype=np.float)
+                species.Uk = np.zeros((2*d*(M+1),1),dtype=np.float) 
+                species.R = np.zeros((K,1),dtype=np.float) 
+                species.FXV = np.zeros((d*(M+1),1),dtype=np.float)   
+                
+                Ix = np.array([[1],[0]])
+                Iv = np.array([[0],[1]],np.newaxis)
+                Ixv = np.array([[0,1],[0,0]])
+                Id = np.identity(d)
+                
+                size = (M+1)*2*d
+                species.Imd = np.identity(size)
+                
+                QQ = self.Qmat @ self.Qmat
+                QQX = np.kron(QQ,Ix)
+                QQX = np.kron(QQX,Id)
+                
+                QV = np.kron(self.Qmat,Iv)
+                QV = np.kron(QV,Id)
+                
+                QXV = np.kron(self.Qmat,Ixv)
+                QXV = np.kron(QXV,Id)
+                
+                species.Cc = species.Imd + QXV
+                species.Qc = QQX + QV
+                
+                self.calc_R = self.calc_residual
+                
+            elif self.SDC_residual_type == 'nodal':
+                species.Rx = np.zeros((K,M),dtype=np.float) 
+                species.Rv = np.zeros((K,M),dtype=np.float) 
+                self.calc_R = self.calc_residual2
                 
 
     def boris_SDC(self, species_list,fields, controller,**kwargs):
@@ -1202,10 +1239,17 @@ class kpps_analysis:
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
+                
+                self.calc_R(species,M,k)
+                
+                
+                
 
         species_list = self.updateStep(species_list,fields,weights,Qmat)
         controller.runTimeDict['particle_push'] += time.time() - tFin
         
+        print(species_list[0].Rx)
+        print(species_list[0].Rv)
         return species_list
     
     
@@ -1600,13 +1644,36 @@ class kpps_analysis:
         s.x_con[k-1,m] = np.max(np.abs(s.xn[:,m+1] - s.x[:,m+1]))
         s.x_res[k-1,m] = np.max(np.linalg.norm(s.xn[:,m+1]-s.xQuad))
         
-        print(m)
-        print(s.xn[:,m+1])
-        print(s.xQuad)
-        
         s.v_res[k-1,m] = np.max(np.linalg.norm(s.vn[:,m+1]-s.vQuad))
         s.v_con[k-1,m] = np.max(np.abs(s.vn[:,m+1] - s.v[:,m+1]))
-    
+        
+    def calc_residual(self,species,M,k):
+        s = species
+        d = s.nq*3
+        
+        u0 = self.get_u(s.x[:,0],s.v[:,0])
+        
+        for m in range(0,M+1):
+            u = self.get_u(s.x[:,m],s.v[:,m])
+            s.U0[2*d*m:2*d*(m+1)] = u0
+            s.Uk[2*d*m:2*d*(m+1)] = u
+            s.FXV[d*m:d*(m+1)] = s.F[:,m,np.newaxis]
+            
+        print((s.Qc @ s.FXV).shape)
+        
+    def calc_residual2(self,species,M,k):
+        s = species
+        q =  self.coll_params['Qmat']
+
+        for m in range(1,M+1):
+            for j in range(1,m+1):
+                qvsum = q[m,j] * s.v[:,j]
+                qfsum = q[m,j] * s.F[:,j] 
+                
+            s.Rx[k-1,m-1] = np.max(np.linalg.norm(s.x[:,0] + qvsum - s.x[:,m]))
+            s.Rx[k-1,m-1] = np.max(np.linalg.norm(s.v[:,0] + qfsum - s.v[:,m]))
+        
+        
     
     def display_convergence(self,species_list,fields,**kwargs):
         for species in species_list:
@@ -1643,7 +1710,7 @@ class kpps_analysis:
         Id = np.identity(d)
         
         u = np.kron(Id,Ix).transpose() @ x + np.kron(Id,Iv).transpose() @ v
-        return u
+        return u[:,np.newaxis]
     
     
     def energy_calc_penning(self,species_list,fields,**kwargs):
