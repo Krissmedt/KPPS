@@ -206,7 +206,7 @@ class kpps_analysis:
         if self.particleIntegration == True:
             self.particleIntegrator_methods.append(self.particleIntegrator)
             
-            if self.particleIntegrator == 'boris_SDC' or 'boris_SDC_dirty':
+            if  'boris_SDC' in self.particleIntegrator:
                 self.preAnalysis_methods.append(self.collSetup)
                 
             self.fieldGather_methods.append(self.gather)
@@ -1157,6 +1157,8 @@ class kpps_analysis:
             #print("k = " + str(k))
             for species in species_list:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
+                print(species.F)
+                print(species.Fn)
 
             for m in range(self.ssi,M):
                 for species in species_list:
@@ -1236,6 +1238,7 @@ class kpps_analysis:
                 controller.runTimeDict['particle_push'] += tFin - tmid
                     
             for species in species_list:
+                print(species.xn)
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
@@ -1248,20 +1251,21 @@ class kpps_analysis:
         species_list = self.updateStep(species_list,fields,weights,Qmat)
         controller.runTimeDict['particle_push'] += time.time() - tFin
         
-        print(species_list[0].Rx)
-        print(species_list[0].Rv)
+#        print(species_list[0].Rx)
+#        print(species_list[0].Rv)
         return species_list
     
     
-    def boris_SDC_dirty(self, species_list,fields, controller,**kwargs):
+    def boris_SDC_2018(self, species_list,fields, controller,**kwargs):
         tst = time.time()
-
+        
         M = self.M
         K = self.K
-        
+
+        #Remap collocation weights from [0,1] to [tn,tn+1]
         weights =  self.coll_params['weights']
 
-        Qmat =  self.coll_params['Qmat']
+        q =  self.coll_params['Qmat']
         Smat =  self.coll_params['Smat']
 
         dm =  self.coll_params['dm']
@@ -1269,30 +1273,19 @@ class kpps_analysis:
         SX =  self.coll_params['SX'] 
 
         SQ =  self.coll_params['SQ']
-        
-        fields.En0 = np.copy(fields.E)
-        
+
         for species in species_list:
             ## Populate node solutions with x0, v0, F0 ##
             species.x0[:,0] = self.toVector(species.pos)
             species.v0[:,0] = self.toVector(species.vel)
             species.F[:,0] = self.toVector(species.lntz)
             species.En_m0 = species.E
+            species.Bn_m0 = species.B
 
-        self.boris_synced(species_list,fields,controller,**kwargs)
-        
-        fields.En1 = np.copy(fields.E)
-        
-        for species in species_list:
-            ## Populate node solutions with x0, v0, F0 ##
-            species.x0[:,-1] = self.toVector(species.pos)
-            species.v0[:,-1] = self.toVector(species.vel)
-            species.F[:,-1] = self.toVector(species.lntz)
-
-            for m in range(1,M):
-                species.x0[:,m] = (1-self.nodes[m-1])*species.x0[:,0] + (self.nodes[m-1])*species.x0[:,-1]
-                species.v0[:,m] = (1-self.nodes[m-1])*species.v0[:,0] + (self.nodes[m-1])*species.v0[:,-1]
-                species.F[:,m] = (1-self.nodes[m-1])*species.F[:,0] + (self.nodes[m-1])*species.F[:,-1]
+            for m in range(1,M+1):
+                species.x0[:,m] = species.x0[:,0]
+                species.v0[:,m] = species.v0[:,0]
+                species.F[:,m] = species.F[:,0]
             #############################################
             
             species.x = np.copy(species.x0)
@@ -1301,7 +1294,7 @@ class kpps_analysis:
             species.xn[:,:] = species.x[:,:]
             species.vn[:,:] = species.v[:,:]
             species.Fn[:,:] = species.F[:,:]
-
+        
         controller.runTimeDict['particle_push'] += time.time() - tst
         
         #print()
@@ -1310,34 +1303,30 @@ class kpps_analysis:
             #print("k = " + str(k))
             for species in species_list:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
-
+                species.Bn_m = species.Bn_m0 #reset magnetic field values for new sweep
+                print(species.F)
+                print(species.Fn)
+                
             for m in range(self.ssi,M):
                 for species in species_list:
+                    print(dm)
                     t_pos = time.time()
+                    
                     #print("m = " + str(m))
                     #Determine next node (m+1) positions
-                    sumSQ = 0
-                    for l in range(1,M+1):
-                        sumSQ += SQ[m+1,l]*species.F[:,l]
                     
-                    sumSX = 0
-                    for l in range(1,m+1):
-                        sumSX += SX[m+1,l]*(species.Fn[:,l] - species.F[:,l])
-                        
-                    species.xQuad = species.xn[:,m] + dm[m]*species.v[:,0] + sumSQ
-                              
+                    # Calculate collocation terms required for pos update
+                    IV = 0
+                    for j in range(1,M+1):
+                        IV += (q[m+1,j]-q[m,j])*species.v[:,j]
+
                     ### POSITION UPDATE FOR NODE m/SWEEP k ###
-                    species.xn[:,m+1] = species.xQuad + sumSX 
+                    species.xn[:,m+1] = species.xn[:,m]
+                    species.xn[:,m+1] += dm[m]* (species.vn[:,m]-species.v[:,m])
+                    species.xn[:,m+1] += dm[m]/2 * (species.Fn[:,m]-species.F[:,m])
+                    species.xn[:,m+1] += IV
                     
                     ##########################################
-                    
-                    sumS = 0
-                    for l in range(1,M+1):
-                        sumS += Smat[m+1,l] * species.F[:,l]
-                    
-                    species.vQuad = species.vn[:,m] + sumS
-                    
-                    species.ck_dm = -1/2 * (species.F[:,m+1]+species.F[:,m]) + 1/dm[m] * sumS
                     
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
                     species.pos = self.toMatrix(species.xn[:,m+1],3)
@@ -1349,8 +1338,7 @@ class kpps_analysis:
                     controller.runTimeDict['pos_push'] += t_bc - t_pos
                     
                 controller.runTimeDict['particle_push'] += time.time() - t_pos
-                
-                self.fieldInterpolator(species_list,fields,controller,m=m)
+                self.run_fieldIntegrator(species_list,fields,controller)
                 
                 tmid = time.time()
                 for species in species_list:
@@ -1361,22 +1349,36 @@ class kpps_analysis:
                     #Sample the electric field at the half-step positions (yields form Nx3)
                     half_E = (species.En_m+species.E)/2
                     species.En_m = species.E              #Save m+1 value as next node's m value
+                    species.Bn_m = species.B
+                    
+                    
+                    t_boris = time.time()
+                    # Calculate collocation terms required for pos update
+                    IF = 0
+                    for j in range(1,M+1):
+                        IF += (q[m+1,j]-q[m,j])*species.F[:,j]
+                        
+                    c = -dm[m]/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
+                                                                    species.Bn_m)
+            
+                    c += -dm[m]/2 * np.reshape(species.F[:,m]+species.F[:,m+1],
+                                              (species.nq,3)) + IF.reshape((species.nq,3))
+                            
+                    c += -np.cross(species.vn[:,m].reshape((species.nq,3)),
+                                                           species.B)
                     
                     #Resort all other 3d vectors to shape Nx3 for use in Boris function
-                    t_boris = time.time()
                     v_oldNode = self.toMatrix(species.vn[:,m])
-                    species.ck_dm = self.toMatrix(species.ck_dm)
+                    species.ck_dm = c
                     
                     ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
                     v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,species.ck_dm)
-                    species.vn[:,m+1] = self.toVector(v_new)
+                    species.vn[:,m+1] = np.ravel(v_new)
                     
                     ##########################################
                     
                     controller.runTimeDict['boris'] += time.time() - t_boris
                     controller.runTimeDict['gather'] += t_boris - t_gather
-                    
-                    self.calc_residuals(species,m,k)
                     
                     ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
                     species.vel = v_new
@@ -1390,13 +1392,18 @@ class kpps_analysis:
                 controller.runTimeDict['particle_push'] += tFin - tmid
                     
             for species in species_list:
+                print(species.xn)
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
-
-        species_list = self.updateStep(species_list,fields,weights,Qmat)
+                
+                self.calc_R(species,M,k)
+                
+        species_list = self.updateStep(species_list,fields,weights,q)
         controller.runTimeDict['particle_push'] += time.time() - tFin
         
+#        print(species_list[0].Rx)
+#        print(species_list[0].Rv)
         return species_list
     
     def fieldInterpolator(self,species_list,mesh,controller,m=1):

@@ -44,10 +44,8 @@ snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-sims['pen_TE16_boris_SDC_M5K1_NQ1_NT'] = [40,80,400,800,4000,8000]
-sims['pen_TE16_boris_SDC_M5K2_NQ1_NT'] = [40,80,400,800,4000,8000]
-sims['pen_TE16_boris_SDC_M5K4_NQ1_NT'] = [40,80,400,800,4000,8000]
-sims['pen_TE16_boris_SDC_M5K8_NQ1_NT'] = [40,80,400,800,4000,8000]
+#sims['pen_TE8_boris_SDC_M5K5_NQ1_NT'] = [20,40,200,400,2000,4000]
+sims['pen_TE8_boris_SDC_2018_M5K5_NQ1_NT'] = [20,40,200,400,2000,4000]
 
 omegaB = 25.0
 omegaE = 4.9
@@ -204,7 +202,7 @@ if plot == True:
         
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_ylim(10**(-14),10**1)
+        ax.set_ylim(10**(-14),10**5)
         ax.set_ylabel('$\Delta x_{rel}$')
         
         ax.set_title('Convergence vs. Analytical Solution')

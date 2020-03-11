@@ -83,14 +83,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [10]
+steps = [100]
 resolutions = [100]
 iterations = [2]
 
 dataRoot = "../data_tsi_strong/"
 
 L = 2*pi
-tend = 1
+tend = 10
 
 dx_mag = 0.1
 dx_mode = 1
@@ -104,11 +104,11 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 200
+nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = False
+plot = True
 
 restart = False
 restart_ts = 14
@@ -163,7 +163,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_SDC_2018'
 analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False

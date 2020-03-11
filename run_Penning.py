@@ -6,20 +6,20 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_SDC']
+schemes = ['boris_SDC_2018','boris_SDC']
 node_type = 'lobatto'
-M = 5
-iterations = [1,2,4,8]
+M = 3
+iterations = [1]
 dtwb = [10,5,1,0.5,0.1,0.05]
 
-tend = 16
+tend = 0.01
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-#dtwb = [0.1*omegaB,0.05*omegaB,0.025*omegaB]
+dtwb = [0.01*omegaB]
 
 
 sim_params = {}
@@ -125,7 +125,7 @@ for scheme in schemes:
     for K in iterations:
         analysis_params['K'] = K
         
-        if scheme == 'boris_SDC':
+        if 'boris_SDC' in scheme:
             suffix = '_M' + str(M) + 'K' + str(K)
         else:
             suffix = ""
