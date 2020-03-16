@@ -12,14 +12,14 @@ M = 3
 iterations = [1]
 dtwb = [10,5,1,0.5,0.1,0.05]
 
-tend = 0.01
+tend = 1
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-dtwb = [0.01*omegaB]
+dtwb = [0.01]
 
 
 sim_params = {}
@@ -131,9 +131,10 @@ for scheme in schemes:
             suffix = ""
             
         for dt in dtwb:
-            sim_params['dt'] = dt/omegaB
+#            sim_params['dt'] = dt/omegaB
+            sim_params['dt'] = dt
             Nt = floor(sim_params['tEnd']/sim_params['dt'])
-            data_params['samplePeriod'] = Nt
+            data_params['samplePeriod'] = 1
             
             xMod = Rplus*cos(omegaPlus*dt) + Rminus*cos(omegaMinus*dt) + Iplus*sin(omegaPlus*dt) + Iminus*sin(omegaMinus*dt)
             yMod = Iplus*cos(omegaPlus*dt) + Iminus*cos(omegaMinus*dt) - Rplus*sin(omegaPlus*dt) - Rminus*sin(omegaMinus*dt)

@@ -44,7 +44,7 @@ snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-#sims['pen_TE8_boris_SDC_M5K5_NQ1_NT'] = [20,40,200,400,2000,4000]
+sims['pen_TE8_boris_SDC_M5K5_NQ1_NT'] = [20,40,200,400,2000,4000]
 sims['pen_TE8_boris_SDC_2018_M5K5_NQ1_NT'] = [20,40,200,400,2000,4000]
 
 omegaB = 25.0
@@ -169,7 +169,7 @@ if plot == True:
             label = "Boris"
         elif file.attrs["integrator"] == "boris_synced":
             label = "Boris Synced"
-        elif file.attrs["integrator"] == "boris_SDC":
+        elif "boris_SDC" in file.attrs["integrator"]:
             label = "Boris-SDC"
             label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
         

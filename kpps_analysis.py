@@ -1157,9 +1157,7 @@ class kpps_analysis:
             #print("k = " + str(k))
             for species in species_list:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
-                print(species.F)
-                print(species.Fn)
-
+                
             for m in range(self.ssi,M):
                 for species in species_list:
                     t_pos = time.time()
@@ -1187,9 +1185,10 @@ class kpps_analysis:
                     species.vQuad = species.vn[:,m] + sumS
                     
                     species.ck_dm = -1/2 * (species.F[:,m+1]+species.F[:,m]) + 1/dm[m] * sumS
-                    
+                    print(species.ck_dm)
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
                     species.pos = self.toMatrix(species.xn[:,m+1],3)
+#                    print(species.pos)
                     
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
@@ -1238,7 +1237,6 @@ class kpps_analysis:
                 controller.runTimeDict['particle_push'] += tFin - tmid
                     
             for species in species_list:
-                print(species.xn)
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
@@ -1304,12 +1302,9 @@ class kpps_analysis:
             for species in species_list:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
                 species.Bn_m = species.Bn_m0 #reset magnetic field values for new sweep
-                print(species.F)
-                print(species.Fn)
                 
             for m in range(self.ssi,M):
                 for species in species_list:
-                    print(dm)
                     t_pos = time.time()
                     
                     #print("m = " + str(m))
@@ -1329,8 +1324,8 @@ class kpps_analysis:
                     ##########################################
                     
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
-                    species.pos = self.toMatrix(species.xn[:,m+1],3)
-                    
+                    species.pos = np.reshape(species.xn[:,m+1],(species.nq,3))
+#                    print(species.pos)
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
                     
@@ -1364,12 +1359,13 @@ class kpps_analysis:
                     c += -dm[m]/2 * np.reshape(species.F[:,m]+species.F[:,m+1],
                                               (species.nq,3)) + IF.reshape((species.nq,3))
                             
-                    c += -np.cross(species.vn[:,m].reshape((species.nq,3)),
+                    c += dm[m]/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
                                                            species.B)
                     
                     #Resort all other 3d vectors to shape Nx3 for use in Boris function
-                    v_oldNode = self.toMatrix(species.vn[:,m])
+                    v_oldNode = np.reshape(species.vn[:,m],(species.nq,3))
                     species.ck_dm = c
+                    print(species.ck_dm)
                     
                     ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
                     v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,species.ck_dm)
@@ -1392,7 +1388,6 @@ class kpps_analysis:
                 controller.runTimeDict['particle_push'] += tFin - tmid
                     
             for species in species_list:
-                print(species.xn)
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
