@@ -15,7 +15,7 @@ interchanging sequence like [1x,1y,1z,2x,2y,2z,...,Nx,Ny,Nz].
 import numpy as np
 import scipy.sparse as sps
 #import scipy.interpolate as scint
-from math import sqrt, fsum, pi
+from math import sqrt, fsum, pi, exp, cos, sin, floor
 from gauss_legendre import CollGaussLegendre
 from gauss_lobatto import CollGaussLobatto
 import time
@@ -1159,9 +1159,12 @@ class kpps_analysis:
                 species.En_m = species.En_m0 #reset electric field values for new sweep
                 
             for m in range(self.ssi,M):
+#                print("m = " + str(m+1))     
+                t = (controller.t-controller.dt) + np.sum(dm[0:m+1])
+                u, energy = self.analytical_penning(t,4.9,25.,self.H,np.array([[10,0,0]]),np.array([[100,0,100]]))
                 for species in species_list:
                     t_pos = time.time()
-                    #print("m = " + str(m))
+               
                     #Determine next node (m+1) positions
                     sumSQ = 0
                     for l in range(1,M+1):
@@ -1185,10 +1188,13 @@ class kpps_analysis:
                     species.vQuad = species.vn[:,m] + sumS
                     
                     species.ck_dm = -1/2 * (species.F[:,m+1]+species.F[:,m]) + 1/dm[m] * sumS
-                    print(species.ck_dm)
+
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
                     species.pos = self.toMatrix(species.xn[:,m+1],3)
-#                    print(species.pos)
+                    pos_error = np.abs(u[::2]-species.pos[0,:])/np.abs(u[::2])
+#                    print("Anal solve: {0}".format(u[::2]))
+#                    print("2015 solve: {0}".format(species.pos))
+#                    print("Rel error: {0}".format(pos_error))
                     
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
@@ -1227,10 +1233,12 @@ class kpps_analysis:
                     
                     ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
                     species.vel = v_new
-
                     species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
                     species.Fn[:,m+1] = species.toVector(species.lntz)
-                    
+                    vel_error = np.abs(u[1::2]-species.vel[0,:])/np.abs(u[1::2])
+#                    print("Anal v salve: {0}".format(u[1::2]))
+#                    print("2015 v solve: {0}".format(species.vel))
+#                    print("Rel v error: {0}".format(vel_error))
                     #########################################
                 
                 tFin = time.time()
@@ -1304,6 +1312,9 @@ class kpps_analysis:
                 species.Bn_m = species.Bn_m0 #reset magnetic field values for new sweep
                 
             for m in range(self.ssi,M):
+#                print("m = " + str(m+1))   
+                t = (controller.t-controller.dt) + np.sum(dm[0:m+1])
+                u, energy = self.analytical_penning(t,4.9,25.,self.H,np.array([[10,0,0]]),np.array([[100,0,100]]))
                 for species in species_list:
                     t_pos = time.time()
                     
@@ -1321,10 +1332,28 @@ class kpps_analysis:
                     species.xn[:,m+1] += dm[m]/2 * (species.Fn[:,m]-species.F[:,m])
                     species.xn[:,m+1] += IV
                     
+#                    sumSQ = 0
+#                    for l in range(1,M+1):
+#                        sumSQ += SQ[m+1,l]*species.F[:,l]
+#                    
+#                    sumSX = 0
+#                    for l in range(1,m+1):
+#                        sumSX += SX[m+1,l]*(species.Fn[:,l] - species.F[:,l])
+#                        
+#                    species.xQuad = species.xn[:,m] + dm[m]*species.v[:,0] + sumSQ
+#                              
+#                    ### POSITION UPDATE FOR NODE m/SWEEP k ###
+#                    species.xn[:,m+1] = species.xQuad + sumSX 
+                    
                     ##########################################
                     
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
                     species.pos = np.reshape(species.xn[:,m+1],(species.nq,3))
+                    pos_error = np.abs(u[::2]-species.pos[0,:])/np.abs(u[::2])
+#                    print("Anal pus salve: {0}".format(u[::2]))
+#                    print("2018 pos solve: {0}".format(species.pos))
+#                    print("Rel pos error: {0}".format(pos_error))
+                    
 #                    print(species.pos)
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
@@ -1353,19 +1382,22 @@ class kpps_analysis:
                     for j in range(1,M+1):
                         IF += (q[m+1,j]-q[m,j])*species.F[:,j]
                         
-                    c = -dm[m]/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
-                                                                    species.Bn_m)
+
             
-                    c += -dm[m]/2 * np.reshape(species.F[:,m]+species.F[:,m+1],
-                                              (species.nq,3)) + IF.reshape((species.nq,3))
+                    c = -1/2 * np.reshape(species.F[:,m]+species.F[:,m+1],
+                                                           (species.nq,3)) 
+                    
+                    c += 1/dm[m]*IF.reshape((species.nq,3))
+                    
+                    c += -1/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
+                                                                    species.Bn_m)
                             
-                    c += dm[m]/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
-                                                           species.B)
+                    c += 1/2 * np.cross(species.vn[:,m].reshape((species.nq,3)),
+                                                                    species.B)
                     
                     #Resort all other 3d vectors to shape Nx3 for use in Boris function
                     v_oldNode = np.reshape(species.vn[:,m],(species.nq,3))
                     species.ck_dm = c
-                    print(species.ck_dm)
                     
                     ### VELOCITY UPDATE FOR NODE m/SWEEP k ###
                     v_new = self.boris(v_oldNode,half_E,species.B,dm[m],species.a,species.ck_dm)
@@ -1378,6 +1410,10 @@ class kpps_analysis:
                     
                     ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
                     species.vel = v_new
+                    vel_error = np.abs(u[1::2]-species.vel[0,:])/np.abs(u[1::2])
+#                    print("Anal v salve: {0}".format(u[1::2]))
+#                    print("2018 v solve: {0}".format(species.vel))
+#                    print("Rel v error: {0}".format(vel_error))
 
                     species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
                     species.Fn[:,m+1] = species.toVector(species.lntz)
@@ -1759,6 +1795,28 @@ class kpps_analysis:
             rhs_eval = 0
             
         return rhs_eval
+    
+    def analytical_penning(self,t,omegaE,omegaB,H,x0,v0,epsilon=-1):
+        omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
+        omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
+        Rminus = (omegaPlus*x0[0,0] + v0[0,1])/(omegaPlus - omegaMinus)
+        Rplus = x0[0,0] - Rminus
+        Iminus = (omegaPlus*x0[0,1] - v0[0,0])/(omegaPlus - omegaMinus)
+        Iplus = x0[0,1] - Iminus
+        omegaTilde = sqrt(-2 * epsilon) * omegaE
+        
+        x = Rplus*cos(omegaPlus*t) + Rminus*cos(omegaMinus*t) + Iplus*sin(omegaPlus*t) + Iminus*sin(omegaMinus*t)
+        y = Iplus*cos(omegaPlus*t) + Iminus*cos(omegaMinus*t) - Rplus*sin(omegaPlus*t) - Rminus*sin(omegaMinus*t)
+        z = x0[0,2] * cos(omegaTilde * t) + v0[0,2]/omegaTilde * sin(omegaTilde*t)
+        
+        vx = Rplus*-omegaPlus*sin(omegaPlus*t) + Rminus*-omegaMinus*sin(omegaMinus*t) + Iplus*omegaPlus*cos(omegaPlus*t) + Iminus*omegaMinus*cos(omegaMinus*t)
+        vy = Iplus*-omegaPlus*sin(omegaPlus*t) + Iminus*-omegaMinus*sin(omegaMinus*t) - Rplus*omegaPlus*cos(omegaPlus*t) - Rminus*omegaMinus*cos(omegaMinus*t)
+        vz = x0[0,2] * -omegaTilde * sin(omegaTilde * t) + v0[0,2]/omegaTilde * omegaTilde * cos(omegaTilde*t)
+    
+        u = np.array([x,vx,y,vy,z,vz])
+        energy = u.transpose() @ H @ u
+        
+        return u, energy 
     
 
 ############################ Misc. functionality ##############################

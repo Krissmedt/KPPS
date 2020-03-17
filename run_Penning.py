@@ -8,10 +8,10 @@ from dataHandler2 import dataHandler2
 
 schemes = ['boris_SDC_2018','boris_SDC']
 node_type = 'lobatto'
-M = 3
-iterations = [1]
+M = 5
+iterations = [6,7,8]
 dtwb = [10,5,1,0.5,0.1,0.05]
-
+dtwb = [0.1,0.05,0.01,0.005,0.001]
 tend = 1
 
 omegaB = 25.0
@@ -19,7 +19,7 @@ omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-dtwb = [0.01]
+#dtwb = [0.01]
 
 
 sim_params = {}
