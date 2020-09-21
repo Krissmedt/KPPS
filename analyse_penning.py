@@ -44,19 +44,29 @@ snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-sims['pen_TE1_boris_SDC_M3K1_NQ1_NT'] = [10,20,100,200,1000]
-sims['pen_TE1_boris_SDC_M3K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K6_NQ1_NT'] = [10,20,100,200,1000]
 
-sims['pen_TE1_boris_SDC_2018_M3K1_NQ1_NT'] = [10,20,100,200,1000]
-sims['pen_TE1_boris_SDC_2018_M3K2_NQ1_NT'] = [10,20,100,200,1000]
-sims['pen_TE1_boris_SDC_2018_M3K3_NQ1_NT'] = [10,20,100,200,1000]
-sims['pen_TE1_boris_SDC_2018_M3K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
 
 #sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
 ##sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
 ##sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K8_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_leg_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_leg2_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+
 #
 ##sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
@@ -66,6 +76,8 @@ sims['pen_TE1_boris_SDC_2018_M3K4_NQ1_NT'] = [10,20,100,200,1000]
 ##sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
 ##sims['pen_TE1_boris_SDC_2018_M5K7_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_2018_M5K8_NQ1_NT'] = [10,20,100,200,1000]
+#
+#sims['pen_TE0.01_boris_SDC_2018_M5K1_NQ1_NT'] = [1]
 
 
 omegaB = 25.0
@@ -118,7 +130,7 @@ if analyse == True:
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
 
-            data_list = DH.load_p(['pos','vel','energy'],sim_name=sim_name)
+            data_list = DH.load_p(['pos','vel','energy','Rx','Rv'],sim_name=sim_name)
             data_dict = data_list[0]
             
             tArray = data_dict['t']
@@ -126,7 +138,10 @@ if analyse == True:
             yArray = data_dict['pos'][:,0,1]
             zArray = data_dict['pos'][:,0,2]
             hArray = data_dict['energy']
-
+            
+            Rx = data_dict['Rx']
+            Rv = data_dict['Rv']
+            
             xAnalyt = np.zeros(tArray.shape,dtype=np.float)
             hAnalyt = np.zeros(tArray.shape,dtype=np.float)
             for ti in range(0,tArray.shape[0]):

@@ -83,14 +83,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [600]
+steps = [2500]
 resolutions = [100]
-iterations = [3]
+iterations = [4]
 
 dataRoot = "../data_tsi_weak/"
 
 L = 2*pi
-tend = 60
+tend = 50
 
 dx_mag = 0.0001
 dx_mode = 1
@@ -108,7 +108,7 @@ nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -163,7 +163,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_SDC_2018'
 analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
@@ -183,7 +183,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
-data_params['write_p'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 

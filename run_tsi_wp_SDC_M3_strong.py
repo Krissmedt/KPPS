@@ -83,14 +83,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [100]
+steps = [1000]
 resolutions = [100]
-iterations = [2]
+iterations = [4]
 
 dataRoot = "../data_tsi_strong/"
 
 L = 2*pi
-tend = 10
+tend = 20
 
 dx_mag = 0.1
 dx_mode = 1
@@ -108,7 +108,7 @@ nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -186,7 +186,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
-data_params['write_p'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 

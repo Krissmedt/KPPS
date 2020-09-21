@@ -234,10 +234,14 @@ class kpps_analysis:
             self.hooks.append(self.centreMass)
             
         if self.residual_check == True and self.particleIntegrator == 'boris_SDC':
+            self.calculate_residuals = self.calc_residuals_max
             self.hooks.append(self.display_residuals)
             
         if self.convergence_check == True and self.particleIntegrator == 'boris_SDC':
             self.hooks.append(self.display_convergence)
+            
+        if self.particleIntegrator == 'boris_SDC_2018':
+            self.calc_R = self.calc_residual_2018
         
         self.scatter_BC = self.stringtoMethod(self.scatter_BC)
         
@@ -1007,7 +1011,7 @@ class kpps_analysis:
         elif self.nodeType == 'legendre':
             self.ssi = 0 
             self.collocationClass = CollGaussLegendre
-            self.updateStep = self.legendre_update
+            self.updateStep = self.legendre_update2
             self.rhs_dt = (self.M + 1)*self.K
         
         coll = self.collocationClass(self.M,0,1) #Initialise collocation/quadrature analysis object (class is Daniels old code)
@@ -1076,39 +1080,41 @@ class kpps_analysis:
             species.v_res = np.zeros((K,M))
             
             # Required residual matrices
-            if self.SDC_residual_type == 'matrix':
-                species.U0 = np.zeros((2*d*(M+1),1),dtype=np.float)
-                species.Uk = np.zeros((2*d*(M+1),1),dtype=np.float) 
-                species.R = np.zeros((K,1),dtype=np.float) 
-                species.FXV = np.zeros((d*(M+1),1),dtype=np.float)   
+#            if self.SDC_residual_type == 'matrix':
+#                species.U0 = np.zeros((2*d*(M+1),1),dtype=np.float)
+#                species.Uk = np.zeros((2*d*(M+1),1),dtype=np.float) 
+#                species.R = np.zeros((K,1),dtype=np.float) 
+#                species.FXV = np.zeros((d*(M+1),1),dtype=np.float)   
+#                
+#                Ix = np.array([[1],[0]])
+#                Iv = np.array([[0],[1]],np.newaxis)
+#                Ixv = np.array([[0,1],[0,0]])
+#                Id = np.identity(d)
+#                
+#                size = (M+1)*2*d
+#                species.Imd = np.identity(size)
+#                
+#                QQ = self.Qmat @ self.Qmat
+#                QQX = np.kron(QQ,Ix)
+#                QQX = np.kron(QQX,Id)
+#                
+#                QV = np.kron(self.Qmat,Iv)
+#                QV = np.kron(QV,Id)
+#                
+#                QXV = np.kron(self.Qmat,Ixv)
+#                QXV = np.kron(QXV,Id)
+#                
+#                species.Cc = species.Imd + QXV
+#                species.Qc = QQX + QV
+#                
+#                self.calc_R = self.calc_residual
                 
-                Ix = np.array([[1],[0]])
-                Iv = np.array([[0],[1]],np.newaxis)
-                Ixv = np.array([[0,1],[0,0]])
-                Id = np.identity(d)
-                
-                size = (M+1)*2*d
-                species.Imd = np.identity(size)
-                
-                QQ = self.Qmat @ self.Qmat
-                QQX = np.kron(QQ,Ix)
-                QQX = np.kron(QQX,Id)
-                
-                QV = np.kron(self.Qmat,Iv)
-                QV = np.kron(QV,Id)
-                
-                QXV = np.kron(self.Qmat,Ixv)
-                QXV = np.kron(QXV,Id)
-                
-                species.Cc = species.Imd + QXV
-                species.Qc = QQX + QV
-                
-                self.calc_R = self.calc_residual
-                
-            elif self.SDC_residual_type == 'nodal':
+            if self.SDC_residual_type == 'nodal':
                 species.Rx = np.zeros((K,M),dtype=np.float) 
                 species.Rv = np.zeros((K,M),dtype=np.float) 
-                self.calc_R = self.calc_residual2
+                
+                fields.Rx = np.zeros((K,M),dtype=np.float) 
+                fields.Rv = np.zeros((K,M),dtype=np.float) 
                 
 
     def boris_SDC(self, species_list,fields, controller,**kwargs):
@@ -1160,8 +1166,6 @@ class kpps_analysis:
                 
             for m in range(self.ssi,M):
 #                print("m = " + str(m+1))     
-                t = (controller.t-controller.dt) + np.sum(dm[0:m+1])
-                u, energy = self.analytical_penning(t,4.9,25.,self.H,np.array([[10,0,0]]),np.array([[100,0,100]]))
                 for species in species_list:
                     t_pos = time.time()
                
@@ -1191,11 +1195,7 @@ class kpps_analysis:
 
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
                     species.pos = self.toMatrix(species.xn[:,m+1],3)
-                    pos_error = np.abs(u[::2]-species.pos[0,:])/np.abs(u[::2])
-#                    print("Anal solve: {0}".format(u[::2]))
-#                    print("2015 solve: {0}".format(species.pos))
-#                    print("Rel error: {0}".format(pos_error))
-                    
+
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
                     
@@ -1235,10 +1235,6 @@ class kpps_analysis:
                     species.vel = v_new
                     species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
                     species.Fn[:,m+1] = species.toVector(species.lntz)
-                    vel_error = np.abs(u[1::2]-species.vel[0,:])/np.abs(u[1::2])
-#                    print("Anal v salve: {0}".format(u[1::2]))
-#                    print("2015 v solve: {0}".format(species.vel))
-#                    print("Rel v error: {0}".format(vel_error))
                     #########################################
                 
                 tFin = time.time()
@@ -1249,16 +1245,13 @@ class kpps_analysis:
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
                 
-                self.calc_R(species,M,k)
                 
                 
                 
 
         species_list = self.updateStep(species_list,fields,weights,Qmat)
         controller.runTimeDict['particle_push'] += time.time() - tFin
-        
-#        print(species_list[0].Rx)
-#        print(species_list[0].Rv)
+
         return species_list
     
     
@@ -1272,13 +1265,9 @@ class kpps_analysis:
         weights =  self.coll_params['weights']
 
         q =  self.coll_params['Qmat']
-        Smat =  self.coll_params['Smat']
 
         dm =  self.coll_params['dm']
 
-        SX =  self.coll_params['SX'] 
-
-        SQ =  self.coll_params['SQ']
 
         for species in species_list:
             ## Populate node solutions with x0, v0, F0 ##
@@ -1313,8 +1302,6 @@ class kpps_analysis:
                 
             for m in range(self.ssi,M):
 #                print("m = " + str(m+1))   
-                t = (controller.t-controller.dt) + np.sum(dm[0:m+1])
-                u, energy = self.analytical_penning(t,4.9,25.,self.H,np.array([[10,0,0]]),np.array([[100,0,100]]))
                 for species in species_list:
                     t_pos = time.time()
                     
@@ -1332,29 +1319,12 @@ class kpps_analysis:
                     species.xn[:,m+1] += dm[m]/2 * (species.Fn[:,m]-species.F[:,m])
                     species.xn[:,m+1] += IV
                     
-#                    sumSQ = 0
-#                    for l in range(1,M+1):
-#                        sumSQ += SQ[m+1,l]*species.F[:,l]
-#                    
-#                    sumSX = 0
-#                    for l in range(1,m+1):
-#                        sumSX += SX[m+1,l]*(species.Fn[:,l] - species.F[:,l])
-#                        
-#                    species.xQuad = species.xn[:,m] + dm[m]*species.v[:,0] + sumSQ
-#                              
-#                    ### POSITION UPDATE FOR NODE m/SWEEP k ###
-#                    species.xn[:,m+1] = species.xQuad + sumSX 
                     
                     ##########################################
                     
                     ### FIELD GATHER FOR m/k NODE m/SWEEP k ###
-                    species.pos = np.reshape(species.xn[:,m+1],(species.nq,3))
-                    pos_error = np.abs(u[::2]-species.pos[0,:])/np.abs(u[::2])
-#                    print("Anal pus salve: {0}".format(u[::2]))
-#                    print("2018 pos solve: {0}".format(species.pos))
-#                    print("Rel pos error: {0}".format(pos_error))
-                    
-#                    print(species.pos)
+                    species.pos = np.copy(np.reshape(species.xn[:,m+1],(species.nq,3)))
+
                     t_bc = time.time()
                     self.check_boundCross(species,fields,**kwargs)
                     
@@ -1410,11 +1380,7 @@ class kpps_analysis:
                     
                     ### LORENTZ UPDATE FOR NODE m/SWEEP k ###
                     species.vel = v_new
-                    vel_error = np.abs(u[1::2]-species.vel[0,:])/np.abs(u[1::2])
-#                    print("Anal v salve: {0}".format(u[1::2]))
-#                    print("2018 v solve: {0}".format(species.vel))
-#                    print("Rel v error: {0}".format(vel_error))
-
+                    
                     species.lntz = species.a*(species.E + np.cross(species.vel,species.B))
                     species.Fn[:,m+1] = species.toVector(species.lntz)
                     
@@ -1427,16 +1393,29 @@ class kpps_analysis:
                 species.F[:,:] = species.Fn[:,:]
                 species.x[:,:] = species.xn[:,:]
                 species.v[:,:] = species.vn[:,:]
-                
+
                 self.calc_R(species,M,k)
-                
+
         species_list = self.updateStep(species_list,fields,weights,q)
         controller.runTimeDict['particle_push'] += time.time() - tFin
         
-#        print(species_list[0].Rx)
-#        print(species_list[0].Rv)
         return species_list
     
+      
+    def calc_residual_2018(self,species,M,k):
+        s = species
+        q =  self.coll_params['Qmat']
+        for m in range(1,M+1):
+            qvsum = 0
+            qfsum = 0
+            for j in range(1,M+1):
+                qvsum += q[m,j] * s.v[:,j]
+                qfsum += q[m,j] * s.F[:,j] 
+            
+            s.Rx[k-1,m-1] = np.linalg.norm(s.x[:,0] + qvsum - s.x[:,m])
+            s.Rv[k-1,m-1] = np.linalg.norm(s.v[:,0] + qfsum - s.v[:,m])
+
+      
     def fieldInterpolator(self,species_list,mesh,controller,m=1):
         mesh.E[2,:,:,:] = (1-self.nodes[m-1])*mesh.En0[2,:,:,:] + (self.nodes[m-1])*mesh.En1[2,:,:,:]
     
@@ -1446,9 +1425,12 @@ class kpps_analysis:
             pos = species.x[:,-1]
             vel = species.v[:,-1]
             
-            species.pos = species.toMatrix(pos)
-            species.vel = species.toMatrix(vel)
+            species.pos = pos.reshape((species.nq,3))
+            species.vel = vel.reshape((species.nq,3))
             self.check_boundCross(species,mesh,**kwargs)
+            
+        mesh.Rx = species_list[0].Rx
+        mesh.Rv = species_list[0].Rv
 
         return species_list
     
@@ -1457,54 +1439,68 @@ class kpps_analysis:
         for species in species_list:
             M = self.M
             d = 3*species.nq
-            
+
             Id = np.identity(d)
-            q = np.zeros(M+1,dtype=np.float)
+            q = np.zeros((M+1),dtype=np.float)
             q[1:] = weights
+            
+            qQ = np.kron(q@Qmat,Id)
             q = np.kron(q,Id)
-            qQ = q @ np.kron(Qmat,Id)
             
-            V0 = self.toVector(species.v0.transpose())
-            F = self.FXV(species,mesh)
+            V0 = np.ravel(species.v0.transpose())
+            F = np.ravel(species.F.transpose())
             
-            vel = species.v0[:,0] + q @ F
-            pos = species.x0[:,0] + q @ V0 + qQ @ F
+#            print(F.shape)
+#            print(d)
+#            print(d*(M+1))
             
-            species.pos = species.toMatrix(pos)
-            species.vel = species.toMatrix(vel)
+            vel = species.v[:,0] + q @ F
+            pos = species.x[:,0] + q @ V0 + qQ @ F
+            
+            species.pos = pos.reshape((species.nq,3))
+            species.vel = vel.reshape((species.nq,3))
             self.check_boundCross(species,mesh,**kwargs)
+        return species_list
+  
+      
+    def legendre_update2(self,species_list,mesh,weights,*args,**kwargs):
+#        q = np.sum(Qmat,axis=0)
+        q = np.zeros(self.M+1,dtype=np.float)
+        q[1:] = weights
+        for s in species_list:
+#            qvsum = 0
+#            qfsum = 0
+#            for m in range(0,self.M+1):
+#                qvsum += q[m] * s.v[:,m]
+#                qfsum += q[m] * s.F[:,m]
+#                  
+#            
+#            pos = s.x[:,0] + qvsum
+#            vel = s.v[:,0] + qfsum
+            pos = s.x[:,0] + q @ s.v.transpose()
+            vel = s.v[:,0] + q @ s.F.transpose()
+            
+            
+            s.pos = pos.reshape((s.nq,3))
+            s.vel = vel.reshape((s.nq,3))
+            self.check_boundCross(s,mesh,**kwargs)
         return species_list
     
     
     def lorentzf(self,species,mesh,m,**kwargs):
-        species.pos = species.toMatrix(species.x[:,m])
-        species.vel = species.toMatrix(species.v[:,m])
+        species.pos = species.x[:,m].reshape((species.nq,3))
+        species.vel = species.v[:,m].reshape((species.nq,3))
         self.check_boundCross(species,mesh,**kwargs)
 
         self.fieldGather(species,mesh)
 
         F = species.a*(species.E + np.cross(species.vel,species.B))
-        F = species.toVector(F)
+        F = np.ravel(F)
         return F
     
     def lorentz_std(self,species,fields):
         F = species.a*(species.E + np.cross(species.vel,species.B))
         return F
-    
-    
-    
-    def FXV(self,species,fields):
-        dxM = np.shape(species.x)
-        d = dxM[0]
-        M = dxM[1]-1
-        
-        F = np.zeros((d,M+1),dtype=np.float)
-        for m in range(0,M+1):
-            F[:,m] = self.lorentzf(species,fields,m)
-        
-        F = self.toVector(F.transpose())
-        return F
-    
     
     
     def gatherE(self,species,mesh,x,**kwargs):
@@ -1697,20 +1693,9 @@ class kpps_analysis:
             s.Uk[2*d*m:2*d*(m+1)] = u
             s.FXV[d*m:d*(m+1)] = s.F[:,m,np.newaxis]
             
-        print((s.Qc @ s.FXV).shape)
         
-    def calc_residual2(self,species,M,k):
-        s = species
-        q =  self.coll_params['Qmat']
 
-        for m in range(1,M+1):
-            for j in range(1,m+1):
-                qvsum = q[m,j] * s.v[:,j]
-                qfsum = q[m,j] * s.F[:,j] 
-                
-            s.Rx[k-1,m-1] = np.max(np.linalg.norm(s.x[:,0] + qvsum - s.x[:,m]))
-            s.Rx[k-1,m-1] = np.max(np.linalg.norm(s.v[:,0] + qfsum - s.v[:,m]))
-        
+
         
     
     def display_convergence(self,species_list,fields,**kwargs):
@@ -1796,7 +1781,9 @@ class kpps_analysis:
             
         return rhs_eval
     
-    def analytical_penning(self,t,omegaE,omegaB,H,x0,v0,epsilon=-1):
+    def analytical_penning(self,t,omegaE,omegaB,H,x0,v0,epsilon=-1):    
+#        t = (controller.t-controller.dt) + np.sum(dm[0:m+1])
+#        u, energy = self.analytical_penning(t,4.9,25.,self.H,np.array([[10,0,0]]),np.array([[100,0,100]]))
         omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
         omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
         Rminus = (omegaPlus*x0[0,0] + v0[0,1])/(omegaPlus - omegaMinus)

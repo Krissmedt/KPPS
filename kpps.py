@@ -172,10 +172,10 @@ class kpps:
         analyser.run_postAnalyser(species_list,fields,sim)
         
         sim.runTimeDict['main_loop'] = time.time()  -tRun
-        
+        sim.runTimeDict['sim_time'] = time.time() - self.tStart
         dHandler.post(species_list,fields,sim)
         dHandler.plot()
         
-        sim.runTimeDict['sim_time'] = time.time() - self.tStart
+
 
         return dHandler

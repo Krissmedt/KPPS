@@ -31,6 +31,9 @@ class mesh:
         self.gather_count = 0
         self.gmres_iters = 0
         
+        self.Rx = np.zeros((3,3))
+        self.Rv = np.zeros((3,3))
+        
         ## Iterate through keyword arguments and store all in object (self)
         self.params = kwargs
         for key, value in self.params.items():

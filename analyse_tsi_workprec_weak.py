@@ -12,20 +12,21 @@ import h5py as h5
 from collections import OrderedDict
 from caseFile_landau1D import *
 
-analyse = False
-fieldPlot = False
+analyse = True
+fieldPlot = True
 snapPlot = False
-compare_reference = True
-plot = True
+resPlot = True
+compare_reference = False
+plot = False
 
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,50]
 compare_times = [10]
 
-fit_start = 1
-fit_stop = 10
+fit_start = 10
+fit_stop = 16
 
-snaps = [0,120,240,360,480,600]
+snaps = [0,100]
 
 fig_type = 'versus'
 data_root = "../data_tsi_weak/"
@@ -35,17 +36,19 @@ sims = {}
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 ##
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
 
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #
-sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+#sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+
+sims['tsi_TE50_a0.0001_boris_SDC_2018_M3K4_NZ100_NQ20000_NT'] = [2500]
 
 #sims['tsi_TE60_a0.0001_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [600]
 
@@ -86,7 +89,7 @@ plot_params['ytick.major.width'] = 2
 plot_params['ytick.minor.width'] = 2
 plot_params['xtick.major.width'] = 2
 plot_params['xtick.minor.width'] = 2
-plot_params['legend.loc'] = 'upper right'
+plot_params['legend.loc'] = 'best'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -151,7 +154,7 @@ if analyse == True:
             analysis_ts = np.array(analysis_ts)
                 
 
-            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','Rx','Rv'],sim_name=sim_name,max_t=analysis_times[-1])
             tArray = mData_dict['t']
 
             phi_data = mData_dict['phi'][analysis_ts,1,1,:-1]
@@ -193,7 +196,7 @@ if analyse == True:
                 print("Drawing field plot...")
                 fig_el2 = plt.figure(DH.figureNo+5,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
-                el2_ax.plot(tArray,EL2,'blue',label="$E$")
+                el2_ax.plot(tArray[1:],EL2[1:],'blue',label="$E$")
                 el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
                 el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
                 E_text1 = el2_ax.text(.1,0.02,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=16)
@@ -203,9 +206,9 @@ if analyse == True:
                 el2_ax.set_ylabel(r'$||E||_{L2}$')
                 el2_ax.set_yscale('log')
                 el2_ax.set_xlim(0,50)
-                el2_ax.set_ylim(10**(-4),3)
+#                el2_ax.set_ylim(10**(-4),3)
                 el2_ax.legend()
-                fig_el2.savefig(data_root + 'tsi_weak_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                fig_el2.savefig(data_root + 'tsi_weak_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
             
                 
             if snapPlot == True:
@@ -234,7 +237,20 @@ if analyse == True:
                     p_ax.set_xlabel('$z$')
                     p_ax.set_ylabel('$v_z$')
                     p_ax.set_ylim([-3,3])
-                    fig_snap.savefig(data_root + 'tsi_weak_snap_ts{0}.svg'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    fig_snap.savefig(data_root + 'tsi_weak_snap_ts{0}.svg'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
+                    
+                    
+            if resPlot == True:
+                fig_R = plt.figure(DH.figureNo+6,dpi=150)
+                R_ax = fig_R.add_subplot(1,1,1)
+                R_ax.plot(tArray[1:],mData_dict['Rx'][1:,-1,-1],label='Beam 1, Rx')
+                R_ax.plot(tArray[1:],mData_dict['Rv'][1:,-1,-1],label='Beam 1, Rv')
+                R_ax.set_xlabel('$t$')
+                R_ax.set_ylabel(r'$||R||_{L2}$')
+                R_ax.set_yscale('log')
+                R_ax.legend()
+                fig_R.savefig(data_root + 'tsi_weak_residual.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
+                  
             
             
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']

@@ -6,21 +6,22 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_SDC_2018','boris_SDC']
+schemes = ['boris_SDC_2018']
 node_type = 'lobatto'
+#node_type = 'legendre'
 M = 5
-iterations = [6,7,8]
+iterations = [5]
 dtwb = [10,5,1,0.5,0.1,0.05]
 dtwb = [0.1,0.05,0.01,0.005,0.001]
 tend = 1
+
+dtwb = [0.01]
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-#dtwb = [0.01]
-
 
 sim_params = {}
 species_params = {}

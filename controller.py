@@ -32,6 +32,8 @@ class controller:
         self.dataSettings = {}
         
         self.runTimeDict = {}
+        self.runTimeDict['sim_time'] = 0.
+        self.runTimeDict['main_loop'] = 0.
         self.runTimeDict['object_instantiation'] = 0.
         self.runTimeDict['particle_load'] = 0.
         self.runTimeDict['mesh_load'] = 0.
@@ -44,6 +46,7 @@ class controller:
         self.runTimeDict['particle_push'] = 0.
         self.runTimeDict['pos_push'] = 0.
         self.runTimeDict['boris'] = 0.
+
         
         ## Dummy values, must be set in parameters or elsewhere!
         self.rhs_dt = None

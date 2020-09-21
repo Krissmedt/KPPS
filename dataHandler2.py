@@ -90,6 +90,8 @@ class dataHandler2:
         self.dataFoldername = self.dataRootFolder + self.controller_obj.simID
         
         if self.write == True:
+            self.runOps.append(self.sim_dumper)
+            self.postOps.append(self.sim_dumper)
             if self.write_p == True:
                 self.runOps.append(self.p_dumper)
             if self.write_m == True:
@@ -102,7 +104,7 @@ class dataHandler2:
                 sim_file = io.open(sim_filename,mode='wb')
                 self.controller_obj = controller
                 pk.dump(controller,sim_file)
-            
+                sim_file.close()
         
         if self.write_vtk == True:
             import vtk_writer as vtk_writer
@@ -117,7 +119,11 @@ class dataHandler2:
         
         self.controller_obj.simID = self.dataFoldername 
 
-            
+    def sim_dumper(self,species_list,fields,controller):
+            sim_filename = self.dataFoldername + "/sim"
+            sim_file = io.open(sim_filename,mode='wb')
+            pk.dump(controller,sim_file)
+            sim_file.close()
         
     def p_dumper(self,species_list,fields,simulationManager):
         for species in species_list:

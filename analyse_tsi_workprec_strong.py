@@ -13,18 +13,19 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 
-analyse = False
+analyse = True
 fieldPlot = False
 snapPlot = False
-compare_reference = True
-plot = True
+resPlot = False
+compare_reference = False
+plot = False
 
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 compare_times = [10]
 
-fit_start = 10
-fit_stop = 16
+fit_start = 8
+fit_stop = 10
 
 snaps = [0]
 
@@ -36,9 +37,9 @@ sims = {}
 #sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 #sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
@@ -46,11 +47,13 @@ sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,20
 
 #sims['tsi_TE10_a0.1_boris_SDC_dirty_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #
-sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
- 
-#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [100]
+#sims['tsi_TE10_a0.1_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+#sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+#sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ20000_NT'] = [400]
+
+sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ20000_NT'] = [400]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -117,8 +120,9 @@ if analyse == True:
         EL2 = np.sum(E*E,axis=1)
         EL2_comp = np.sqrt(EL2*dz_comp)
         
-        
+    sno = 0
     for key, value in sims.items():
+        sno += 1
         dts = []
         Nts = []
         rhs_evals = []
@@ -149,12 +153,25 @@ if analyse == True:
             NA = np.int(fit_start/(sim.dt*DH.samplePeriod))
             NB = np.int(fit_stop/(sim.dt*DH.samplePeriod))
             
+            run_times = sim.runTimeDict
+            totalT = run_times['sim_time']
+            scatterT =  run_times['scatter']
+            gatherT = run_times['gather']
+            solveT = run_times['field_solve']
+            
+            rhsT = scatterT + gatherT + solveT
+            
+            rhs_frac = rhsT/totalT * 100
+      
+            print(rhs_frac)
+            
+            
             analysis_ts = []
             for time in analysis_times:
                 analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
             analysis_ts = np.array(analysis_ts)
                 
-            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz'],sim_name=sim_name,max_t=analysis_times[-1])
+            mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','Rx','Rv'],sim_name=sim_name,max_t=analysis_times[-1])
             tArray = mData_dict['t']
 
             phi_data = mData_dict['phi'][analysis_ts,1,1,:-1]
@@ -196,14 +213,14 @@ if analyse == True:
                 print("Drawing field plot...")
                 fig_el2 = plt.figure(DH.figureNo+5,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
-                el2_ax.plot(tArray,EL2,'blue',label="$E-field$")
+                el2_ax.plot(tArray,EL2,'blue',label="$E$")
 #                el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
 #                el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
                 el2_ax.set_xlabel('$t$')
                 el2_ax.set_ylabel(r'$||E||_{L2}$')
                 el2_ax.set_yscale('log')
                 el2_ax.legend()
-                fig_el2.savefig(data_root + 'tsi_strong_growth.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                fig_el2.savefig(data_root + 'tsi_strong_growth_{0}.pdf'.format(sno), dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
             
                 
             if snapPlot == True:
@@ -232,7 +249,7 @@ if analyse == True:
                 res_ax.set_ylabel('Res')
                 res_ax.set_yscale('log')
                 res_ax.legend()
-                fig_res.savefig(data_root + 'tsi_strong_residual.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')     
+                fig_res.savefig(data_root + 'tsi_strong_residual_{0}.pdf'.format(sno), dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')     
                 
                 no = 0
                 for snap in snaps:
@@ -246,7 +263,22 @@ if analyse == True:
                     p_ax.set_xlabel('$z$')
                     p_ax.set_ylabel('$v_z$')
                     p_ax.set_ylim([-3,3])
-                    fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.png'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                    fig_snap.savefig(data_root + 'tsi_strong_snap_ts{0}.png'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
+                    
+                    
+            if resPlot == True:
+                fig_R = plt.figure(DH.figureNo+6,dpi=150)
+                R_ax = fig_R.add_subplot(1,1,1)
+                R_ax.plot(tArray[1:],np.max(mData_dict['Rx'][1:,0,:],axis=1),label='Beam 1, Rx, K=1')
+                R_ax.plot(tArray[1:],np.max(mData_dict['Rx'][1:,1,:],axis=1),label='Beam 1, Rx, K=2')
+                R_ax.plot(tArray[1:],np.max(mData_dict['Rx'][1:,2,:],axis=1),label='Beam 1, Rx, K=3')
+                R_ax.plot(tArray[1:],np.max(mData_dict['Rx'][1:,3,:],axis=1),label='Beam 1, Rx, K=4')
+#                R_ax.plot(tArray[1:],mData_dict['Rv'][1:,-1,-1],label='Beam 1, Rv')
+                R_ax.set_xlabel('$t$')
+                R_ax.set_ylabel(r'$||R||_{L2}$')
+                R_ax.set_yscale('log')
+                R_ax.legend()
+                fig_R.savefig(data_root + 'tsi_strong_residual.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
                     
 
                 
@@ -368,5 +400,5 @@ if plot == True:
                         ls='dashed',c='0.75')
             
             compare_times = np.array(compare_times,dtype=np.int)
-            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
-            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
+            fig_nl_rhs.savefig(data_root + 'tsi_strong_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
+            fig_nl_dt.savefig(data_root + 'tsi_strong_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')

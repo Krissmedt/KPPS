@@ -93,7 +93,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [300]
+steps = [1500]
 resolutions = [100]
 
 dataRoot = "../data_landau_weak/"
@@ -126,7 +126,7 @@ omega_p = np.sqrt(q*nq*a*1/L)
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -180,9 +180,9 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_SDC_2018'
 analysis_params['M'] = 3
-analysis_params['K'] = 3
+analysis_params['K'] = 4
 analysis_params['looped_axes'] = ['z']
 
 analysis_params['fieldIntegration'] = True
@@ -202,7 +202,7 @@ if plot == True:
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
-data_params['write_p'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
