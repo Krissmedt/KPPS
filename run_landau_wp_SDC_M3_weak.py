@@ -92,14 +92,23 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
     
     
-
-steps = [1500]
+# Setup for visualisation and verification results
+steps = [300]
 resolutions = [100]
+iterations = 2
+nq = 20000
+tend = 30
+
+# Setup for work precision results
+# steps = [10,20,40,50,80,100,200,400,500,1000]
+# resolutions = [10,100,1000]
+# iterations = 2
+# nq = 200000
+# tend = 10
 
 dataRoot = "../data_landau_weak/"
 
 L = 4*pi
-tend = 30
 
 dx_mag = 0.05
 dx_mode = 0.5
@@ -113,13 +122,7 @@ dv_mode = 0
 v_off = 4
 plot_res = 100
 
-#Nq is particles per species, total nq = 2*nq
-#ppc = 20
-nq = 200000
-
-#q = omega_p**2 * L / (nq*a*1)
 q = L/nq
-#m = 1
 a = 1
 
 omega_p = np.sqrt(q*nq*a*1/L)
@@ -133,21 +136,6 @@ restart_ts = 14
 
 
 slow_factor = 1
-
-############################# Linear Analysis ##################################
-k = dx_mode
-omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-#omega = 1.4436
-vp = omega/k
-omega2 = 2.8312 * k
-omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-
-df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-
-damp_rate = - (np.pi*omega_p**3)/(2*k**2) * df_vp
-
-c1 = 2
-gamma_lit = 0.1533
 
 ############################ Setup and Run ####################################
 sim_params = {}
@@ -180,9 +168,9 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC_2018'
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = 3
-analysis_params['K'] = 4
+analysis_params['K'] = iterations
 analysis_params['looped_axes'] = ['z']
 
 analysis_params['fieldIntegration'] = True
@@ -240,7 +228,7 @@ for Nt in steps:
         species_params = [hot_params]
         loader_params = [hotLoader_params]
 
-        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator']+ '_M3K3' + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(analysis_params['K']) + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

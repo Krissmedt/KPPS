@@ -92,14 +92,22 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
     
     
+# Setup for visualisation and verification results
+steps = [300]
+resolutions = [100]
+nq = 20000
+tend = 30
 
-steps = [10,20,40,50,80,100,200,400,500,1000]
-resolutions = [1000]
+# Setup for work precision results
+# steps = [10,20,40,50,80,100,200,400,500,1000]
+# resolutions = [10,100,1000]
+# nq = 200000
+# tend = 10
+
 
 dataRoot = "../data_landau_strong/"
 
 L = 4*pi
-tend = 10 
 
 dx_mag = 0.5
 dx_mode = 0.5
@@ -112,11 +120,6 @@ dv_mode = 0
 
 v_off = 4
 plot_res = 100
-
-#Nq is particles per species, total nq = 2*nq
-#ppc = 20
-nq = 2**14
-nq = 2000000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -136,18 +139,6 @@ restart_ts = 14
 slow_factor = 1
 
 ############################# Linear Analysis ##################################
-k = dx_mode
-omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-#omega = 1.4436
-vp = omega/k
-omega2 = 2.8312 * k
-omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-
-df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-
-damp_rate = - (np.pi*omega_p**3)/(2*k**2) * df_vp
-
-c1 = 2
 gamma_lit = 0.1533
 
 ############################ Setup and Run ####################################
@@ -219,10 +210,9 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     for res in resolutions:
         ppc = nq/res
-        #nq = ppc*res
 
         hot_params['nq'] = np.int(nq)
         hot_params['a'] = a
@@ -320,15 +310,7 @@ for Nt in steps:
             max_phi_data_log = np.log(max_phi_data)
             max_phi_data_norm = max_phi_data/max_phi_data[0]
             
-            try:
-                energy_fit = np.polyfit(tArray[NA:NB],UE_log[NA:NB],1)
-                energy_line = energy_fit[0]*tArray[NA:NB] + energy_fit[1]
-                enorm_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
-                enorm_line = enorm_fit[1]*np.exp(enorm_fit[0]*tArray[NA:NB])
-                lit_line = c1*np.exp(-gamma_lit*tArray[NA:NB])
-            except:
-                pass
-            
+
             vel_dist = mData_dict['vel_dist']
             
             gridx = mData_dict['grid_x'][0,:,:]
@@ -336,22 +318,22 @@ for Nt in steps:
             f = mData_dict['f']
                  
 #            ## Phase animation setup
-#            fig = plt.figure(DH.figureNo+4,dpi=150)
-#            p_ax = fig.add_subplot(1,1,1)
-#            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
-#            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
-#            p_ax.set_xlim([0.0, L])
-#            p_ax.set_xlabel('$z$')
-#            p_ax.set_ylabel('$v_z$')
-#            p_ax.set_ylim([-4,4])
-#            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
-#            p_ax.legend()
-#            
-#            # Setting data/line lists:
-#            pdata = [p1_data]
-#            vdata = [v1_data]
-#            phase_lines = [line_p1]
-#            
+            fig = plt.figure(DH.figureNo+4,dpi=150)
+            p_ax = fig.add_subplot(1,1,1)
+            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
+            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
+            p_ax.set_xlim([0.0, L])
+            p_ax.set_xlabel('$z$')
+            p_ax.set_ylabel('$v_z$')
+            p_ax.set_ylim([-4,4])
+            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            p_ax.legend()
+            
+            # Setting data/line lists:
+            pdata = [p1_data]
+            vdata = [v1_data]
+            phase_lines = [line_p1]
+            
             ## Phase density animation setup
             fig_f = plt.figure(DH.figureNo+5,dpi=150)
             f_ax = fig_f.add_subplot(1,1,1)
@@ -429,25 +411,13 @@ for Nt in steps:
             energy_ax.set_ylabel('$\sum E^2/2 \Delta x$')
             energy_ax.set_title('Landau energy, Nt=' + str(Nt) +', Nz=' + str(res+1))
             energy_ax.legend()
-            
-            try:
-                growth_ax.plot(tArray[NA:NB],enorm_line,'orange',label="actual damping")
-                growth_ax.plot(tArray[NA:NB],lit_line,'red',label="analytical damping")
-                text = (r'$\gamma$ = ' + str(enorm_fit[0]))
-                growth_text.set_text(text)
-                
-                energy_ax.plot(tArray[NA:NB],energy_line,'orange',label="damping rate")
-                text = (r'$\gamma_E$ = ' + str(energy_fit[0]))
-                energy_text.set_text(text)
-            except:
-                pass
                 
             fps = 1/(sim.dt*DH.samplePeriod)
             #fps = 1
             # Creating the Animation object
-#            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples+1, 
-#                                               fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
-#                                               interval=1000/fps)
+            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples+1, 
+                                              fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
+                                              interval=1000/fps)
 
             dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples+1, 
                                                fargs=(gridx,gridv,f,cont,f_ax),

@@ -14,15 +14,15 @@ from caseFile_landau1D import *
 
 
 analyse = True
-fieldPlot = False
+fieldPlot = True
 snapPlot = False
 resPlot = False
 compare_reference = False
 plot = False
 
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [10]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,20]
+compare_times = [1]
 
 fit_start = 8
 fit_stop = 10
@@ -41,6 +41,7 @@ sims = {}
 #sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
+
 #sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
 #sims['tsi_TE10_a0.1_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500]
@@ -49,11 +50,9 @@ sims = {}
 #sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 #sims['tsi_TE10_a0.1_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-#sims['tsi_TE10_a0.1_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [400]
-sims['tsi_TE10_a0.1_boris_synced_NZ100_NQ20000_NT'] = [400]
+sims['tsi_TE20_a0.1_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [200]
 
 comp_run = 'tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
-
 
 ################################ Linear analysis ##############################
 omega_p = 1
@@ -205,6 +204,7 @@ if analyse == True:
             if compare_reference == True:
                 E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                 E_errors.append(E_error)
+                print(E_error)
             
             if fieldPlot == True:
                 print("Drawing field plot...")
@@ -356,6 +356,8 @@ if plot == True:
             for time in compare_times:
                 label_line = label + ', ' + str(analysis_times[time]) + 's'
                 ax_nl_dt.plot(dts,E_errors[:,time],marker="o",color=c,label=label_line)
+            print(dts)
+            print(E_errors)
                 
     handles, labels = fig_nl_rhs.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))

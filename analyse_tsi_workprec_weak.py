@@ -15,7 +15,7 @@ from caseFile_landau1D import *
 analyse = True
 fieldPlot = True
 snapPlot = False
-resPlot = True
+resPlot = False
 compare_reference = False
 plot = False
 
@@ -48,9 +48,7 @@ sims = {}
 #sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE50_a0.0001_boris_SDC_2018_M3K4_NZ100_NQ20000_NT'] = [2500]
-
-#sims['tsi_TE60_a0.0001_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [600]
+sims['tsi_TE50_a0.0001_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [500]
 
 comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 

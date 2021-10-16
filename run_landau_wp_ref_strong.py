@@ -94,7 +94,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
 
 steps = [5000]
-resolutions = [10000]
+resolutions = [5000]
 
 dataRoot = "../data_landau_strong/"
 
@@ -115,7 +115,7 @@ plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 1000000
+nq = 200000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -133,21 +133,6 @@ restart_ts = 14
 
 
 slow_factor = 1
-
-############################# Linear Analysis ##################################
-k = dx_mode
-omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-#omega = 1.4436
-vp = omega/k
-omega2 = 2.8312 * k
-omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-
-df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-
-damp_rate = - (np.pi*omega_p**3)/(2*k**2) * df_vp
-
-c1 = 2
-gamma_lit = 0.1533
 
 ############################ Setup and Run ####################################
 sim_params = {}
@@ -336,21 +321,21 @@ for Nt in steps:
             f = mData_dict['f']
                  
 #            ## Phase animation setup
-#            fig = plt.figure(DH.figureNo+4,dpi=150)
-#            p_ax = fig.add_subplot(1,1,1)
-#            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
-#            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
-#            p_ax.set_xlim([0.0, L])
-#            p_ax.set_xlabel('$z$')
-#            p_ax.set_ylabel('$v_z$')
-#            p_ax.set_ylim([-4,4])
-#            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
-#            p_ax.legend()
-#            
-#            # Setting data/line lists:
-#            pdata = [p1_data]
-#            vdata = [v1_data]
-#            phase_lines = [line_p1]
+            fig = plt.figure(DH.figureNo+4,dpi=150)
+            p_ax = fig.add_subplot(1,1,1)
+            line_p1 = p_ax.plot(p1_data[0,0:1],v1_data[0,0:1],'bo',ms=2,c=(0.2,0.2,0.75,1),label='Plasma, v=0')[0]
+            p_text = p_ax.text(.05,.05,'',transform=p_ax.transAxes,verticalalignment='bottom',fontsize=14)
+            p_ax.set_xlim([0.0, L])
+            p_ax.set_xlabel('$z$')
+            p_ax.set_ylabel('$v_z$')
+            p_ax.set_ylim([-4,4])
+            p_ax.set_title('Landau phase space, Nt=' + str(Nt) +', Nz=' + str(res+1))
+            p_ax.legend()
+            
+            # Setting data/line lists:
+            pdata = [p1_data]
+            vdata = [v1_data]
+            phase_lines = [line_p1]
 #            
             ## Phase density animation setup
             fig_f = plt.figure(DH.figureNo+5,dpi=150)
@@ -443,11 +428,11 @@ for Nt in steps:
                 pass
                 
             fps = 1/(sim.dt*DH.samplePeriod)
-            #fps = 1
-            # Creating the Animation object
-#            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples+1, 
-#                                               fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
-#                                               interval=1000/fps)
+            fps = 1
+            #Creating the Animation object
+            phase_ani = animation.FuncAnimation(fig, update_phase, DH.samples+1, 
+                                              fargs=(pdata,vdata,phase_lines,KE_data,sim.dt),
+                                              interval=1000/fps)
 
             dens_dist_ani = animation.FuncAnimation(fig_f, update_contour, DH.samples+1, 
                                                fargs=(gridx,gridv,f,cont,f_ax),

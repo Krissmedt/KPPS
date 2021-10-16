@@ -83,14 +83,25 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [1000]
+# Setup for visualisation and verification results
+steps = [200]
 resolutions = [100]
-iterations = [4]
+iterations = [2]
+tend = 20
+nq = 20000
+
+# Setup for work precision results
+# steps = [10,20,40,50,80,100,200,300,400,500,1000]
+# resolutions = [10,100,1000]
+# iterations = [2]
+# tend = 10
+# nq = 200000
+
+###############################################################################
 
 dataRoot = "../data_tsi_strong/"
 
 L = 2*pi
-tend = 20
 
 dx_mag = 0.1
 dx_mode = 1
@@ -101,9 +112,6 @@ dv_mode = 1
 
 a = -1
 omega_p = 1
-
-#Nq is particles per species, total nq = 2*nq
-nq = 2000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
@@ -162,7 +170,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC_2018'
+analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = 3
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
@@ -173,7 +181,7 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['field_solver'] = 'direct'
+analysis_params['field_solver'] = 'direct_solve'
 analysis_params['hooks'] = ['kinetic_energy']
 analysis_params['rhs_check'] = True
 analysis_params['pre_hook_list'] = []   

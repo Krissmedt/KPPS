@@ -44,12 +44,12 @@ snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-#sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K6_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_boris_SDC_M5K6_NQ1_NT'] = [10,20,100,200,1000]
 
 #sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
@@ -57,27 +57,6 @@ sims = {}
 #sims['pen_TE1_boris_SDC_2018_M5K4_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
 #sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
-
-#sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_M5K8_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_leg_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
-sims['pen_TE1_leg2_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
-
-#
-##sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_2018_M5K3_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_2018_M5K4_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
-##sims['pen_TE1_boris_SDC_2018_M5K7_NQ1_NT'] = [10,20,100,200,1000]
-#sims['pen_TE1_boris_SDC_2018_M5K8_NQ1_NT'] = [10,20,100,200,1000]
-#
-#sims['pen_TE0.01_boris_SDC_2018_M5K1_NQ1_NT'] = [1]
 
 
 omegaB = 25.0

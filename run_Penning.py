@@ -6,16 +6,13 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_SDC_2018']
+# schemes = ['boris_SDC_2018']
+schemes = ['boris_SDC']
 node_type = 'lobatto'
-#node_type = 'legendre'
 M = 5
 iterations = [5]
-dtwb = [10,5,1,0.5,0.1,0.05]
 dtwb = [0.1,0.05,0.01,0.005,0.001]
 tend = 1
-
-dtwb = [0.01]
 
 omegaB = 25.0
 omegaE = 4.9

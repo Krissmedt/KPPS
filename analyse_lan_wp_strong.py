@@ -34,26 +34,24 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
 
     return peaks
 
-analyse = False
-fieldPlot = False
+analyse = True
+fieldPlot = True
 snapPlot = False
 resPlot = False
-compare_reference = True
-plot = True
+compare_reference = False
+plot = False
 
 
 peak_intervals = [[0,2],[2,4]]
 peak_intervals2 = [[22.5,25],[25,27.5]]
-#peak_intervals = [[2,4],[4,6],[6,8]]
-#peak_intervals = [[0,2],[2,4],[4,6]]
 
 fit1_start = peak_intervals[0][0]
 fit1_stop = 5
 fit2_start = 22
 fit2_stop = 30
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
-compare_times = [9]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10,30]
+compare_times = [1]
 
 snaps = [0,60,120,180,240,300]
 
@@ -61,45 +59,26 @@ fig_type = 'full'
 data_root = "../data_landau_strong/"
 sims = {}
 
-sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# Work precision data input
+# sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
-
-#sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#sims['lan_TE10_a0.5_boris_SDC_M3K3_NZ1000_NQ2000000_NT'] = [10,20,40,50,80,100,200,400,500]
-
-# sims['lan_TE30_a0.5_boris_SDC_2018_M3K4_NZ100_NQ200000_NT'] = [1500]
+# Visualisation and verification data input
+sims['lan_TE30_a0.5_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
-nq = 163000
-k = 0.5
-v_th = 1
-L = 4*np.pi
-a = 1
-q = L/nq
-
-omega_p = np.sqrt(q*nq*a*1/L)
-omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-#omega = 1.4436
-vp = omega/k
-#omega2 = 2.8312 * k
-#omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-
-df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-
-gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
 
 gamma_lit1 = -0.2922
 gamma_lit2 = 0.08612
@@ -216,7 +195,6 @@ if analyse == True:
                     E_fit = np.polyfit(tArray[peaks],np.log(EL2[peaks]),1)
                     E_fit = np.around(E_fit,decimals=5)
                     E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
-                    gamma_line = c1*np.exp(gamma*tArray[NA:NB])
                     lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
                     error_gamma1 = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
                     gamma1_errors.append(error_gamma1)
@@ -241,8 +219,6 @@ if analyse == True:
                 rhs_evals.append(sim.rhs_eval)
 
                 if compare_reference == True:
-#                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-#                    skip_int = np.int(skip)
                     E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                     E_errors.append(E_error)
 
@@ -299,7 +275,6 @@ if analyse == True:
                         f_ax.set_xlabel('$z$')
                         f_ax.set_ylabel('$v_z$')
                         f_ax.set_ylim([-4,4])
-    #                    f_ax.set_title('Landau density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
                         fig_f.savefig(data_root + 'landau_strong_snap_ts{}.pdf'.format(snap), dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
 
 
@@ -419,12 +394,10 @@ if plot == True:
                 orderSlope = 1
 
             ax.set_xscale('log')
-            #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-6),1)
             ax.set_ylabel(r'Rel. $||E||_{L2}$ Error')
 
-#            ax.set_title('Non-linear Landau damping, convergence vs. ref solution')
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
 

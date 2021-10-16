@@ -34,17 +34,15 @@ def find_peaks(peak_intervals,EL2,dt,samplePeriod):
 
     return peaks
 
-analyse = False
-fieldPlot = False
+analyse = True
+fieldPlot = True
 snapPlot = False
 resPlot = False
-compare_reference = True
-plot = True
+compare_reference = False
+plot = False
 
 
 peak_intervals = [[0,1],[2,4],[4,5],[6,8],[8,10],[10,12.5],[12.5,15]]
-#peak_intervals = [[2,4],[4,6],[6,8]]
-#peak_intervals = [[0,2],[2,4],[4,6]]
 
 fit1_start = peak_intervals[0][0]
 fit1_stop = peak_intervals[-1][-1]
@@ -58,64 +56,24 @@ fig_type = 'full'
 data_root = "../data_landau_weak/"
 sims = {}
 
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
-sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
+# sims['lan_TE10_a0.05_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,500,1000]
 
-sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
-#
-# sims['lan_TE30_a0.05_boris_SDC_2018_M3K3_NZ100_NQ200000_NT'] = [1500]
+# sims['lan_TE10_a0.05_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.05_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+# sims['lan_TE10_a0.05_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+sims['lan_TE30_a0.05_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [300]
 
 comp_run = 'lan_TE10_a0.05_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 ################################ Linear analysis ##############################
-nq = 20000
-k = 0.5
-v_th = 1
-L = 4*np.pi
-qm = 1
-q = L/nq
-nq = 1
-
-omega_p = np.sqrt(4*np.pi*nq*qm)
-#omega_p = 1
-
-a = v_th * np.sqrt(1/(4*np.pi*nq*qm))
-#a = v_th * np.sqrt(1/(nq*qm))
-
-omega = omega_p * (1 + 3/2*a**2*k**2)
-gamma = - omega_p * np.sqrt(np.pi/8) * (k*a)**-3 * np.exp(-1/(2*k**2 * a**2))
-
-omega_R = omega_p**2 + 3*k**2*v_th**2 + (6*k**4*v_th**4)/(omega_p**2)
-omega_R = np.sqrt(omega_R)
-
-the_R = omega_R/(np.sqrt(2)*k*v_th)
-gamma4 = - np.sqrt(np.pi) * the_R**3 * (1 - 3/(the_R**2))*np.exp(-the_R**2)
-error_gamma = the_R**(-4)*np.exp(-the_R**2)
-
-omega_L2 = omega_p**2  + 3*k**2*v_th**2
-gamma2 = - np.sqrt(np.pi/8) * (omega_p**6/(k**3*v_th**3*omega_L2)) *np.exp(-omega_L2/(2*k**2*v_th**2))
-
-gamma3 = - np.sqrt(np.pi/8) * (omega_p**2*omega_L2/(k**3*v_th**3)) *np.exp(-omega_L2/(2*k**2*v_th**2))
-
-#omega = np.sqrt(omega_p**2  +3*k**2*v_th**2)
-##omega = 1.4436
-#vp = omega/k
-#vp = 2.84
-##omega2 = 2.8312 * k
-##omegap2 = np.sqrt(omega2**2 - 3*k**2*v_th**2)
-##
-##df_vp = (2*np.pi)**(-1/2)*(1/v_th) * np.exp(-vp**2/(2*v_th**2)) * -vp/v_th**2
-#df_vp = -vp/np.sqrt(2*np.pi) * np.exp(-vp**2/2)
-#
-#gamma = (np.pi*omega_p**3)/(2*k**2) * df_vp
 
 gamma_lit1 = -0.1533
 
@@ -229,7 +187,6 @@ if analyse == True:
                     E_fit = np.around(E_fit,decimals=4)
                     E_fit_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
 
-                    gamma_line = c1*np.exp(gamma*tArray[NA:NB])
                     lit_line = c1*np.exp(gamma_lit1*tArray[NA:NB])
 
                     error_linear = abs(gamma_lit1 - E_fit[0])/abs(gamma_lit1)
@@ -244,8 +201,6 @@ if analyse == True:
 
 
                 if compare_reference == True:
-#                    skip = (sim.dt*DH.samplePeriod)/(comp_sim.dt*DH_comp.samplePeriod)
-#                    skip_int = np.int(skip)
                     E_error = np.abs(EL2_comp-EL2[analysis_ts])/np.abs(EL2_comp)
                     E_errors.append(E_error)
 
