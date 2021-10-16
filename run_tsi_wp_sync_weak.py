@@ -49,7 +49,6 @@ def update_field(num,xdata,ydata,lines,rho_mag,phi_mag):
     t = '%.2E' % Decimal(str((num)*dt))
     text = (r't = '+ t +r'; $\phi$ = ' + phitext + r'; $\rho$ = ' + rhotext)
     field_text.set_text(text)
-    print(xdata[1].shape)
     lines = update_lines(num,xdata,ydata,lines)
     
     return lines
@@ -82,16 +81,16 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     return species_list, fields
 
 
-steps = [600]
-resolutions = [100]
-iterations = [3]
+steps = [10,20,40,50,80,100,200,300,400,500,1000]
+resolutions = [10,100,1000]
+iterations = [1]
 
 dataRoot = "../data_tsi_weak/"
 
 L = 2*pi
-tend = 60
+tend = 10
 
-dx_mag = 1e-4
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
@@ -103,11 +102,11 @@ omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -162,8 +161,7 @@ mesh_params['grid_v'] = 0
 mesh_params['f'] = 0
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
-analysis_params['M'] = 3
+analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['looped_axes'] = ['z']
 analysis_params['centreMass_check'] = False
 
@@ -182,6 +180,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 
@@ -200,7 +199,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -214,13 +213,13 @@ for Nt in steps:
             beam1_params['nq'] = np.int(nq)
             beam1_params['mq'] = -q
             beam1_params['q'] = q
-            loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
+            loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin')
             loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
             
             beam2_params['nq'] = np.int(nq)
             beam2_params['mq'] = -q
             beam2_params['q'] = q
-            loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='cos')
+            loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='sin')
             loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
             
             mesh_params['node_charge'] = -2*ppc*q
@@ -228,7 +227,7 @@ for Nt in steps:
             species_params = [beam1_params,beam2_params]
             loader_params = [loader1_params,loader2_params]
     
-            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K' + str(K) + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
+            sim_name = 'tsi_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(nq) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             ## Numerical solution ##

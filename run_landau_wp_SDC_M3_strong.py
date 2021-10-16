@@ -93,13 +93,13 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [10,20,30,40,50,100,200,300,400,500,1000]
-resolutions = [100,1000]
+steps = [1500]
+resolutions = [100]
 
 dataRoot = "../data_landau_strong/"
 
 L = 4*pi
-tend = 10
+tend = 30
 
 dx_mag = 0.5
 dx_mode = 0.5
@@ -115,7 +115,7 @@ plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 #q = omega_p**2 * L / (nq*a*1)
 q = L/nq
@@ -180,8 +180,9 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
+analysis_params['particleIntegrator'] = 'boris_SDC_2018'
 analysis_params['M'] = 3
+analysis_params['K'] = 4
 analysis_params['looped_axes'] = ['z']
 
 analysis_params['fieldIntegration'] = True
@@ -190,12 +191,17 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['hooks'] = ['kinetic_energy','field_energy',plot_density_1d]
+analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = [plot_density_1d]
+analysis_params['pre_hook_list'] = []
+
+if plot == True:
+    analysis_params['hooks'].append(plot_density_1d)
+    analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
@@ -213,7 +219,7 @@ kppsObject = kpps_class()
 
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = Nt
     for res in resolutions:
         ppc = nq/res
         #nq = ppc*res
@@ -233,7 +239,7 @@ for Nt in steps:
         species_params = [hot_params]
         loader_params = [hotLoader_params]
 
-        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K4' + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

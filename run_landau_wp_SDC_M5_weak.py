@@ -94,7 +94,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
 
 steps = [5000]
-resolutions = [10000]
+resolutions = [5000]
 
 dataRoot = "../data_landau_weak/"
 
@@ -182,6 +182,7 @@ mLoader_params['store_node_pos'] = False
 analysis_params['particleIntegration'] = True
 analysis_params['particleIntegrator'] = 'boris_SDC'
 analysis_params['M'] = 3
+analysis_params['K'] = 3
 analysis_params['looped_axes'] = ['z']
 
 analysis_params['fieldIntegration'] = True
@@ -190,12 +191,17 @@ analysis_params['custom_q_background'] = ion_bck
 analysis_params['units'] = 'custom'
 analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
-analysis_params['hooks'] = ['kinetic_energy','field_energy',plot_density_1d]
+analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = [plot_density_1d]
+analysis_params['pre_hook_list'] = []
+
+if plot == True:
+    analysis_params['hooks'].append(plot_density_1d)
+    analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['dataRootFolder'] = dataRoot
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 
 plot_params = {}
@@ -233,7 +239,7 @@ for Nt in steps:
         species_params = [hot_params]
         loader_params = [hotLoader_params]
 
-        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_M3K3'+ '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

@@ -93,15 +93,15 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
     
 
-steps = [5000]
-resolutions = [5000]
+steps = [10,20,40,50,80,100,200,400,500,1000]
+resolutions = [10,100,1000]
 
-dataRoot = "../data_landau_strong/"
+dataRoot = "../data_landau_weak/"
 
 L = 4*pi
 tend = 10
 
-dx_mag = 0.5
+dx_mag = 0.05
 dx_mode = 0.5
 
 v = 0
@@ -115,6 +115,7 @@ plot_res = 100
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
+nq = 2**14
 nq = 200000
 
 #q = omega_p**2 * L / (nq*a*1)
@@ -124,12 +125,12 @@ a = 1
 
 omega_p = np.sqrt(q*nq*a*1/L)
 
-prefix = 'TE'+str(tend) + '_a' + str(dx_mag) + 'alt'
+prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
 plot = False
 
 restart = False
-restart_ts = 3500
+restart_ts = 14
 
 
 slow_factor = 1
@@ -180,10 +181,9 @@ mLoader_params['load_type'] = 'box'
 mLoader_params['store_node_pos'] = False
 
 analysis_params['particleIntegration'] = True
-analysis_params['particleIntegrator'] = 'boris_SDC'
-analysis_params['M'] = 3
-analysis_params['K'] = 3
+analysis_params['particleIntegrator'] = 'boris_synced'
 analysis_params['looped_axes'] = ['z']
+analysis_params['centreMass_check'] = False
 
 analysis_params['fieldIntegration'] = True
 analysis_params['field_type'] = 'pic'
@@ -239,7 +239,7 @@ for Nt in steps:
         species_params = [hot_params]
         loader_params = [hotLoader_params]
 
-        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_boris_SDC_M3K3' + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+        sim_name = 'lan_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NZ' + str(res) + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
         sim_params['simID'] = sim_name
         
         ## Numerical solution ##

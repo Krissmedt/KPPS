@@ -61,6 +61,12 @@ class species:
         self.pos = np.zeros((self.nq,3),dtype=np.float) #Position vector
         self.ones = np.ones(self.nq,dtype=np.float)
         
+        self.x_con = np.zeros((3,3))
+        self.x_res = np.zeros((3,3))
+        self.v_con = np.zeros((3,3))
+        self.v_res = np.zeros((3,3))
+        self.Rx = np.zeros((3,3))
+        self.Rv = np.zeros((3,3))
         
     def vals_at_p(self,const):
         return self.ones*const

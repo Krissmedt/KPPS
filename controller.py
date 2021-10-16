@@ -18,7 +18,7 @@ class controller:
         self.setupTime = 0
         self.runTime = 0
 
-        self.percentBar = False
+        self.percentBar = True
         self.restarted = False
         
         self.xlimits = np.array([-1,1],dtype=np.float)
@@ -30,6 +30,22 @@ class controller:
         self.caseSettings = {}
         self.analysisSettings = {}
         self.dataSettings = {}
+        
+        self.runTimeDict = {}
+        self.runTimeDict['sim_time'] = 0.
+        self.runTimeDict['main_loop'] = 0.
+        self.runTimeDict['object_instantiation'] = 0.
+        self.runTimeDict['particle_load'] = 0.
+        self.runTimeDict['mesh_load'] = 0.
+        self.runTimeDict['pre_processing'] = 0.
+        self.runTimeDict['bound_cross_check'] = 0.
+        self.runTimeDict['gather'] = 0.
+        self.runTimeDict['scatter'] = 0.
+        self.runTimeDict['FD_setup'] = 0.
+        self.runTimeDict['field_solve'] = 0.
+        self.runTimeDict['particle_push'] = 0.
+        self.runTimeDict['pos_push'] = 0.
+        self.runTimeDict['boris'] = 0.
 
         
         ## Dummy values, must be set in parameters or elsewhere!
@@ -88,13 +104,10 @@ class controller:
         
         self.tArray = []
         self.tArray.append(self.t)
+        self.percentStep = self.tSteps/100
         
-        self.percentTime = self.tEnd/100
-        self.percentCounter = self.percentTime
         
-    
-        
-    def updateTime(self):
+    def update(self):
         self.ts += 1
         self.t += self.dt
         self.tArray.append(self.t)
@@ -111,9 +124,8 @@ class controller:
                 + str(self.dt) + ".")    
             
     def displayProgress(self):
-        if self.t >= self.percentCounter:
+        if self.ts % self.percentStep == 0:
             print("Simulation progress: " 
-                  + str(int(self.t/self.percentTime)) + "%" 
+                  + str(int(self.ts/self.percentStep)) + "%" 
                   + " - " + str(self.ts) + "/" + str(self.tSteps)
                   + " - at " + time.strftime("%d/%m/%y  %H:%M:%S",time.localtime()))
-            self.percentCounter += self.percentTime

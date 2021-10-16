@@ -15,26 +15,27 @@ from collections import OrderedDict
 sims = {}
 particle = 0
 
+#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type1_boris_staggered_NZ1_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
 
-sims['NLO__type4_boris_synced_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_synced_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type2_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type2_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type2_boris_synced_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type2_boris_staggered_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
 
-sims['NLO__type4_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ10000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ100000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-sims['NLO__type4_boris_SDC_M3K3_NZ1000000_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+#sims['NLO__type3_boris_SDC_M5K5_NZ10_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type3_boris_SDC_M3K3_NZ10_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type3_boris_synced_NZ10_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+#sims['NLO__type3_boris_staggered_NZ10_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
 
-#sims['NLO__type1_boris_SDC_M3K3_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type1_boris_SDC_M5K5_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
-#sims['NLO__type1_boris_synced_NZ1_TE1_NT'] = [1,2,4,8,16,32,64,128,256,512,1024]
+sims['NLO__type4_boris_SDC_M5K5_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+sims['NLO__type4_boris_SDC_M3K3_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+sims['NLO__type4_boris_synced_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
+sims['NLO__type4_boris_staggered_NZ1000_TE1_NT'] = [1,5,10,50,100,200,250,500,1000]
 
-comp_run = 'NLO__type4_boris_SDC_M5K5_NZ100_TE0.1_NT128'
+comp_run = 'NLO__type1_boris_SDC_M8K8_NZ1_TE1_NT2000'
 
 plot_params = {}
 plot_params['legend.fontsize'] = 12
@@ -49,7 +50,7 @@ plot_params['legend.loc'] = 'upper right'
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
 
-analyse = False
+analyse = True
 plot = True
 plot_type = 'cross-integrator'
 data_root = "../data_nlo/"
@@ -69,9 +70,14 @@ if analyse == True:
         rhs_evals = []
         zrels = []
         
-        filename = key[:-3] + "_workprec" + ".h5"
+        filename = key[:-3] + "_wp" + ".h5"
         filenames.append(filename)
-        file = h5.File(filename,'w')
+        try:
+            file = h5.File(data_root+filename,'w')
+        except OSError:
+            file.close()
+            file = h5.File(data_root+filename,'w')
+            
         grp = file.create_group('fields')
         
         for tsteps in value:
@@ -107,9 +113,9 @@ if analyse == True:
             label_type =  'Boris-SDC,' + ' M=' + str(sim.analysisSettings['M']) + ', K=' + str(sim.analysisSettings['K']) + ', Type ' + str(sim.simSettings['nlo_type'])
         elif sim.analysisSettings['particleIntegrator'] == 'boris_staggered':
             label_res = 'Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
-            label_type =  'Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
+            label_type =  'Boris ' + 'LF' + ', Type ' + str(sim.simSettings['nlo_type'])
         elif sim.analysisSettings['particleIntegrator'] == 'boris_synced':
-            label_res = 'Boris' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
+            label_res = 'Boris ' + 'VV' + ', Nz=' + str(sim.mLoaderSettings['resolution'][2])
             label_type =  'Boris' + ', Type ' + str(sim.simSettings['nlo_type'])
         
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
@@ -133,7 +139,7 @@ if analyse == True:
 if plot == True:
     if len(filenames) == 0:
         for key, value in sims.items():
-            filename = key[:-3] + "_workprec" + ".h5"
+            filename = key[:-3] + "_wp" + ".h5"
             filenames.append(filename)
             
 
@@ -154,14 +160,11 @@ if plot == True:
                 c = 'red'
             elif int(nlo_type) == 4:
                 c = 'green'
-                
+
         elif plot_type == "cross-integrator":
-            label = file.attrs['label_type']
-            if file.attrs["integrator"] == "boris_SDC":
-                c = 'blue'
-            elif file.attrs["integrator"] == "boris_synced":
-                c = 'red'
-        
+            label = file.attrs['label_res']
+
+        file.close()
         plt.rcParams.update(plot_params)
         ##Convergence Plot w/ rhs
         #fig_con = plt.figure(DH.figureNo+4)

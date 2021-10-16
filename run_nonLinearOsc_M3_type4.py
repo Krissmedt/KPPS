@@ -25,7 +25,7 @@ prefix = ''
 
 schemes = ['boris_staggered','boris_synced','boris_SDC']
 steps = [1,5,10,50,100,200,250,500,1000]
-resolutions = [10,100,1000]
+resolutions = [10,100,1000,10000,100000,1000000]
 
 M = 3
 K = 3
@@ -53,7 +53,7 @@ sim_params['tEnd'] = tend
 sim_params['percentBar'] = True
 sim_params['dimensions'] = 1
 sim_params['zlimits'] = [-1,1]
-sim_params['nlo_type'] = exptype
+
 
 spec1_params['name'] = 'spec1'
 spec1_params['nq'] = 2
@@ -82,7 +82,6 @@ analysis_params['units'] = 'custom'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['rhs_check'] = True
 
-data_params['samplePeriod'] = 1
 data_params['write'] = True
 data_params['write_m'] = False
 data_params['dataRootFolder'] = "../data_nlo/" 
@@ -100,7 +99,7 @@ data_params['plot_params'] = plot_params
 
 
 analysis_params = type_setup(exptype,analysis_params)
-
+sim_params['nlo_type'] = exptype
 for scheme in schemes:
     analysis_params['particleIntegrator'] = scheme
     
@@ -119,8 +118,7 @@ for scheme in schemes:
         
         for Nt in steps:
             sim_params['tSteps'] = Nt
-            dt = tend/Nt
-            dts.append(dt)
+            data_params['samples'] = 1
 
             species_params, loader_params = type_setup_spec(exptype,res,ppc,spec1_params,loader1_params,spec2_params,loader2_params)
             sim_name = 'NLO_' + prefix + '_' + 'type' + str(exptype) + '_' + scheme + '_NZ' + str(res) + '_TE' + str(tend) + '_NT' + str(Nt) 

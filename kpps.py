@@ -29,7 +29,6 @@ class kpps:
         print("Restarting ' "+sim_name+" ' at time "+str(tstep*sim.dt)+"s...")
         
         sim.ts = tstep
-        sim.t = tstep*sim.dt
         sim.restarted = True
         
         p = species_class()
@@ -111,17 +110,19 @@ class kpps:
         
         print("Setting up...")
         
+        t_setup = time.time()
         species_list = []
         for setting in speciesSettings:
             species = species_class(**setting)
             species_list.append(species)
-            
+        
         pLoader_list = []
         for setting in pLoaderSettings:
             pLoader = pLoader_class(**setting)
             pLoader_list.append(pLoader)
-        
+            
         fields = mesh(**meshSettings)
+        
         mLoader = meshLoader(**mLoaderSettings)
         
 
@@ -130,18 +131,28 @@ class kpps:
         
         dHandler = dataHandler(controller_obj=sim,
                                **dataSettings)
-
+        
+        t_ploader = time.time()
         for loader in pLoader_list:
             loader.run(species_list,sim)
         
+        t_mloader = time.time()
         mLoader.run(fields,sim)
-
-        analyser.run_preAnalyser(species_list,fields,controller=sim)
-
+        
+        t_pre = time.time()
+        analyser.run_preAnalyser(species_list,fields,sim)
+        t_Start = time.time()
+        
+        sim.runTimeDict['object_instantiation'] = t_ploader-t_setup
+        sim.runTimeDict['particle_load'] = t_mloader-t_ploader
+        sim.runTimeDict['mesh_load'] = t_pre-t_mloader
+        sim.runTimeDict['pre_processing'] = t_Start-t_pre
+        
         dHandler.run_setup(sim)
         dHandler.run(species_list,fields,sim)
         
         ########################## RUN TIME! ##################################
+        sim.runTimeDict['setup'] = time.time()-self.tStart 
         dHandler = self.run(species_list,fields,sim,analyser,dHandler)
         
         return dHandler
@@ -151,7 +162,7 @@ class kpps:
         ## Main time loop
         tRun = time.time()
         for ts in range(sim.ts+1,sim.tSteps+1):
-            sim.updateTime()
+            sim.update()
             analyser.run_particleIntegrator(species_list,fields,sim) 
             analyser.runHooks(species_list,fields,controller=sim)
             dHandler.run(species_list,fields,sim)
@@ -160,11 +171,11 @@ class kpps:
         ## Post-analysis and data plotting
         analyser.run_postAnalyser(species_list,fields,sim)
         
-        tStop = time.time()   
-        sim.setupTime = tRun-self.tStart 
-        sim.runTime = tStop-tRun
-        
+        sim.runTimeDict['main_loop'] = time.time()  -tRun
+        sim.runTimeDict['sim_time'] = time.time() - self.tStart
         dHandler.post(species_list,fields,sim)
         dHandler.plot()
+        
+
 
         return dHandler

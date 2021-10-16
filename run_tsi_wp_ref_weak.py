@@ -49,7 +49,6 @@ def update_field(num,xdata,ydata,lines,rho_mag,phi_mag):
     t = '%.2E' % Decimal(str((num)*dt))
     text = (r't = '+ t +r'; $\phi$ = ' + phitext + r'; $\rho$ = ' + rhotext)
     field_text.set_text(text)
-    print(xdata[1].shape)
     lines = update_lines(num,xdata,ydata,lines)
     
     return lines
@@ -73,41 +72,43 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     plot_res = controller.plot_res
     v_off = controller.v_off
     
-    pos_data_list = [species_list[0].pos[:,2]]
-    vel_data_list = [species_list[0].vel[:,2]]
-    pos_data_list.append(species_list[1].pos[:,2])
-    vel_data_list.append(species_list[1].vel[:,2])
-    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    pos_data_list = []
+    vel_data_list = []
     
+    for species in species_list:
+        pos_data_list.append(species.pos[:,2])
+        vel_data_list.append(species.vel[:,2])
+        fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+        
     return species_list, fields
 
 
-steps = [600]
-resolutions = [100]
+steps = [5000]
+resolutions = [5000]
 iterations = [3]
 
 dataRoot = "../data_tsi_weak/"
 
 L = 2*pi
-tend = 60
+tend = 10
 
-dx_mag = 1e-4
+dx_mag = 0.0001
 dx_mode = 1
 
 v = 1
 dv_mag = 0
-dv_mode = 1
+dv_mode = 0
 
 a = -1
 omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
 #ppc = 20
-nq = 20000
+nq = 200000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
-plot = True
+plot = False
 
 restart = False
 restart_ts = 14
@@ -182,6 +183,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 
@@ -200,7 +202,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = 10
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -214,13 +216,13 @@ for Nt in steps:
             beam1_params['nq'] = np.int(nq)
             beam1_params['mq'] = -q
             beam1_params['q'] = q
-            loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='cos')
+            loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin')
             loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
             
             beam2_params['nq'] = np.int(nq)
             beam2_params['mq'] = -q
             beam2_params['q'] = q
-            loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='cos')
+            loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='sin')
             loader2_params['vel'] = particle_vel_init(loader2_params['pos'],-v,dv_mag,dv_mode)
             
             mesh_params['node_charge'] = -2*ppc*q
@@ -296,8 +298,8 @@ for Nt in steps:
                 rho1 = (rho_data-rho_min[:,np.newaxis])/rho_mag[:,np.newaxis]
 
                 ## Growth rate phi plot setup
-                tA = 12.5
-                tB = 17.5
+                tA = 0
+                tB = 10
                 
                 NA = int(np.floor(tA/(sim.dt*DH.samplePeriod)))
                 NB = int(np.floor(tB/(sim.dt*DH.samplePeriod)))
@@ -310,17 +312,7 @@ for Nt in steps:
                 UE =  np.sum(E2/2,axis=1)*mData_dict['dz'][0]
                 UE_log = np.log(UE)
                 
-                c1 = 10e-5
-                E_fit = np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1)
-                E_line = c1*np.exp(E_fit[0]*tArray[NA:NB])
-                
                 max_phi_data = np.amax(np.abs(phi_data),axis=1)
-                growth_fit = np.polyfit(tArray[NA:NB],np.log(max_phi_data[NA:NB]),1)
-                growth_line = c1*np.exp(growth_fit[0]*tArray[NA:NB])
-                
-                exact_line = c1*np.exp(real_slope*tArray[NA:NB])
-                
-                linear_g_error = abs(real_slope - growth_fit[0])/real_slope
                 
                 vel_dist = mData_dict['vel_dist']
             
@@ -362,8 +354,7 @@ for Nt in steps:
                 field_ax.set_ylim([-0.2, 1.2])
                 field_ax.set_title('Two-stream instability potential, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 field_ax.legend()
-                fig_field.savefig(dataRoot + sim_name + '_rho.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-                
+
                 ## Velocity histogram animation setup
                 hist_data = np.concatenate((v1_data,v2_data),axis=1)
                 fig_hist = plt.figure(DH.figureNo+6,dpi=150)
@@ -401,31 +392,11 @@ for Nt in steps:
                 f_ax.set_ylim([-v_off,v_off])
                 f_ax.set_title('Two-stream density distribution, Nt=' + str(Nt) +', Nz=' + str(res+1))
                 f_ax.legend()
-                
-                
-                ## Growth rate plot
-                fig_gr = plt.figure(DH.figureNo+9,dpi=150)
-                growth_ax = fig_gr.add_subplot(1,1,1)
-                growth_ax.plot(tArray,max_phi_data,'blue',label="$\phi$ growth")
-                growth_ax.plot(tArray[NA:NB],growth_line,'orange',label="Fitted growth")
-                growth_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth")
-                growth_text = growth_ax.text(.5,0,'',transform=growth_ax.transAxes,verticalalignment='bottom',fontsize=14)
-                text = (r'$\gamma$ = ' + str(growth_fit[0]))
-                growth_text.set_text(text)
-                growth_ax.set_xlabel('$t$')
-                growth_ax.set_ylabel('$\phi_{max}$')
-                growth_ax.set_yscale('log')
-                #growth_ax.set_ylim([-0.001,0.001])
-                growth_ax.set_title('Two stream instability growth rate, Nt=' + str(Nt) +', Nz=' + str(res+1))
-                growth_ax.legend()
-                
+
+                ## E field plot
                 fig_el2 = plt.figure(DH.figureNo+10,dpi=150)
                 el2_ax = fig_el2.add_subplot(1,1,1)
                 el2_ax.plot(tArray,EL2,'blue',label="$E$")
-                el2_ax.plot(tArray[NA:NB],E_line,'orange',label="Fitted growth, $\gamma = $" + str(E_fit[0]))
-                el2_ax.plot(tArray[NA:NB],exact_line,'red',label="Theoretical growth, $\gamma = $" + str(real_slope))
-#                el2_text = el2_ax.text(.5,0,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=14)
-#                growth_text.set_text("$\gamma = $" + str(E_fit[0]))
                 el2_ax.set_xlabel('$t$')
                 el2_ax.set_ylabel(r'log $||E||_{L2}$')
                 el2_ax.set_yscale('log')
@@ -481,7 +452,7 @@ for Nt in steps:
                 phase_ani.save(dataRoot + sim_name+'_phase.mp4')
                 field_ani.save(dataRoot + sim_name+'_field.mp4')
                 hist_ani.save(dataRoot + sim_name+'_hist.mp4')
-                fig_gr.savefig(dataRoot + sim_name + '_growth.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+                
                 fig_el2.savefig(dataRoot + sim_name + '_el2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 fig_UE.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
                 plt.show()

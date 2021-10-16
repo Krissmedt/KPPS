@@ -6,22 +6,22 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 
 
-schemes = ['boris_SDC']
+schemes = ['boris_SDC_2018']
 node_type = 'lobatto'
-M = 3
-iterations = [3]
-dtwb = [10,1,0.1]
+#node_type = 'legendre'
+M = 5
+iterations = [5]
+dtwb = [10,5,1,0.5,0.1,0.05]
+dtwb = [0.1,0.05,0.01,0.005,0.001]
+tend = 1
 
-
-tend = 16
+dtwb = [0.01]
 
 omegaB = 25.0
 omegaE = 4.9
 epsilon = -1
 
 prefix = 'TE'+str(tend)
-
-
 
 sim_params = {}
 species_params = {}
@@ -68,8 +68,9 @@ analysis_params['B_magnitude'] = omegaB/species_params['a']
 analysis_params['hooks'] = ['energy_calc_penning']
 analysis_params['H'] = H
 
-analysis_params['centreMass_check'] = True
+analysis_params['centreMass_check'] = False
 analysis_params['residual_check'] = False
+analysis_params['convergence_check'] = False
 analysis_params['rhs_check'] = True
 
 
@@ -100,8 +101,6 @@ data_params['plot_params'] = plot_params
 species_params = [species_params]
 loader_params = [ploader_params]
 
-run_times_inner = np.zeros((len(dtwb),len(iterations)),dtype=np.float)
-run_times = []
 
 ## Calculated Params ##
 x0 = ploader_params['pos']
@@ -126,8 +125,15 @@ for scheme in schemes:
     j = 0
     for K in iterations:
         analysis_params['K'] = K
+        
+        if 'boris_SDC' in scheme:
+            suffix = '_M' + str(M) + 'K' + str(K)
+        else:
+            suffix = ""
+            
         for dt in dtwb:
-            sim_params['dt'] = dt/omegaB
+#            sim_params['dt'] = dt/omegaB
+            sim_params['dt'] = dt
             Nt = floor(sim_params['tEnd']/sim_params['dt'])
             data_params['samplePeriod'] = 1
             
@@ -141,7 +147,7 @@ for scheme in schemes:
             xOne = [xMod,yMod,zMod]
             vHalf = v_half_dt
             
-            sim_name = 'pen_' + prefix + '_' + analysis_params['particleIntegrator'] + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
+            sim_name = 'pen_' + prefix + '_' + analysis_params['particleIntegrator'] + suffix + '_NQ' + str(int(nq)) + '_NT' + str(Nt) 
             sim_params['simID'] = sim_name
             
             

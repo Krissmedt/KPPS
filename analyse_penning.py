@@ -14,8 +14,6 @@ import h5py as h5
 
 
 def analytical_sol(t,omegaE,omegaB,H,x0,v0,epsilon=-1):
-    print(x0)
-            
     omegaPlus = 1/2 * (omegaB + sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
     omegaMinus = 1/2 * (omegaB - sqrt(omegaB**2 + 4 * epsilon * omegaE**2))
     Rminus = (omegaPlus*x0[0,0] + v0[0,1])/(omegaPlus - omegaMinus)
@@ -42,11 +40,44 @@ def analytical_sol(t,omegaE,omegaB,H,x0,v0,epsilon=-1):
 
 analyse = True
 plot = True
-snapPlot = True 
+snapPlot = False
 data_root = "../data_penning/"
 sims = {}
 
-sims['pen_TE10_boris_SDC_NQ1_NT'] = [2500]
+#sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K6_NQ1_NT'] = [10,20,100,200,1000]
+
+#sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
+
+#sims['pen_TE1_boris_SDC_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_M5K8_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_leg_boris_SDC_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+sims['pen_TE1_leg2_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+
+#
+##sims['pen_TE1_boris_SDC_2018_M5K1_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K2_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_2018_M5K3_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_2018_M5K4_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K5_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_2018_M5K6_NQ1_NT'] = [10,20,100,200,1000]
+##sims['pen_TE1_boris_SDC_2018_M5K7_NQ1_NT'] = [10,20,100,200,1000]
+#sims['pen_TE1_boris_SDC_2018_M5K8_NQ1_NT'] = [10,20,100,200,1000]
+#
+#sims['pen_TE0.01_boris_SDC_2018_M5K1_NQ1_NT'] = [1]
 
 
 omegaB = 25.0
@@ -72,7 +103,6 @@ plot_params['axes.titlepad'] = 10
 data_params['plot_params'] = plot_params
 data_params['dataRootFolder'] = data_root
 
-DH = dataHandler2(**data_params)
 filenames = []
 if analyse == True:
     sim_no = 0
@@ -94,11 +124,13 @@ if analyse == True:
         grp = file.create_group('fields')
         
         for tsteps in value:
+            DH = dataHandler2(**data_params)
+            
             sim_no += 1
             sim_name = key + str(tsteps)
             sim, sim_name = DH.load_sim(sim_name=sim_name,overwrite=True)
 
-            data_list = DH.load_p(['pos','vel','energy'],sim_name=sim_name)
+            data_list = DH.load_p(['pos','vel','energy','Rx','Rv'],sim_name=sim_name)
             data_dict = data_list[0]
             
             tArray = data_dict['t']
@@ -106,7 +138,10 @@ if analyse == True:
             yArray = data_dict['pos'][:,0,1]
             zArray = data_dict['pos'][:,0,2]
             hArray = data_dict['energy']
-
+            
+            Rx = data_dict['Rx']
+            Rv = data_dict['Rv']
+            
             xAnalyt = np.zeros(tArray.shape,dtype=np.float)
             hAnalyt = np.zeros(tArray.shape,dtype=np.float)
             for ti in range(0,tArray.shape[0]):
@@ -114,28 +149,31 @@ if analyse == True:
                 xAnalyt[ti] = u_lit[0]
                 hAnalyt[ti] = UE_lit
                 
+            hArray[0] = hAnalyt[0]
             xRel = abs(xArray - xAnalyt)/abs(xAnalyt)
             hRel = abs(hArray - hAnalyt)/abs(hAnalyt)
-            hRel[0] = 0
             
-            xErrors.append(xRel)
-            hErrors.append(hRel)
+            xErrors.append(xRel[-1])
+            hErrors.append(hRel[-1])
             dts.append(sim.dt)
             Nts.append(sim.tSteps)
             rhs_evals.append(sim.rhs_eval)
             
             if snapPlot == True:
-                DH.trajectory_plot()
+                DH.trajectory_plot(sim_name=sim_name)
                 DH.figureNo += 1
                 
                 fig_H = plt.figure(DH.figureNo)
                 ax_H = fig_H.add_subplot(1, 1, 1)
                 ax_H.plot(tArray,hRel,label=sim_name)
-        
+                #ax_H.set_yscale('log')
+                ax_H.set_xlabel('$t$')
+                ax_H.set_ylabel('$\Delta E_{rel}$')
+    
         file.attrs["integrator"] = sim.analysisSettings['particleIntegrator']
         try:
-            file.attrs["M"] = str(3)
-            file.attrs["K"] = str(3)
+            file.attrs["M"] = key[key.find('M')+1]
+            file.attrs["K"] = key[key.find('K')+1]
         except KeyError:
             pass
         
@@ -167,20 +205,24 @@ if plot == True:
             label = "Boris"
         elif file.attrs["integrator"] == "boris_synced":
             label = "Boris Synced"
-        elif file.attrs["integrator"] == "boris_SDC":
-            label = "Boris-SDC"
+        elif "boris_SDC" in file.attrs["integrator"]:
+            if "2018" in file.attrs["integrator"]:
+                label = "Boris-SDC 2018"
+            else:
+                label = "Boris-SDC"
             label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
         
+        dts = np.array(dts)
 
         ##Order Plot w/ rhs
         fig_rhs = plt.figure(DH.figureNo+2)
         ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,xErrors[:,-1],label=label)
+        ax_rhs.plot(rhs_evals,xErrors,label=label)
             
         ##Order Plot w/ dt
         fig_dt = plt.figure(DH.figureNo+3)
         ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,xErrors[:-1],label=label)
+        ax_dt.plot(dts*omegaB,xErrors,label=label)
         file.close()
         
     ax_list = []  
@@ -194,16 +236,15 @@ if plot == True:
             orderSlope = -1
             ax.set_xlabel('Number of RHS evaluations')
         else:
-            ax.set_xlabel(r'$\Delta t$')
+            ax.set_xlabel(r'$\omega_B \cdot \Delta t $')
             orderSlope = 1
         
         ax.set_xscale('log')
-        #ax_rhs.set_xlim(10**3,10**5)
         ax.set_yscale('log')
-        ax.set_ylim(10**(-4),10)
-        ax.set_ylabel('damping rate error')
+        ax.set_ylim(10**(-14),10**5)
+        ax.set_ylabel('$\Delta x_{rel}$')
         
-        ax.set_title('Convergence vs. Linear Theory')
+        ax.set_title('Convergence vs. Analytical Solution')
         
         xRange = ax.get_xlim()
         yRange = ax.get_ylim()
@@ -212,6 +253,8 @@ if plot == True:
                     ls='dotted',c='0.25',label='2nd Order')
         ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                     ls='dashed',c='0.75',label='4th Order')
+        ax.plot(xRange,DH.orderLines(8*orderSlope,xRange,yRange),
+                    ls='dashdot',c='0.5',label='8th Order')
         
         ax.legend()
         

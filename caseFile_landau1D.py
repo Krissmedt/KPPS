@@ -203,10 +203,8 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
 
     n = np.sum(f[0:-1,0:-1],axis=0) * dv
     fv = np.sum(f[0:-1,0:-1],axis=1) * dx
-    f_int = np.sum(fv) * dv
 
-    
-    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv,n1
+    return grid_x[0:-1,0:-1],grid_v[0:-1,0:-1],f[0:-1,0:-1],n,fv
 
 
 def lit_iv(res,mag,mode,L,v_off):
@@ -231,9 +229,21 @@ def lit_iv(res,mag,mode,L,v_off):
  
     return grid_x, grid_v, f, n, fvel
 
+def plot_density_1d(species_list,fields,controller='',**kwargs):
+    plot_res = controller.plot_res
+    v_off = controller.v_off
+    
+    pos_data_list = [species_list[0].pos[:,2]]
+    vel_data_list = [species_list[0].vel[:,2]]
+    pos_data_list.append(species_list[1].pos[:,2])
+    vel_data_list.append(species_list[1].vel[:,2])
+    fields.grid_x,fields.grid_v,fields.f,fields.pn,fields.vel_dist = calc_density_mesh(pos_data_list,vel_data_list,plot_res,plot_res,v_off,L)
+    
+    return species_list, fields
 
-#res = 1000
-#mag = 0.05
+
+#res = 100
+#mag = 0.01
 #mode = 0.5
 #L = 4*np.pi
 #v_off = 4
@@ -247,8 +257,10 @@ def lit_iv(res,mag,mode,L,v_off):
 #
 #v_array, pdist = vel_dist([pvel[:,2]],res,-v_off,v_off)
 #grid_x,grid_v, flit, nlit, fvlit = lit_iv(res,mag,mode,L,v_off)
-#grid_x,grid_v, f, n, fvel,n1 = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
+#grid_x,grid_v, f, n, fvel = calc_density_mesh([ppos[:,2]],[pvel[:,2]],res,res,v_off,L)
 #
+#dv = 2*v_off/res
+#fv_int = np.sum(fvel) * dv
 #
 #fig = plt.figure(1)
 #ax_f = fig.add_subplot(111)
@@ -274,7 +286,7 @@ def lit_iv(res,mag,mode,L,v_off):
 #ax_pos = fig.add_subplot(111)
 #ax_pos.scatter(grid_x[0,:],n)
 #ax_pos.plot(grid_x[0,:],nlit)
-#ax_pos.scatter(grid_x[0,:],n1)
+##ax_pos.scatter(grid_x[0,:],n1)
 ##ax_pos.set_ylim([0.99,1.01])
 #ax_pos.legend()
-#
+

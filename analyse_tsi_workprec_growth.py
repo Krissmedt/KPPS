@@ -9,6 +9,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataHandler2 import dataHandler2
 import matplotlib.animation as animation
 import h5py as h5
+from collections import OrderedDict
+
 
 analyse = False
 plot = True
@@ -16,19 +18,21 @@ snapPlot = False
 compare_reference = True
 
 start_time = 0
-max_time = 5
+max_time = 4
 
 fig_type = 'versus'
-data_root = "../data_tsi_strong/"
+data_root = "../data_tsi_old/"
 sims = {}
 
-#sims['tsi_TE10_boris_staggered_NZ10_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
-#sims['tsi_TE10_boris_staggered_NZ100_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
-#sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = [10,20,30,50,60,70,90,100,110,120,130,140,150,160,320,640,1280]
 
-#sims['tsi_TE10_boris_SDC_M3K3_NZ10_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
-#sims['tsi_TE10_boris_SDC_M3K3_NZ100_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
-sims['tsi_TE10_boris_SDC_M3K3_NZ1000_NQ20000_NT'] = [10,20,30,40,50,60,70,80,160,320]
+sims['tsi_TE10_boris_staggered_NZ10_NQ20000_NT'] = []
+sims['tsi_TE10_boris_staggered_NZ100_NQ20000_NT'] = []
+sims['tsi_TE10_boris_staggered_NZ1000_NQ20000_NT'] = []
+
+
+sims['tsi_TE10_boris_SDC_M3K3_NZ10_NQ20000_NT'] = []
+sims['tsi_TE10_boris_SDC_M3K3_NZ100_NQ20000_NT'] = []
+sims['tsi_TE10_boris_SDC_M3K3_NZ1000_NQ20000_NT'] = []
 
 comp_run = 'tsi_TE10_boris_SDC_M5K5_NZ10000_NQ200000_NT1000'
 
@@ -54,13 +58,13 @@ real_slope = roots[1].imag
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 12
+plot_params['legend.fontsize'] = 14
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 14
-plot_params['axes.titlesize'] = 14
-plot_params['xtick.labelsize'] = 10
-plot_params['ytick.labelsize'] = 10
-plot_params['lines.linewidth'] = 3
+plot_params['axes.labelsize'] = 20
+plot_params['axes.titlesize'] = 20
+plot_params['xtick.labelsize'] = 16
+plot_params['ytick.labelsize'] = 16
+plot_params['lines.linewidth'] = 4
 plot_params['axes.titlepad'] = 5
 plot_params['legend.loc'] = 'lower left'
 plt.rcParams.update(plot_params)
@@ -186,7 +190,7 @@ if plot == True:
             filenames.append(filename)
             
 
-
+    plt.rcParams.update(plot_params)
     for filename in filenames:
         file = h5.File(data_root+filename,'r')
         dts = file["fields/dts"][:]
@@ -196,68 +200,35 @@ if plot == True:
 
         if file.attrs["integrator"] == "boris_staggered":
             label = "Boris Staggered" + ", Nz=" + file.attrs["res"]
-            label = "Boris" + ", Nz=" + file.attrs["res"]
+            label = "Boris"
+            c = '#0080FF'
         elif file.attrs["integrator"] == "boris_synced":
-            label = "Boris Synced" + ", Nz=" + file.attrs["res"]
+            c = '#0080FF'
+            label = "Boris"
         elif file.attrs["integrator"] == "boris_SDC":
-            label = "Boris-SDC" + ", Nz=" + file.attrs["res"]
+            c = '#F9004B'
+            label = "Boris-SDC"
             label += ", M=" + file.attrs["M"] + ", K=" + file.attrs["K"]
         
         if compare_reference == True:
             ##Order Plot w/ rhs
             fig_nl_rhs = plt.figure(10)
             ax_nl_rhs = fig_nl_rhs.add_subplot(1, 1, 1)
-            ax_nl_rhs.plot(rhs_evals,energy_errors,label=label)
+            ax_nl_rhs.plot(rhs_evals,energy_errors,color=c,label=label)
                 
             ##Order Plot w/ dt
             fig_nl_dt = plt.figure(11)
             ax_nl_dt = fig_nl_dt.add_subplot(1, 1, 1)
-            ax_nl_dt.plot(dts,energy_errors,label=label)
+            ax_nl_dt.plot(dts,energy_errors,color=c,label=label)
             
-        
-        ##Order Plot w/ rhs
-        fig_rhs = plt.figure(12)
-        ax_rhs = fig_rhs.add_subplot(1, 1, 1)
-        ax_rhs.plot(rhs_evals,avg_errors,label=label)
-            
-        ##Order Plot w/ dt
-        fig_dt = plt.figure(13)
-        ax_dt = fig_dt.add_subplot(1, 1, 1)
-        ax_dt.plot(dts,avg_errors,label=label)
-        file.close()
-        
-    ax_list = []  
-    ax_list.append(ax_rhs)
-    ax_list.append(ax_dt)
+    handles, labels = fig_nl_rhs.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_rhs.legend(by_label.values(), by_label.keys(),loc='best')
     
-    i = 0
-    for ax in ax_list:
-        i +=1
-        if i == 1:
-            orderSlope = -1
-            ax.set_xlabel('Number of RHS evaluations')
-        else:
-            ax.set_xlabel(r'$\Delta t$')
-            orderSlope = 1
-        
-        ax.set_xscale('log')
-        #ax_rhs.set_xlim(10**3,10**5)
-        ax.set_yscale('log')
-        ax.set_ylim(10**(-4),10)
-        ax.set_ylabel('Growth rate error')
-        
-        ax.set_title('Convergence vs. Linear Theory')
-        
-        xRange = ax.get_xlim()
-        yRange = ax.get_ylim()
-        
-        ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                    ls='dotted',c='0.25',label='2nd Order')
-        ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                    ls='dashed',c='0.75',label='4th Order')
-        
-        ax.legend()
-        
+    handles, labels = fig_nl_dt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    ax_nl_dt.legend(by_label.values(), by_label.keys(),loc='best')
+    
     if compare_reference == True:
         axnl_list = []
         axnl_list.append(ax_nl_rhs)
@@ -277,17 +248,20 @@ if plot == True:
             #ax_rhs.set_xlim(10**3,10**5)
             ax.set_yscale('log')
             ax.set_ylim(10**(-5),10)
-            ax.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x)$')
-            
+            ax.set_ylabel(r'Energy Error $\Delta (\sum \frac{E_i^2}{2} \Delta x )$')
             
             xRange = ax.get_xlim()
             yRange = ax.get_ylim()
             
             ax.plot(xRange,DH.orderLines(2*orderSlope,xRange,yRange),
-                        ls='dotted',c='0.25',label='2nd Order')
+                        ls='dotted',c='0.25')
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
-                        ls='dashed',c='0.75',label='4th Order')
+                        ls='dashed',c='0.75')
             
-            ax.legend(loc = 'best')
-            fig_nl_rhs.savefig(data_root + 'tsi_growth_'+ fig_type +"_"+ str(max_time) + 's_rhs.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
-            fig_nl_dt.savefig(data_root + 'tsi_growth_' + fig_type +"_"+ str(max_time) + 's_dt.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
+            ax.set_title('Two-Stream Instability Work Precision at {0}s'.format(str(max_time)))
+            
+            
+            
+#            ax.legend(loc = 'best')
+            fig_nl_rhs.savefig(data_root + 'tsi_growth_'+ fig_type +"_"+ str(max_time) + 's_rhs.svg', dpi=300, facecolor='w', edgecolor='w',orientation='portrait')
+            fig_nl_dt.savefig(data_root + 'tsi_growth_' + fig_type +"_"+ str(max_time) + 's_dt.svg', dpi=300, facecolor='w', edgecolor='w',orientation='portrait')

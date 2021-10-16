@@ -24,7 +24,7 @@ def phase_snap(tstep,beamData1,beamData2,figNo=3):
     p_ax.legend()
     plt.show()
 
-analyse = True
+analyse = False
 plot = True
 snapPlot = False
 
@@ -36,7 +36,7 @@ max_time = 1
 
 sims = {}
 
-
+sims['tsi_TE1_boris_SDC_NZ1000_NQ_NT100'] = [20,200,2000,20000]
 sims['tsi_TE1_boris_SDC_NZ1000_NQ_NT100'] = [20,200,2000,20000]
 
 comp_run = 'tsi_TE1_boris_SDC_NZ5000_NQ200000_NT1000'
@@ -87,7 +87,7 @@ if analyse == True:
         rhs_evals = []
         errors = []
 
-        filename = key + "_workprec_dz" + h5_suffix + ".h5"
+        filename = key + "_workprec_nq" + h5_suffix + ".h5"
         filenames.append(filename)
         file = h5.File(data_root+filename,'w')
         grp = file.create_group('fields')
