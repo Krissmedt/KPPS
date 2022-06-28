@@ -14,7 +14,7 @@ class meshLoader:
         self.custom = self.custom_ph
         
         self.grid_input = None
-        self.mesh_res = np.array([2,2,2],dtype=np.int)
+        self.mesh_res = np.array([2,2,2],dtype=int)
         self.mesh_dh = None
         self.store_node_pos = False
         
@@ -171,7 +171,7 @@ class meshLoader:
             
         if self.grid_input == 'cell_count' or self.mesh_dh == None:
             try:
-                res = np.zeros(3,dtype=np.int)
+                res = np.zeros(3,dtype=int)
                 res[:] = self.mesh_res
                 self.mesh_res = res
                 
@@ -198,7 +198,7 @@ class meshLoader:
             xres = (mesh.xlimits[1] - mesh.xlimits[0])/self.mesh_dh[0]
             yres = (mesh.ylimits[1] - mesh.ylimits[0])/self.mesh_dh[1]
             zres = (mesh.zlimits[1] - mesh.zlimits[0])/self.mesh_dh[2]
-            self.mesh_res = np.array([xres,yres,zres],dtype=np.int)
+            self.mesh_res = np.array([xres,yres,zres],dtype=int)
             self.grid_iput = 'cell_length'
                 
         self.cell_volume = np.prod(self.mesh_dh[0:])

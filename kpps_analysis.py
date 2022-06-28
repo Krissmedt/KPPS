@@ -723,7 +723,7 @@ class kpps_analysis:
 
         nodesList = []
         for k in kList:
-            interpol_nodes = np.zeros((mesh.res[2]+1,k+2),dtype=np.int)
+            interpol_nodes = np.zeros((mesh.res[2]+1,k+2),dtype=int)
             if self.mesh_boundary_z == 'open':
                 for i in range(0,mesh.res[2]+1):
                     interpol_nodes[i,0] = i
@@ -877,13 +877,13 @@ class kpps_analysis:
     
     def lower_index(self,pos,O,dh):
         li = np.floor((pos-O)/dh)
-        li = np.array(li,dtype=np.int)
+        li = np.array(li,dtype=int)
         
         return li
     
     def upper_index(self,pos,O,dh):
         ui = np.ceil((pos-O)/dh)
-        ui = np.array(ui,dtype=np.int)
+        ui = np.array(ui,dtype=int)
         
         return ui
     
@@ -894,7 +894,7 @@ class kpps_analysis:
         ui = np.ceil((pos-O)/dh)
         
         ci = np.where(i-li <= ui-i,li,ui)
-        ci = np.array(ci,dtype=np.int)
+        ci = np.array(ci,dtype=int)
 
         return ci
     

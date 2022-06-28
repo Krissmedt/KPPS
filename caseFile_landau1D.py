@@ -179,8 +179,8 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
     vel_data[under_min] = -v_off
     
     for pii in range(0,pos_data.shape[0]):
-        lix = np.int(pos_data[pii]/dx)
-        liv = np.int((vel_data[pii]+v_off)/dv) 
+        lix = int(pos_data[pii]/dx)
+        liv = int((vel_data[pii]+v_off)/dv) 
         hx = (pos_data[pii] - lix*dx)/dx
         hv = (vel_data[pii] + v_off - liv*dv)/dv
         

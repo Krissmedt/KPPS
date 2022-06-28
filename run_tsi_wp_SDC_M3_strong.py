@@ -84,22 +84,22 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 
 
 # Setup for visualisation and verification results
-steps = [200]
-resolutions = [100]
-iterations = [2]
-tend = 20
-nq = 20000
+#steps = [200]
+#resolutions = [100]
+#iterations = [2]
+#tend = 20
+#nq = 20000
 
 # Setup for work precision results
-# steps = [10,20,40,50,80,100,200,300,400,500,1000]
-# resolutions = [10,100,1000]
-# iterations = [2]
-# tend = 10
-# nq = 200000
-
+steps = [10,20,40,50,80,100,200,300,400,500,1000]
+resolutions = [10,100,1000]
+iterations = [1,2,3]
+tend = 10
+nq = 200000
+samples=10
 ###############################################################################
 
-dataRoot = "../data_tsi_strong/"
+dataRoot = "../data/"
 
 L = 2*pi
 
@@ -191,7 +191,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
-data_params['write_p'] = False
+data_params['write_p'] = True
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 
@@ -210,7 +210,7 @@ data_params['plot_params'] = plot_params
 kppsObject = kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = samples
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -221,13 +221,13 @@ for Nt in steps:
             
             q = omega_p**2 * L / (nq*a*1)
             
-            beam1_params['nq'] = np.int(nq)
+            beam1_params['nq'] = int(nq)
             beam1_params['mq'] = -q
             beam1_params['q'] = q
             loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin')
             loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
             
-            beam2_params['nq'] = np.int(nq)
+            beam2_params['nq'] = int(nq)
             beam2_params['mq'] = -q
             beam2_params['q'] = q
             loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='sin')

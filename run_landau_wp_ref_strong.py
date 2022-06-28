@@ -209,7 +209,7 @@ for Nt in steps:
         ppc = nq/res
         #nq = ppc*res
 
-        hot_params['nq'] = np.int(nq)
+        hot_params['nq'] = int(nq)
         hot_params['a'] = a
         hot_params['q'] = q
         

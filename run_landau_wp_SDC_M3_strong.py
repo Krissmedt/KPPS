@@ -213,7 +213,7 @@ for Nt in steps:
     for res in resolutions:
         ppc = nq/res
 
-        hot_params['nq'] = np.int(nq)
+        hot_params['nq'] = int(nq)
         hot_params['a'] = a
         hot_params['q'] = q
         

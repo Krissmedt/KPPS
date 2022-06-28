@@ -206,10 +206,10 @@ class dataHandler2:
         if max_t == 'all':
             max_ti = sim.tSteps
         else:
-            max_ti = np.int(max_t/(sim.dt*self.samplePeriod))
+            max_ti = int(max_t/(sim.dt*self.samplePeriod))
         
         try:
-            skip = np.int(sim.tSteps/load_limit)
+            skip = int(sim.tSteps/load_limit)
         except TypeError:
             skip = 1
         
@@ -438,11 +438,11 @@ class dataHandler2:
     def set_taggedList(self,p_data,tagged_list):
         nq = p_data['pos'].shape[1]
         try:
-            tagged_list = np.array(tagged_list,dtype=np.int) - 1
+            tagged_list = np.array(tagged_list,dtype=int) - 1
         except (TypeError,ValueError):
             if self.tagged_particles == 'all':
-                tagged_list = np.linspace(0,nq-1,nq,dtype=np.int)
+                tagged_list = np.linspace(0,nq-1,nq,dtype=int)
             else:
-                tagged_list = np.array(self.tagged_particles,dtype=np.int) - 1
+                tagged_list = np.array(self.tagged_particles,dtype=int) - 1
                 
         return tagged_list

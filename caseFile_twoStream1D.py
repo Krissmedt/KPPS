@@ -5,7 +5,7 @@ import math
 from mpl_toolkits.mplot3d import Axes3D
 
 def particle_pos_init(ppc,res,L,dx_mag,dx_mode):
-    nq = np.int(ppc*res)
+    nq = int(ppc*res)
     spacing = L/nq
     
     
@@ -50,11 +50,11 @@ def particle_vel_init(pos_list,v,dv_mag,dv_mode):
 
 def particle_vel_init_2sp(pos_list,v,k,a):
     vel_list = np.zeros(pos_list.shape,dtype=np.float)
-    for pii in range(0,np.int(pos_list.shape[0]/2)):
+    for pii in range(0,int(pos_list.shape[0]/2)):
         z = pos_list[pii,2]
         vel_list[pii,2] =  v + k*sin(a*z)
         
-    for pii in range(np.int(pos_list.shape[0]/2),pos_list.shape[0]):
+    for pii in range(int(pos_list.shape[0]/2),pos_list.shape[0]):
         z = pos_list[pii,2]
         vel_list[pii,2] =  -v + k*sin(a*z)
 
@@ -112,8 +112,8 @@ def calc_density_mesh(pos_data_list,vel_data_list,xres,vres,v_off,L):
     vel_data[under_min] = -v_off
     
     for pii in range(0,pos_data.shape[0]):
-        lix = np.int(pos_data[pii]/dx)
-        liv = np.int((vel_data[pii]+v_off)/dv) 
+        lix = int(pos_data[pii]/dx)
+        liv = int((vel_data[pii]+v_off)/dv) 
         hx = (pos_data[pii] - lix*dx)/dx
         hv = (vel_data[pii] + v_off - liv*dv)/dv
         

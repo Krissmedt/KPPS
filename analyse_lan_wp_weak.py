@@ -27,8 +27,8 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 def find_peaks(peak_intervals,EL2,dt,samplePeriod):
     peaks = []
     for interval in peak_intervals:
-        NA = np.int(interval[0]/(dt*samplePeriod))
-        NB = np.int(interval[1]/(dt*samplePeriod))
+        NA = int(interval[0]/(dt*samplePeriod))
+        NB = int(interval[1]/(dt*samplePeriod))
         mi = NA + np.argmax(EL2[NA:NB])
         peaks.append(mi)
 
@@ -102,7 +102,7 @@ if analyse == True:
 
         analysis_ts = []
         for time in analysis_times:
-            analysis_ts.append(np.int(time/(comp_sim.dt*DH_comp.samplePeriod)))
+            analysis_ts.append(int(time/(comp_sim.dt*DH_comp.samplePeriod)))
         analysis_ts = np.array(analysis_ts)
 
         tArray_comp = mData_comp['t']
@@ -156,12 +156,12 @@ if analyse == True:
                 dt = sim.dt
                 Nt = sim.tSteps
 
-                NA = np.int(fit1_start/(sim.dt*DH.samplePeriod))
-                NB = np.int(fit1_stop/(sim.dt*DH.samplePeriod))
+                NA = int(fit1_start/(sim.dt*DH.samplePeriod))
+                NB = int(fit1_stop/(sim.dt*DH.samplePeriod))
 
                 analysis_ts = []
                 for time in analysis_times:
-                    analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
+                    analysis_ts.append(int(time/(sim.dt*DH.samplePeriod)))
                 analysis_ts = np.array(analysis_ts)
 
                 mData_dict = DH.load_m(['phi','E','rho','PE_sum','zres','dz','vel_dist','grid_x','grid_v','f','Rx','Rv'],sim_name=sim_name,max_t=analysis_times[-1])
@@ -380,6 +380,6 @@ if plot == True:
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                         ls='dashed',c='0.75')
 
-            compare_times = np.array(compare_times,dtype=np.int)
+            compare_times = np.array(compare_times,dtype=int)
             fig_nl_rhs.savefig(data_root + 'landau_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
             fig_nl_dt.savefig(data_root + 'landau_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')

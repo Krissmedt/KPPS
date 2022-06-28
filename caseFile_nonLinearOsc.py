@@ -56,7 +56,7 @@ def type_setup_spec(exptype,res,ppc,spec1_params,loader1_params,spec2_params,loa
         
         nq = res*ppc
         
-        y_range = np.linspace(0,-1,num=np.int(nq/2))
+        y_range = np.linspace(0,-1,num=int(nq/2))
         x_range2 = np.power(-y_range,1/3)
         x_range1 = np.flip(-x_range2,0)
         x_range = np.append(x_range1[:-1],x_range2)

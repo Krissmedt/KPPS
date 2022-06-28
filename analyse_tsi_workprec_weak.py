@@ -13,32 +13,32 @@ from collections import OrderedDict
 from caseFile_landau1D import *
 
 analyse = True
-fieldPlot = True
+fieldPlot = False
 snapPlot = False
-resPlot = False
-compare_reference = False
-plot = False
+resPlot = True
+compare_reference = True
+plot = True
 
 
-analysis_times = [0,1,2,3,4,5,6,7,8,9,10,50]
-compare_times = [10]
+analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
+compare_times = [1]
 
 fit_start = 10
 fit_stop = 16
 
 snaps = [0,100]
 
-fig_type = 'versus'
-data_root = "../data_tsi_weak/"
+fig_type = 'full'
+data_root = "../data/"
 sims = {}
 
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 ##
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
+sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
@@ -48,7 +48,7 @@ sims = {}
 #sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 #sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
 
-sims['tsi_TE50_a0.0001_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [500]
+#sims['tsi_TE50_a0.0001_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [500]
 
 comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
@@ -99,7 +99,7 @@ if analyse == True:
 
         analysis_ts = []
         for time in analysis_times:
-            analysis_ts.append(np.int(time/(comp_sim.dt*DH_comp.samplePeriod)))
+            analysis_ts.append(int(time/(comp_sim.dt*DH_comp.samplePeriod)))
         analysis_ts = np.array(analysis_ts)
 
         tArray_comp = mData_comp['t']
@@ -143,12 +143,12 @@ if analyse == True:
             dt = sim.dt
             Nt = sim.tSteps
             
-            NA = np.int(fit_start/(sim.dt*DH.samplePeriod))
-            NB = np.int(fit_stop/(sim.dt*DH.samplePeriod))
+            NA = int(fit_start/(sim.dt*DH.samplePeriod))
+            NB = int(fit_stop/(sim.dt*DH.samplePeriod))
             
             analysis_ts = []
             for time in analysis_times:
-                analysis_ts.append(np.int(time/(sim.dt*DH.samplePeriod)))
+                analysis_ts.append(int(time/(sim.dt*DH.samplePeriod)))
             analysis_ts = np.array(analysis_ts)
                 
 
@@ -361,6 +361,6 @@ if plot == True:
             ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                         ls='dashed',c='0.75')
             
-        compare_times = np.array(compare_times,dtype=np.int)
+        compare_times = np.array(compare_times,dtype=int)
         fig_nl_rhs.savefig(data_root + 'tsi_weak_'+ fig_type +"_"+ str(compare_times) + 's_rhs.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')
         fig_nl_dt.savefig(data_root + 'tsi_weak_' + fig_type +"_"+ str(compare_times) + 's_dt.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.0,bbox_inches = 'tight')

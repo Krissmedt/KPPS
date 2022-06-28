@@ -219,13 +219,13 @@ for Nt in steps:
         
         q = omega_p**2 * L / (nq*a*1)
         
-        beam1_params['nq'] = np.int(nq)
+        beam1_params['nq'] = int(nq)
         beam1_params['mq'] = -q
         beam1_params['q'] = q
         loader1_params['pos'] = ppos_init_sin(nq,L,dx_mag,dx_mode,ftype='sin')
         loader1_params['vel'] = particle_vel_init(loader1_params['pos'],v,dv_mag,dv_mode)
         
-        beam2_params['nq'] = np.int(nq)
+        beam2_params['nq'] = int(nq)
         beam2_params['mq'] = -q
         beam2_params['q'] = q
         loader2_params['pos'] = ppos_init_sin(nq,L,-dx_mag,dx_mode,ftype='sin')
