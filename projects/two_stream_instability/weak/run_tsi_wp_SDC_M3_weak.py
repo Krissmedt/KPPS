@@ -1,6 +1,6 @@
 from kpps.kpps import Kpps
 from decimal import Decimal
-from caseFile_twoStream1D import *
+from projects.two_stream_instability.caseFile_twoStream1D import *
 from kpps.output.data_handler import DataHandler
 import matplotlib.animation as animation
 import cmath as cm
@@ -78,18 +78,20 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 
 
 # Setup for visualisation and verification results
-# steps = [500]
-# resolutions = [100]
-# tend = 50
-# nq = 20000
+steps = [500]
+resolutions = [100]
+iterations = [4]
+tend = 50
+nq = 20000
+samples = steps[0]
 
 # Setup for work precision results
-steps = [10,20,40,50,80,100,200,300,400,500,1000]
-resolutions = [10,100,1000]
-iterations = [2]
-tend = 10
-nq = 200000
-samples = 10
+# steps = [10,20,40,50,80,100,200,300,400,500,1000]
+# resolutions = [10,100,1000]
+# iterations = [2]
+# tend = 10
+# nq = 200000
+# samples = 10
 
 dataRoot = "/home/krissmedt/data/tsi/weak/"
 
@@ -175,7 +177,9 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = []   
+analysis_params['residual_check'] = True
+analysis_params['log_residuals'] = False
+analysis_params['pre_hook_list'] = []
 
 if plot == True:
     analysis_params['hooks'].append(plot_density_1d)

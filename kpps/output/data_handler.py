@@ -233,7 +233,7 @@ class DataHandler:
                 break
         
         for key, value in return_dict.items():
-            return_dict[key] = np.array(value, dtype=object)
+            return_dict[key] = np.array(value, dtype=float)
             
         return return_dict, sim
         

@@ -1,6 +1,6 @@
 from kpps.kpps import Kpps
 from decimal import Decimal
-from caseFile_twoStream1D import *
+from projects.two_stream_instability.caseFile_twoStream1D import *
 from kpps.output.data_handler import DataHandler
 import matplotlib.animation as animation
 import cmath as cm

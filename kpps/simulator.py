@@ -70,6 +70,7 @@ class Simulator:
         self.calc_residuals = self.calc_residuals_max
         self.SDC_residual_type = 'nodal'
         self.display_residuals = self.display_residuals_max
+        self.log_residuals = False
 
         self.fieldIntegration = False
         self.field_type = 'custom'  # Can be pic, coulomb or custom
@@ -225,7 +226,8 @@ class Simulator:
 
         if self.residual_check == True and self.particleIntegrator == 'boris_SDC':
             self.calculate_residuals = self.calc_residuals_max
-            self.hooks.append(self.display_residuals)
+
+            if (self.log_residuals == True): self.hooks.append(self.display_residuals)
 
         if self.convergence_check == True and self.particleIntegrator == 'boris_SDC':
             self.hooks.append(self.display_convergence)
