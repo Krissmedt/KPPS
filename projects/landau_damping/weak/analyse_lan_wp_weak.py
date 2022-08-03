@@ -1,4 +1,4 @@
-from caseFile_landau1D import *
+from projects.landau_damping.caseFile_landau1D import *
 import matplotlib.pyplot as plt
 import numpy as np
 from kpps.output.data_handler import DataHandler

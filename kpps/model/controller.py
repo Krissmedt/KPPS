@@ -43,6 +43,7 @@ class Controller:
         self.runTimeDict['gather'] = 0.
         self.runTimeDict['scatter'] = 0.
         self.runTimeDict['FD_setup'] = 0.
+        self.runTimeDict['setup'] = 0.
         self.runTimeDict['field_solve'] = 0.
         self.runTimeDict['particle_push'] = 0.
         self.runTimeDict['pos_push'] = 0.

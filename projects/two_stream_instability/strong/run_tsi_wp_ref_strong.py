@@ -80,9 +80,10 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 steps = [5000]
 resolutions = [5000]
 iterations = [3]
-samples=10
+samples = 10
+nq = 200000 #Nq is particles per species, total nq = 2*nq
 
-dataRoot = "../data/"
+dataRoot = "/home/krissmedt/data/tsi/strong/"
 
 L = 2*pi
 tend = 10
@@ -97,8 +98,7 @@ dv_mode = 0
 a = -1
 omega_p = 1
 
-#Nq is particles per species, total nq = 2*nq
-nq = 200000
+
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
@@ -170,7 +170,8 @@ analysis_params['mesh_boundary_z'] = 'open'
 analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
-analysis_params['pre_hook_list'] = []   
+analysis_params['residual_check'] = True
+analysis_params['pre_hook_list'] = []
 
 if plot == True:
     analysis_params['hooks'].append(plot_density_1d)
@@ -196,7 +197,7 @@ data_params['plot_params'] = plot_params
 kppsObject = Kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = 10
+    data_params['samples'] = samples
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]

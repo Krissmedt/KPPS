@@ -86,14 +86,14 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 
 # Setup for work precision results
 steps = [10,20,40,50,80,100,200,300,400,500,1000]
-resolutions = [10,100,1000]
+resolutions = [100]
 iterations = [1,2,3]
 tend = 10
-nq = 200000
-samples=10
+nq = 20000
+samples = 10
 ###############################################################################
 
-dataRoot = "../data/"
+dataRoot = "/home/krissmedt/data/tsi/timing/"
 
 L = 2*pi
 
@@ -178,6 +178,7 @@ analysis_params['poisson_M_adjust_1d'] = 'simple_1d'
 analysis_params['field_solver'] = 'direct_solve'
 analysis_params['hooks'] = ['kinetic_energy']
 analysis_params['rhs_check'] = True
+analysis_params['residual_check'] = True
 analysis_params['pre_hook_list'] = []   
 
 if plot == True:
@@ -185,7 +186,7 @@ if plot == True:
     analysis_params['pre_hook_list'].append(plot_density_1d)
 
 data_params['write'] = True
-data_params['write_p'] = True
+data_params['write_p'] = False
 data_params['plot_limits'] = [1,1,L]
 data_params['dataRootFolder'] = dataRoot
 

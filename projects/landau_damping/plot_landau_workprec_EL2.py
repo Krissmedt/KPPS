@@ -5,20 +5,20 @@ from kpps.output.data_handler import DataHandler
 import h5py as h5
 from collections import OrderedDict
 
-compare_samples = [1,5,10]
+compare_samples = [1,2,3,4,5,6,7,8,9,10]
 
-data_root = "/home/krissmedt/data/tsi/weak/"
+data_root = "/home/krissmedt/data/landau/strong/"
 
 datafiles = [
-    'tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_wp_weak'
+    'lan_TE10_a0.5_boris_synced_NZ10_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_synced_NZ100_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_wp_strong'
 ]
 
-output_file_label = "weak"
+output_file_label = "strong_EL2_"
 
 ############################### Setup #########################################
 data_params = {}
@@ -128,14 +128,14 @@ for sample in compare_samples:
         ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                     ls='dashed',c='0.75')
 
-    fig_nl_rhs.savefig(data_root + "tsi_wp_" + output_file_label + "_" + str(times[sample]) + 's_rhs.pdf',
+    fig_nl_rhs.savefig(data_root + "landau_wp_" + output_file_label + "_" + str(times[sample]) + 's_rhs.pdf',
                        dpi=150, facecolor='w',
                        edgecolor='w',
                        orientation='portrait',
                        pad_inches=0.0,
                        bbox_inches ='tight'
                        )
-    fig_nl_dt.savefig(data_root + "tsi_wp_" + output_file_label + "_" + str(times[sample]) + 's_dt.pdf',
+    fig_nl_dt.savefig(data_root + "landau_wp_" + output_file_label + "_" + str(times[sample]) + 's_dt.pdf',
                       dpi=150, facecolor='w',
                       edgecolor='w',
                       orientation='portrait',

@@ -5,20 +5,20 @@ from kpps.output.data_handler import DataHandler
 import h5py as h5
 from collections import OrderedDict
 
-compare_samples = [1,5,10]
+compare_samples = [1,2,3,4,5,6,7,8,9,10]
 
-data_root = "/home/krissmedt/data/tsi/weak/"
+data_root = "/home/krissmedt/data/landau/strong/"
 
 datafiles = [
-    'tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_wp_weak',
-    'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_wp_weak'
+    'lan_TE10_a0.5_boris_synced_NZ10_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_synced_NZ100_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_wp_strong',
+    'lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_wp_strong'
 ]
 
-output_file_label = "weak"
+output_file_label = "strong_meanErr_"
 
 ############################### Setup #########################################
 data_params = {}
@@ -55,12 +55,8 @@ for sample in compare_samples:
         times = file["fields/times"][:]
         rhs_evals = file["fields/rhs_evals"][:]
         energy_errors = file["fields/energy_errors"][:]
-        EL2_errors = file["fields/EL2_errors"][:]
-        EL2_errors = np.array(EL2_errors)
         Eavg_errors = file["fields/Eavg_errors"][:]
         Eavg_errors = np.array(Eavg_errors)
-        Emax_errors = file["fields/Emax_errors"][:]
-        Emax_errors = np.array(Emax_errors)
 
         K = filename[filename.find('K')+1]
         if file.attrs["integrator"] == "boris_staggered":
@@ -86,11 +82,11 @@ for sample in compare_samples:
 
         ##Order Plot w/ rhs
         label_line = label + ', ' + str(times[sample]) + 's'
-        ax_nl_rhs.plot(rhs_evals, EL2_errors[:, sample], marker="o", color=c, label=label_line)
+        ax_nl_rhs.plot(rhs_evals, Eavg_errors[:, sample], marker="o", color=c, label=label_line)
 
         ##Order Plot w/ dt
         label_line = label + ', ' + str(times[sample]) + 's'
-        ax_nl_dt.plot(dts, EL2_errors[:, sample], marker="o", color=c, label=label_line)
+        ax_nl_dt.plot(dts, Eavg_errors[:, sample], marker="o", color=c, label=label_line)
 
     handles, labels = fig_nl_rhs.gca().get_legend_handles_labels()
     by_label = OrderedDict(zip(labels, handles))
@@ -117,9 +113,9 @@ for sample in compare_samples:
         ax.set_xscale('log')
         #ax_rhs.set_xlim(10**3,10**5)
         ax.set_yscale('log')
-        ax.set_ylim(10**(-6),1)
+        ax.set_ylim(10**(-4),10)
         #x.set_ylabel(r'E L2 Error $\Delta \sqrt{\sum \frac{E_i^2}{2} \Delta z}$')
-        ax.set_ylabel(r'Rel. $||E||_{L2}$ Error')
+        ax.set_ylabel(r'Rel. Mean E Error')
         xRange = ax.get_xlim()
         yRange = ax.get_ylim()
 
@@ -128,14 +124,14 @@ for sample in compare_samples:
         ax.plot(xRange,DH.orderLines(4*orderSlope,xRange,yRange),
                     ls='dashed',c='0.75')
 
-    fig_nl_rhs.savefig(data_root + "tsi_wp_" + output_file_label + "_" + str(times[sample]) + 's_rhs.pdf',
+    fig_nl_rhs.savefig(data_root + "landau_wp_" + output_file_label + "_" + str(times[sample]) + 's_rhs.pdf',
                        dpi=150, facecolor='w',
                        edgecolor='w',
                        orientation='portrait',
                        pad_inches=0.0,
                        bbox_inches ='tight'
                        )
-    fig_nl_dt.savefig(data_root + "tsi_wp_" + output_file_label + "_" + str(times[sample]) + 's_dt.pdf',
+    fig_nl_dt.savefig(data_root + "landau_wp_" + output_file_label + "_" + str(times[sample]) + 's_dt.pdf',
                       dpi=150, facecolor='w',
                       edgecolor='w',
                       orientation='portrait',

@@ -76,18 +76,19 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 
 
 # Setup for visualisation and verification results
-steps = [400]
-resolutions = [100]
-tend = 20
-nq = 20000
+# steps = [400]
+# resolutions = [100]
+# tend = 20
+# nq = 20000
 
 # Setup for work precision results
-# steps = [10,20,40,50,80,100,200,400,500,1000]
-# resolutions = [10,100,1000]
-# tend = 10
-nq = 200000
+steps = [10,20,40,50,80,100,200,400,500,1000]
+resolutions = [100]
+tend = 10
+nq = 20000
+samples = 10
 
-dataRoot = "../data_tsi_strong/"
+dataRoot = "/home/krissmedt/data/tsi/timing/"
 
 L = 2*pi
 tend = 10
@@ -103,8 +104,6 @@ a = -1
 omega_p = 1
 
 #Nq is particles per species, total nq = 2*nq
-#ppc = 20
-nq = 20000
 
 prefix = 'TE'+str(tend) + '_a' + str(dx_mag)
 simulate = True
@@ -178,6 +177,7 @@ analysis_params['field_solver'] = 'bicgstab_solve'
 analysis_params['iter_tol'] = 1e-11
 analysis_params['hooks'] = ['kinetic_energy','field_energy']
 analysis_params['rhs_check'] = True
+analysis_params['residual_check'] = True
 analysis_params['pre_hook_list'] = []   
 
 if plot == True:
@@ -204,7 +204,7 @@ data_params['plot_params'] = plot_params
 kppsObject = Kpps()
 for Nt in steps:
     sim_params['tSteps'] = Nt
-    data_params['samples'] = Nt
+    data_params['samples'] = samples
     dt = tend/Nt
     for res in resolutions:
         mLoader_params['resolution'] = [2,2,res]
@@ -251,6 +251,8 @@ for Nt in steps:
                 DH = kppsObject.start(**model)
                 sim = DH.controller_obj
                 sim_name = sim.simID
+            print("Setup time = " + str(sim.runTimeDict["setup"]))
+            print("Run time = " + str(sim.runTimeDict["sim_time"]))
         else:
             DH = DataHandler(**data_params)
             sim, name = DH.load_sim(sim_name=sim_name,overwrite=True)
@@ -486,6 +488,4 @@ for Nt in steps:
             fig_el2.savefig(dataRoot + sim_name + '_el2.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             fig_UE.savefig(dataRoot + sim_name + '_energy.png', dpi=150, facecolor='w', edgecolor='w',orientation='portrait')
             plt.show()
-#        
-    print("Setup time = " + str(sim.setupTime))
-    print("Run time = " + str(sim.runTime))
+#

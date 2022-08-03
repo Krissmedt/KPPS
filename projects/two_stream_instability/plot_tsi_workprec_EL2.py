@@ -5,7 +5,7 @@ from kpps.output.data_handler import DataHandler
 import h5py as h5
 from collections import OrderedDict
 
-compare_samples = [1,5,10]
+compare_samples = [1,2,3,4,5,6,7,8,9,10]
 
 data_root = "/home/krissmedt/data/tsi/weak/"
 
@@ -18,7 +18,7 @@ datafiles = [
     'tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_wp_weak'
 ]
 
-output_file_label = "weak"
+output_file_label = "weak_EL2_"
 
 ############################### Setup #########################################
 data_params = {}

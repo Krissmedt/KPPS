@@ -5,10 +5,10 @@ from kpps.output.data_handler import DataHandler
 import h5py as h5
 from collections import OrderedDict
 
-data_root = "/home/krissmedt/data/tsi/strong/"
+data_root = "/home/krissmedt/data/landau/strong/"
 
 sims = [
-    "tsi_TE10_a0.1_boris_SDC_M3K3_NZ5000_NQ200000_NT5000"
+    "lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000"
 ]
 
 ############################### Setup #########################################
@@ -41,14 +41,13 @@ for sim_name in sims:
     dt = sim.dt
     Nt = sim.tSteps
 
-    pData_list = DH.load_p(['x_res', 'v_res'], species=['beam1', 'beam2'], sim_name=sim_name)
+    pData_list = DH.load_p(['x_res', 'v_res'], species=['hot'], sim_name=sim_name)
     p1Data_dict = pData_list[0]
-    p2Data_dict = pData_list[1]
     tArray = p1Data_dict['t']
     xRes = np.array(p1Data_dict['x_res'][1:,:,-1], dtype=float)
     vRes = np.array(p1Data_dict['v_res'][1:,:,-1], dtype=float)
 
-    print("Drawing x-residual plot for Beam 1 of " + sim_name + "...")
+    print("Drawing x-residual plot for hot species of " + sim_name + "...")
     fig_p1 = plt.figure(1,dpi=150)
     R_ax = fig_p1.add_subplot(1,1,1)
     for i in range(0, xRes.shape[1]):
@@ -59,7 +58,7 @@ for sim_name in sims:
     R_ax.legend()
     fig_p1.savefig(data_root + sim_name + '_xResidual.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
 
-    print("Drawing v-residual plot for Beam 1 of " + sim_name + "...")
+    print("Drawing v-residual plot for hot species of " + sim_name + "...")
     fig_p2 = plt.figure(1,dpi=150)
     R_ax = fig_p2.add_subplot(1,1,1)
     for i in range(0, vRes.shape[1]):

@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+from projects.landau_damping.caseFile_landau1D import *
 import numpy as np
 import cmath as cm
 from kpps.output.data_handler import DataHandler
@@ -8,29 +8,22 @@ from scipy.interpolate import interp1d
 
 analysis_times = [0,1,2,3,4,5,6,7,8,9,10]
 
-data_root = "/home/krissmedt/data/tsi/weak/"
+data_root = "/home/krissmedt/data/landau/strong/"
 
 sims = {}
 
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K1_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-##
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
 
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#sims['tsi_TE10_a0.0001_boris_SDC_M3K3_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500]
-#
-sims['tsi_TE10_a0.0001_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
-sims['tsi_TE10_a0.0001_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,300,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_SDC_M3K2_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+
+sims['lan_TE10_a0.5_boris_synced_NZ10_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ100_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
+sims['lan_TE10_a0.5_boris_synced_NZ1000_NQ200000_NT'] = [10,20,40,50,80,100,200,400,500,1000]
 
 #sims['tsi_TE50_a0.0001_boris_SDC_M3K2_NZ100_NQ20000_NT'] = [500]
 
-comp_run = 'tsi_TE10_a0.0001_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
+comp_run = 'lan_TE10_a0.5_boris_SDC_M3K3_NZ5000_NQ200000_NT5000'
 
 
 data_params = {}
@@ -77,7 +70,7 @@ for key, value in sims.items():
     EL2_errors = []
     times = []
 
-    filename = key[:-3] + "_wp_weak.h5"
+    filename = key[:-3] + "_wp_strong.h5"
     filenames.append(filename)
 
     try:
