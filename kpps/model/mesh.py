@@ -3,7 +3,6 @@
 ## Dependencies
 import numpy as np
 
-
 class Mesh:
     def __init__(self, **kwargs):
         ## Default values

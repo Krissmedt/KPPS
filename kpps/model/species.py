@@ -2,8 +2,6 @@
 
 ## Dependencies
 import numpy as np
-from math import pi
-
 
 ## Class
 class Species:

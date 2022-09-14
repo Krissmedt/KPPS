@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.polynomial.legendre as leg
 
-from .collocation import CollBase
+from kpps.collocation.collocation import CollBase
 
 class CollGaussLobatto(CollBase):
     """

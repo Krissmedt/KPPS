@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cmath as cm
 from kpps.output.data_handler import DataHandler
-import h5py as h5
-from collections import OrderedDict
 
 fit_start = 10
 fit_stop = 16
@@ -11,7 +9,7 @@ fit_stop = 16
 data_root = "/home/krissmedt/data/tsi/weak/"
 
 sims = [
-    "tsi_TE50_a0.0001_boris_SDC_M3K4_NZ100_NQ20000_NT500"
+    "tsi_TE50_a0.0001_boris_SDC_M3K2_NZ100_NQ20000_NT500"
 ]
 
 
@@ -37,12 +35,12 @@ real_slope = roots[1].imag
 data_params = {}
 data_params['dataRootFolder'] = data_root
 plot_params = {}
-plot_params['legend.fontsize'] = 16
+plot_params['legend.fontsize'] = 22
 plot_params['figure.figsize'] = (12,8)
-plot_params['axes.labelsize'] = 20
-plot_params['axes.titlesize'] = 20
-plot_params['xtick.labelsize'] = 16
-plot_params['ytick.labelsize'] = 16
+plot_params['axes.labelsize'] = 24
+plot_params['axes.titlesize'] = 24
+plot_params['xtick.labelsize'] = 24
+plot_params['ytick.labelsize'] = 24
 plot_params['lines.linewidth'] = 4
 plot_params['axes.titlepad'] = 5
 plot_params['axes.linewidth'] = 1.5
@@ -50,7 +48,7 @@ plot_params['ytick.major.width'] = 2
 plot_params['ytick.minor.width'] = 2
 plot_params['xtick.major.width'] = 2
 plot_params['xtick.minor.width'] = 2
-plot_params['legend.loc'] = 'best'
+plot_params['legend.loc'] = 'lower right'
 plt.rcParams.update(plot_params)
 
 filenames = []
@@ -87,6 +85,7 @@ for sim_name in sims:
         E_fit = np.around(np.polyfit(tArray[NA:NB],np.log(EL2[NA:NB]),1),decimals=4)
         E_line = c1*np.exp(tArray[NA:NB]*E_fit[0])
 
+        c1 = EL2[NA]*0.004
         real_slope = np.around(real_slope,decimals=4)
         lit_line = c1*np.exp(tArray[NA:NB]*real_slope)
 
@@ -94,14 +93,15 @@ for sim_name in sims:
     except:
         pass
 
+    plt.rcParams.update(plot_params)
     print("Drawing field plot...")
     fig_el2 = plt.figure(1,dpi=150)
     el2_ax = fig_el2.add_subplot(1,1,1)
-    el2_ax.plot(tArray[1:],EL2[1:],'blue',label="$E$")
-    el2_ax.plot(tArray[NA:NB],E_line,'red',label="Fitted $\gamma$")
-    el2_ax.plot(tArray[NA:NB],lit_line,'orange',label="Literature $\gamma$")
-    E_text1 = el2_ax.text(.1,0.02,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=16)
-    text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{lit}$ = ' + str(real_slope))
+    el2_ax.plot(tArray[1:],EL2[1:],'blue',label="$E$-field")
+    el2_ax.plot(tArray[NA:NB],E_line,'red', marker="s", markevery=10, label="Fitted $\gamma$")
+    el2_ax.plot(tArray[NA:NB],lit_line,'orange', marker="x", markevery=10, label="Theory $\gamma$")
+    E_text1 = el2_ax.text(.1,0.06,'',transform=el2_ax.transAxes,verticalalignment='bottom',fontsize=24)
+    text1 = (r'$\gamma_{fit}$ = ' + str(E_fit[0]) + ' vs. ' + r'$\gamma_{theory}$ = ' + str(real_slope))
     E_text1.set_text(text1)
     el2_ax.set_xlabel('$t$')
     el2_ax.set_ylabel(r'$||E||_{L2}$')
@@ -109,4 +109,4 @@ for sim_name in sims:
     el2_ax.set_xlim(0,50)
 #   el2_ax.set_ylim(10**(-4),3)
     el2_ax.legend()
-    fig_el2.savefig(data_root + sim_name + '_eField.pdf', dpi=150, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')
+    fig_el2.savefig(data_root + sim_name + '_eField.pdf', dpi=300, facecolor='w', edgecolor='w',orientation='portrait',pad_inches=0.05,bbox_inches = 'tight')

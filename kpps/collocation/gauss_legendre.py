@@ -1,6 +1,6 @@
 import numpy as np
 
-from .collocation import CollBase
+from kpps.collocation.collocation import CollBase
 
 
 class CollGaussLegendre(CollBase):

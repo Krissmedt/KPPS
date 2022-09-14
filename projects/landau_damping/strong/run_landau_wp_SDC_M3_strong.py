@@ -88,20 +88,20 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
     
 
 # Setup for visualisation and verification results
-# steps = [300]
-# resolutions = [100]
-# iterations = 2
-# nq = 20000
-# tend = 30
-# samples = steps[0]
-
-# Setup for work precision results
-steps = [10,20,40,50,80,100,200,400,500,1000]
-resolutions = [10,100,1000]
+steps = [300]
+resolutions = [100]
 iterations = 2
 nq = 200000
-tend = 10
-samples = 10
+tend = 30
+samples = steps[0]
+
+# Setup for work precision results
+# steps = [10,20,40,50,80,100,200,400,500,1000]
+# resolutions = [10,100,1000]
+# iterations = 2
+# nq = 200000
+# tend = 10
+# samples = 10
 
 dataRoot = "/home/krissmedt/data/landau/strong/"
 

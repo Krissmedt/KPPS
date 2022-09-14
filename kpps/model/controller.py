@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+
+## Dependencies
 from math import floor
 import numpy as np
 import time
-
 
 ## Class
 class Controller:

@@ -6,10 +6,9 @@ import math as math
 import matplotlib.pyplot as plt
 import pickle as pk
 
-
 ## Class ##
 class DataHandler:
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         ## Default values and initialisation
         self.params = {}
         

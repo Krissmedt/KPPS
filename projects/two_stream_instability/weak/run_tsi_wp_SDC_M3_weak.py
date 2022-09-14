@@ -80,7 +80,7 @@ def plot_density_1d(species_list,fields,controller='',**kwargs):
 # Setup for visualisation and verification results
 steps = [500]
 resolutions = [100]
-iterations = [4]
+iterations = [2]
 tend = 50
 nq = 20000
 samples = steps[0]

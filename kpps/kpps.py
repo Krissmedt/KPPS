@@ -11,7 +11,7 @@ from kpps.initialisation.particle_loader import ParticleLoader as pLoader_class
 from kpps.initialisation.mesh_loader import MeshLoader
 from kpps.model.controller import Controller
 from kpps.output.data_handler import DataHandler
-from .simulator import Simulator
+from kpps.simulator import Simulator
 
 
 class Kpps:

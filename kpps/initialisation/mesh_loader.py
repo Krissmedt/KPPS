@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 ## Dependencies
-import random as rand
 import numpy as np
-import math as math
-
 
 ## Class
 class MeshLoader:
